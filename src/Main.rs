@@ -422,7 +422,7 @@ fn get_operator(index: &mut usize, buffer: &[u8]) -> Token {
 }
 
 fn main() -> io::Result<()> {
-    let file_path = "release/Main.s";
+    let file_path = "Main.s";
 
     let mut file = File::open(file_path)?;
     let mut buffer = Vec::new();
