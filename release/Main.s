@@ -1,6 +1,5 @@
 ##
-  test text
-  test comment
+  class test
 ##
 Human
   public age
@@ -11,9 +10,6 @@ Human
   public getAge()
     ret age
 main
-  println("Hello world!")
   h = new Human(32)
-  for i = 0; i < 10; i++
-    println(i)
-  prinln("Program end: "+h.getAge())
-  # next ret 0
+  prinln("Human age: "+h.getAge())
+  # next ret 0 and print "Deleted"
