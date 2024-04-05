@@ -2,11 +2,18 @@
   test text
   test comment
 ##
-main():
+Human
+  public age
+  constr(age)
+    this.age = age
+  destr
+    println("Deleted")
+  public getAge()
+    ret age
+main
   println("Hello world!")
-  (i = 10000; i++):
+  h = new Human(32)
+  for i = 0; i < 10; i++
     println(i)
-    goup(i < 10)
-  end
-  prinln("Program end!")
-end
+  prinln("Program end: "+h.getAge())
+  # next ret 0
