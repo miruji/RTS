@@ -7,8 +7,8 @@ Human
     this.age = age
   destr
     println("Deleted")
-  public getAge()
-    ret age
+  public getAge
+    = age
 main
   h = new Human(32)
   prinln("Human age: "+h.getAge())
