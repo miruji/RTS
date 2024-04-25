@@ -4,6 +4,7 @@
 
 pub mod token {
     #[derive(PartialEq)]
+    #[derive(Clone)]
     pub enum TokenType {
         // basic
         None,    // none
@@ -43,17 +44,22 @@ pub mod token {
         DoubleEquals,        // ==
         And,                 // &&
         Or,                  // ||
-        // parameter
+        // brackets
         CircleBlockBegin, // (
         CircleBlockEnd,   // )
-        // array
         SquareBlockBegin, // [
         SquareBlockEnd,   // ]
-        // class
         FigureBlockBegin, // {
         FigureBlockEnd,   // }
-        // block
-        Begin, // :
+        // other
+        Colon,   // :
+        Pointer, // ->
+        // words
+        If,   // if
+        Else, // else
+        Elif, // else if
+        While, // while
+        For,   // for
     }
 
     impl ToString for TokenType {
@@ -97,21 +103,27 @@ pub mod token {
                 TokenType::DoubleEquals        => "DOUBLE_EQUALS".to_string(),          // ==
                 TokenType::And                 => "AND".to_string(),                    // &&
                 TokenType::Or                  => "OR".to_string(),                     // ||
-                // parameter
+                // brackets
                 TokenType::CircleBlockBegin => "CIRCLE_BLOCK_BEGIN".to_string(), // (
                 TokenType::CircleBlockEnd   => "CIRCLE_BLOCK_END".to_string(),   // )
-                // array
                 TokenType::SquareBlockBegin => "SQUARE_BLOCK_BEGIN".to_string(), // [
                 TokenType::SquareBlockEnd   => "SQUARE_BLOCK_END".to_string(),   // ]
-                // class
                 TokenType::FigureBlockBegin => "FIGURE_BLOCK_BEGIN".to_string(), // {
                 TokenType::FigureBlockEnd   => "FIGURE_BLOCK_END".to_string(),   // }
-                // block
-                TokenType::Begin => "BEGIN".to_string(), // :
+                // other
+                TokenType::Colon => "COLON".to_string(),     // :
+                TokenType::Pointer => "POINTER".to_string(), // ->
+                // words
+                TokenType::If => "IF".to_string(),     // if
+                TokenType::Else => "ELSE".to_string(), // else
+                TokenType::Elif => "ELIF".to_string(), // else if
+                TokenType::While => "WHILE".to_string(), // while
+                TokenType::For => "FOR".to_string(),     // for
             }
         }
     }
 
+    #[derive(Clone)]
     pub struct Token {
         pub data: String,
         pub data_type: TokenType,

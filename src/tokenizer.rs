@@ -1,9 +1,12 @@
 /*
     tokenizer + methods for it
 */
+
 pub mod token;
+pub mod line;
 pub mod tokenizer {
     use crate::tokenizer::token::token::*;
+    use crate::tokenizer::line::line::*;
 
     pub fn delete_comment(index: &mut usize, buffer: &[u8], buffer_length: &usize) {
         if buffer[*index] != b'#' {
@@ -112,7 +115,20 @@ pub mod tokenizer {
         if !result.is_empty() {
             *index = index_buffer;
         }
-        Token { data_type: TokenType::Word, data: result }
+        //
+        return if result == "if" {
+            Token { data_type: TokenType::If, data: "".to_string() }
+        } else if result == "else" {
+            Token { data_type: TokenType::Else, data: "".to_string() }
+        } else if result == "elif" {
+            Token { data_type: TokenType::Elif, data: "".to_string() }
+        } else if result == "while" {
+            Token { data_type: TokenType::While, data: "".to_string() }
+        } else if result == "for" {
+            Token { data_type: TokenType::For, data: "".to_string() }
+        } else {
+            Token { data_type: TokenType::Word, data: result }
+        };
     }
 
     pub fn get_quotes(quote: u8, index: &mut usize, buffer: &[u8]) -> Token {
@@ -185,6 +201,9 @@ pub mod tokenizer {
             } else if next_char == '-' {
                 *index += 2;
                 return Token { data_type: TokenType::Decrement, data: "".to_string() };
+            } else if next_char == '>' {
+                *index += 2;
+                return Token { data_type: TokenType::Pointer, data: "".to_string() };
             } else {
                 *index += 1;
                 return Token { data_type: TokenType::Minus, data: "".to_string() };
@@ -277,13 +296,13 @@ pub mod tokenizer {
                     return Token { data_type: TokenType::SquareBlockEnd, data: "".to_string() };
                 } else
                 // other
-                if c == ':' {
-                    *index += 1;
-                    return Token { data_type: TokenType::Begin, data: "".to_string() };
-                } else
                 if c == ';' {
                     *index += 1;
                     return Token { data_type: TokenType::Endline, data: "".to_string() };
+                } else
+                if c == ':' {
+                    *index += 1;
+                    return Token { data_type: TokenType::Colon, data: "".to_string() };
                 } else
                 if c == ',' {
                     *index += 1;
@@ -306,5 +325,84 @@ pub mod tokenizer {
 
         *index += 1;
         Token { data_type: TokenType::None, data: "".to_string() }
+    }
+
+    pub fn read_tokens(buffer: Vec<u8>) {
+        let mut lines: Vec<Line> = Vec::new();
+        let mut tokens: Vec<Token> = Vec::new();
+        let mut line_ident: u8 = 0;
+        let mut read_line_ident: bool = true;
+
+        let buffer_length = buffer.len();
+        let mut index = 0;
+        while index < buffer_length {
+            let c = buffer[index] as char;
+
+            // ident
+            if c == ' ' && read_line_ident {
+                line_ident += 1;
+                index += 1;
+            } else {
+                read_line_ident = false;
+                // get endline
+                if c == '\n' {
+                    tokens.push( Token { data_type: TokenType::Endline, data: "".to_string()} );
+
+                    line_ident = if line_ident % 2 == 0 { line_ident / 2 } else { (line_ident - 1) / 2 };
+                    lines.push( Line { tokens: tokens.clone(), ident: line_ident } );
+                    line_ident = 0;
+                    
+                    read_line_ident = true;
+                    tokens.clear();
+                    index += 1;
+                } else
+                // delete comment
+                if c == '#' {
+                    delete_comment(&mut index, &buffer, &buffer_length);
+                } else
+                // get number
+                if c.is_digit(10) {
+                    tokens.push( get_number(&mut index, &buffer, &buffer_length) );
+                } else
+                // get word
+                if c.is_alphabetic() {
+                    tokens.push( get_word(&mut index, &buffer, &buffer_length) );
+                } else
+                // get quotes ' " `
+                if c == '\'' || c == '"' || c == '`' {
+                    let token = get_quotes(buffer[index], &mut index, &buffer);
+                    if token.data_type != TokenType::None {
+                        tokens.push(token);
+                    } else {
+                        index += 1;
+                    }
+                } else
+                // get single and double chars
+                if get_single_char(c) {
+                    let token = get_operator(&mut index, &buffer);
+                    if token.data_type != TokenType::None {
+                        tokens.push(token);
+                    } else {
+                        index += 1;
+                    }
+                    // skip
+                } else {
+                    index += 1;
+                }
+            }
+        }
+
+        // output tokens
+        println!("[LOG][INFO] Lines:");
+        for line in &lines {
+            println!("  ident: {}", line.ident);
+            for token in &line.tokens {
+                if !token.data.is_empty() {
+                    println!("    [{}] [{}]", token.data_type.to_string(), token.data);
+                } else {
+                    println!("    [{}]", token.data_type.to_string());
+                }
+            }
+        }
     }
 }

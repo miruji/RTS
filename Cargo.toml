@@ -14,4 +14,4 @@ codegen-units = 1
 lto = "fat"
 panic = "abort"
 overflow-checks = true
-prefer-dynamic = true
+# prefer-dynamic = true

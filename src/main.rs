@@ -9,7 +9,6 @@ use std::env;
 mod tokenizer;
 
 fn main() -> io::Result<()> {
-    use crate::tokenizer::token::token::*;
     use crate::tokenizer::tokenizer::*;
 
     // get args --> key-values
@@ -84,62 +83,8 @@ fn main() -> io::Result<()> {
     }
 
     // read tokens
-    let mut tokens: Vec<Token> = Vec::new();
+    read_tokens(buffer);
 
-    let buffer_length = buffer.len();
-    let mut index = 0;
-    while index < buffer_length {
-        let c = buffer[index] as char;
-
-        // delete comment
-        if c == '#' {
-            delete_comment(&mut index, &buffer, &buffer_length);
-        } else
-        // get endline + end of file
-        if c == '\n' {
-            tokens.push( Token { data_type: TokenType::Endline, data: "".to_string()} );
-            index += 1;
-        } else
-        // get number
-        if c.is_digit(10) {
-            tokens.push( get_number(&mut index, &buffer, &buffer_length) );
-        } else
-        // get word
-        if c.is_alphabetic() {
-            tokens.push( get_word(&mut index, &buffer, &buffer_length) );
-        } else
-        // get quotes ' " `
-        if c == '\'' || c == '"' || c == '`' {
-            let token = get_quotes(buffer[index], &mut index, &buffer);
-            if token.data_type != TokenType::None {
-                tokens.push(token);
-            } else {
-                index += 1;
-            }
-        } else
-        // get single and double chars
-        if get_single_char(c) {
-            let token = get_operator(&mut index, &buffer);
-            if token.data_type != TokenType::None {
-                tokens.push(token);
-            } else {
-                index += 1;
-            }
-            // skip
-        } else {
-            index += 1;
-        }
-    }
-
-    // output tokens
-    println!("[LOG][INFO] Tokens:");
-    for token in &tokens {
-        if !token.data.is_empty() {
-            println!("  [{}] [{}]", token.data_type.to_string(), token.data);
-        } else {
-            println!("  [{}]", token.data_type.to_string());
-        }
-    }
-
+    //
     Ok(())
 }

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./spl -rr Main.s --debug test test2
+./spl -rr test.s #--debug
