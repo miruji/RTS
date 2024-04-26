@@ -45,12 +45,12 @@ pub mod token {
         And,                 // &&
         Or,                  // ||
         // brackets
-        CircleBlockBegin, // (
-        CircleBlockEnd,   // )
-        SquareBlockBegin, // [
-        SquareBlockEnd,   // ]
-        FigureBlockBegin, // {
-        FigureBlockEnd,   // }
+        CircleBracketBegin, // (
+        CircleBracketEnd,   // )
+        SquareBracketBegin, // [
+        SquareBracketEnd,   // ]
+        FigureBracketBegin, // {
+        FigureBracketEnd,   // }
         // other
         Colon,   // :
         Pointer, // ->
@@ -58,8 +58,12 @@ pub mod token {
         If,   // if
         Else, // else
         Elif, // else if
+        
         While, // while
         For,   // for
+
+        Final, // final
+        Const, // const
     }
 
     impl ToString for TokenType {
@@ -104,12 +108,12 @@ pub mod token {
                 TokenType::And                 => "AND".to_string(),                    // &&
                 TokenType::Or                  => "OR".to_string(),                     // ||
                 // brackets
-                TokenType::CircleBlockBegin => "CIRCLE_BLOCK_BEGIN".to_string(), // (
-                TokenType::CircleBlockEnd   => "CIRCLE_BLOCK_END".to_string(),   // )
-                TokenType::SquareBlockBegin => "SQUARE_BLOCK_BEGIN".to_string(), // [
-                TokenType::SquareBlockEnd   => "SQUARE_BLOCK_END".to_string(),   // ]
-                TokenType::FigureBlockBegin => "FIGURE_BLOCK_BEGIN".to_string(), // {
-                TokenType::FigureBlockEnd   => "FIGURE_BLOCK_END".to_string(),   // }
+                TokenType::CircleBracketBegin => "CIRCLE_BRACKET_BEGIN".to_string(), // (
+                TokenType::CircleBracketEnd   => "CIRCLE_BRACKET_END".to_string(),   // )
+                TokenType::SquareBracketBegin => "SQUARE_BRACKET_BEGIN".to_string(), // [
+                TokenType::SquareBracketEnd   => "SQUARE_BRACKET_END".to_string(),   // ]
+                TokenType::FigureBracketBegin => "FIGURE_BRACKET_BEGIN".to_string(), // {
+                TokenType::FigureBracketEnd   => "FIGURE_BRACKET_END".to_string(),   // }
                 // other
                 TokenType::Colon => "COLON".to_string(),     // :
                 TokenType::Pointer => "POINTER".to_string(), // ->
@@ -117,8 +121,12 @@ pub mod token {
                 TokenType::If => "IF".to_string(),     // if
                 TokenType::Else => "ELSE".to_string(), // else
                 TokenType::Elif => "ELIF".to_string(), // else if
+
                 TokenType::While => "WHILE".to_string(), // while
                 TokenType::For => "FOR".to_string(),     // for
+
+                TokenType::Final => "FINAL".to_string(), // final
+                TokenType::Const => "CONST".to_string(), // const
             }
         }
     }

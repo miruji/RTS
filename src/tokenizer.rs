@@ -8,7 +8,7 @@ pub mod tokenizer {
     use crate::tokenizer::token::token::*;
     use crate::tokenizer::line::line::*;
 
-    pub fn delete_comment(index: &mut usize, buffer: &[u8], buffer_length: &usize) {
+    fn delete_comment(index: &mut usize, buffer: &[u8], buffer_length: &usize) {
         if buffer[*index] != b'#' {
             return;
         }
@@ -42,7 +42,7 @@ pub mod tokenizer {
         }
     }
 
-    pub fn get_single_char(c: char) -> bool {
+    fn get_single_char(c: char) -> bool {
         // signle math
         c == '+' || c == '-' || c == '*' || c == '/' || c == '=' || c == '%' ||
             // single logical
@@ -58,7 +58,7 @@ pub mod tokenizer {
             c == '.'
     }
 
-    pub fn get_number(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
+    fn get_number(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
         let mut index_buffer = *index;
         let mut result = String::new();
 
@@ -92,7 +92,7 @@ pub mod tokenizer {
         Token { data_type: TokenType::Number, data: result }
     }
 
-    pub fn get_word(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
+    fn get_word(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
         let mut index_buffer = *index;
         let mut result = String::new();
 
@@ -117,21 +117,25 @@ pub mod tokenizer {
         }
         //
         return if result == "if" {
-            Token { data_type: TokenType::If, data: "".to_string() }
+            Token { data_type: TokenType::If, data: String::new() }
         } else if result == "else" {
-            Token { data_type: TokenType::Else, data: "".to_string() }
+            Token { data_type: TokenType::Else, data: String::new() }
         } else if result == "elif" {
-            Token { data_type: TokenType::Elif, data: "".to_string() }
+            Token { data_type: TokenType::Elif, data: String::new() }
         } else if result == "while" {
-            Token { data_type: TokenType::While, data: "".to_string() }
+            Token { data_type: TokenType::While, data: String::new() }
         } else if result == "for" {
-            Token { data_type: TokenType::For, data: "".to_string() }
+            Token { data_type: TokenType::For, data: String::new() }
+        } else if result == "final" {
+            Token { data_type: TokenType::Final, data: String::new() }
+        } else if result == "const" {
+            Token { data_type: TokenType::Const, data: String::new() }
         } else {
             Token { data_type: TokenType::Word, data: result }
         };
     }
 
-    pub fn get_quotes(quote: u8, index: &mut usize, buffer: &[u8]) -> Token {
+    fn get_quotes(quote: u8, index: &mut usize, buffer: &[u8]) -> Token {
         let input_length = buffer.len();
         let mut result = String::new();
         if buffer[*index] == quote {
@@ -180,91 +184,91 @@ pub mod tokenizer {
         Token { data_type: TokenType::None, data: String::new() }
     }
 
-    pub fn get_operator(index: &mut usize, buffer: &[u8]) -> Token {
+    fn get_operator(index: &mut usize, buffer: &[u8]) -> Token {
         let next_char = buffer[*index+1] as char;
         match buffer[*index] as char {
             // += ++ +
             '+' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::PlusEquals, data: "".to_string() };
+                return Token { data_type: TokenType::PlusEquals, data: String::new() };
             } else if next_char == '+' {
                 *index += 2;
-                return Token { data_type: TokenType::Increment, data: "".to_string() };
+                return Token { data_type: TokenType::Increment, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Plus, data: "".to_string() };
+                return Token { data_type: TokenType::Plus, data: String::new() };
             },
             // -= -- -
             '-' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::MinusEquals, data: "".to_string() };
+                return Token { data_type: TokenType::MinusEquals, data: String::new() };
             } else if next_char == '-' {
                 *index += 2;
-                return Token { data_type: TokenType::Decrement, data: "".to_string() };
+                return Token { data_type: TokenType::Decrement, data: String::new() };
             } else if next_char == '>' {
                 *index += 2;
-                return Token { data_type: TokenType::Pointer, data: "".to_string() };
+                return Token { data_type: TokenType::Pointer, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Minus, data: "".to_string() };
+                return Token { data_type: TokenType::Minus, data: String::new() };
             },
             // *= *
             '*' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::MultiplyEquals, data: "".to_string() };
+                return Token { data_type: TokenType::MultiplyEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Multiply, data: "".to_string() };
+                return Token { data_type: TokenType::Multiply, data: String::new() };
             },
             // /= /
             '/' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::DivideEquals, data: "".to_string() };
+                return Token { data_type: TokenType::DivideEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Divide, data: "".to_string() };
+                return Token { data_type: TokenType::Divide, data: String::new() };
             },
             // >= >
             '>' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::GreaterThanOrEquals, data: "".to_string() };
+                return Token { data_type: TokenType::GreaterThanOrEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::GreaterThan, data: "".to_string() };
+                return Token { data_type: TokenType::GreaterThan, data: String::new() };
             },
             // <=
             '<' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::LessThanOrEquals, data: "".to_string() };
+                return Token { data_type: TokenType::LessThanOrEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::LessThan, data: "".to_string() };
+                return Token { data_type: TokenType::LessThan, data: String::new() };
             },
             // != !
             '!' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::NotEquals, data: "".to_string() };
+                return Token { data_type: TokenType::NotEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Not, data: "".to_string() };
+                return Token { data_type: TokenType::Not, data: String::new() };
             },
             // == =
             '=' => if next_char == '=' {
                 *index += 2;
-                return Token { data_type: TokenType::DoubleEquals, data: "".to_string() };
+                return Token { data_type: TokenType::DoubleEquals, data: String::new() };
             } else {
                 *index += 1;
-                return Token { data_type: TokenType::Equals, data: "".to_string() };
+                return Token { data_type: TokenType::Equals, data: String::new() };
             },
             // &&
             '&' => if next_char == '&' {
                 *index += 2;
-                return Token { data_type: TokenType::And, data: "".to_string() };
+                return Token { data_type: TokenType::And, data: String::new() };
             },
             // ||
             '|' => if next_char == '|' {
                 *index += 2;
-                return Token { data_type: TokenType::Or, data: "".to_string() };
+                return Token { data_type: TokenType::Or, data: String::new() };
             },
             // single chars
             _ => {
@@ -273,58 +277,99 @@ pub mod tokenizer {
                 // block
                 if c == '(' {
                     *index += 1;
-                    return Token { data_type: TokenType::CircleBlockBegin, data: "".to_string() };
+                    return Token { data_type: TokenType::CircleBracketBegin, data: String::new() };
                 } else
                 if c == ')' {
                     *index += 1;
-                    return Token { data_type: TokenType::CircleBlockEnd, data: "".to_string() };
+                    return Token { data_type: TokenType::CircleBracketEnd, data: String::new() };
                 } else
                 if c == '{' {
                     *index += 1;
-                    return Token { data_type: TokenType::FigureBlockBegin, data: "".to_string() };
+                    return Token { data_type: TokenType::FigureBracketBegin, data: String::new() };
                 } else
                 if c == '}' {
                     *index += 1;
-                    return Token { data_type: TokenType::FigureBlockEnd, data: "".to_string() };
+                    return Token { data_type: TokenType::FigureBracketEnd, data: String::new() };
                 } else
                 if c == '[' {
                     *index += 1;
-                    return Token { data_type: TokenType::SquareBlockBegin, data: "".to_string() };
+                    return Token { data_type: TokenType::SquareBracketBegin, data: String::new() };
                 } else
                 if c == ']' {
                     *index += 1;
-                    return Token { data_type: TokenType::SquareBlockEnd, data: "".to_string() };
+                    return Token { data_type: TokenType::SquareBracketEnd, data: String::new() };
                 } else
                 // other
                 if c == ';' {
                     *index += 1;
-                    return Token { data_type: TokenType::Endline, data: "".to_string() };
+                    return Token { data_type: TokenType::Endline, data: String::new() };
                 } else
                 if c == ':' {
                     *index += 1;
-                    return Token { data_type: TokenType::Colon, data: "".to_string() };
+                    return Token { data_type: TokenType::Colon, data: String::new() };
                 } else
                 if c == ',' {
                     *index += 1;
-                    return Token { data_type: TokenType::Dot, data: "".to_string() };
+                    return Token { data_type: TokenType::Comma, data: String::new() };
                 } else
                 if c == '.' {
                     *index += 1;
-                    return Token { data_type: TokenType::Comma, data: "".to_string() };
+                    return Token { data_type: TokenType::Dot, data: String::new() };
                 } else
                 if c == '%' {
                     *index += 1;
-                    return Token { data_type: TokenType::Modulo, data: "".to_string() };
+                    return Token { data_type: TokenType::Modulo, data: String::new() };
                 } else
                 if c == '?' {
                     *index += 1;
-                    return Token { data_type: TokenType::Question, data: "".to_string() };
+                    return Token { data_type: TokenType::Question, data: String::new() };
                 }
             },
         }
 
         *index += 1;
-        Token { data_type: TokenType::None, data: "".to_string() }
+        Token { data_type: TokenType::None, data: String::new() }
+    }
+
+    fn output_lines(lines: &Vec<Line>, ident: usize) {
+        for line in lines {
+            println!("{}* Line", " ".repeat(ident+2));
+            println!("{}Tokens:", " ".repeat(ident+4));
+            for token in &line.tokens {
+                if !token.data.is_empty() {
+                    println!("{}{} [{}]", " ".repeat(ident+6), token.data_type.to_string(), token.data);
+                } else {
+                    println!("{}{}", " ".repeat(ident+6), token.data_type.to_string());
+                }
+            }
+            if (&line.lines).len() > 0 {
+                println!("{}Lines:", " ".repeat(ident+4));
+                output_lines(&line.lines, ident+4);
+            }
+            println!("{}.", " ".repeat(ident+4));
+        }
+    }
+
+    fn line_nesting(lines: &mut Vec<Line>) {
+        let mut lines_len = lines.len();
+        
+        let mut i = 0;
+        while i < lines_len {
+            let ni = i+1;
+            if ni < lines_len {
+                if lines[i].ident < lines[ni].ident {
+                    let next_line = lines[ni].clone(); // clone next line
+                    lines[i].lines.push(next_line);    // nesting
+                    lines.remove(ni);                  // delete next
+                    lines_len = lines.len();           // update vec len
+                    line_nesting(&mut lines[i].lines); // cycle
+                } else {
+                    i += 1; // next line < current line => skip
+                }
+            } else {
+                break; // if no lines
+            }
+        }
     }
 
     pub fn read_tokens(buffer: Vec<u8>) {
@@ -346,12 +391,12 @@ pub mod tokenizer {
                 read_line_ident = false;
                 // get endline
                 if c == '\n' {
-                    tokens.push( Token { data_type: TokenType::Endline, data: "".to_string()} );
+                    tokens.push( Token { data_type: TokenType::Endline, data: String::new()} );
 
                     line_ident = if line_ident % 2 == 0 { line_ident / 2 } else { (line_ident - 1) / 2 };
-                    lines.push( Line { tokens: tokens.clone(), ident: line_ident } );
+                    lines.push( Line { tokens: tokens.clone(), ident: line_ident, lines: Vec::new() } );
                     line_ident = 0;
-                    
+
                     read_line_ident = true;
                     tokens.clear();
                     index += 1;
@@ -392,17 +437,15 @@ pub mod tokenizer {
             }
         }
 
+        lines.retain(|line| {
+            line.tokens.len() >= 1 && line.tokens[0].data_type != TokenType::Endline
+        });
+
+        // line nesting
+        line_nesting(&mut lines);
+
         // output tokens
         println!("[LOG][INFO] Lines:");
-        for line in &lines {
-            println!("  ident: {}", line.ident);
-            for token in &line.tokens {
-                if !token.data.is_empty() {
-                    println!("    [{}] [{}]", token.data_type.to_string(), token.data);
-                } else {
-                    println!("    [{}]", token.data_type.to_string());
-                }
-            }
-        }
+        output_lines(&lines, 0);
     }
 }
