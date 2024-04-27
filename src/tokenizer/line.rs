@@ -8,7 +8,7 @@ pub mod line {
     #[derive(Clone)]
     pub struct Line {
         pub tokens: Vec<Token>, // list
-        pub ident: u8,          // identation
+        pub ident: usize,       // identation
         pub lines: Vec<Line>,   // child lines
     }
 }

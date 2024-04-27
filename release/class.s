@@ -1,6 +1,7 @@
 ##
   class test
 ##
+
 Human
   public age
   constr(age)
@@ -9,7 +10,7 @@ Human
     println("Deleted")
   public getAge
     = age
-main
-  h = new Human(32)
-  prinln("Human age: "+h.getAge())
-  # next ret 0 and print "Deleted"
+
+h = new Human(32)
+prinln("Human age: "+h.getAge())
+# next ret 0 and print "Deleted"

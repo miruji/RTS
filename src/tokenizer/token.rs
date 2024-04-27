@@ -9,7 +9,7 @@ pub mod token {
         // basic
         None,    // none
         Word,    // word
-        Number,  // number
+        Int,     // integer
         Float,   // float number
         Endline, // endline
         Comma,   // ,
@@ -70,53 +70,54 @@ pub mod token {
         fn to_string(&self) -> String {
             match self {
                 // basic
-                TokenType::None    => "NONE".to_string(),    // none
-                TokenType::Word    => "WORD".to_string(),    // word
-                TokenType::Number  => "NUMBER".to_string(),  // number
-                TokenType::Float   => "FLOAT".to_string(),   // float number
-                TokenType::Endline => "ENDLINE".to_string(), // endline
-                TokenType::Comma   => "COMMA".to_string(),   // ,
-                TokenType::Dot     => "DOT".to_string(),     // .
+                TokenType::None    => "NONE".to_string(),  // none
+                TokenType::Word    => "WORD".to_string(),  // word
+                TokenType::Int     => "INT".to_string(),   // integer
+                TokenType::Float   => "FLOAT".to_string(), // float number
+                TokenType::Endline => "\\n".to_string(),   // endline
+                TokenType::Comma   => ",".to_string(),     // ,
+                TokenType::Dot     => ".".to_string(),     // .
                 // quotes
                 TokenType::BackQuote   => "BACK_QUOTE".to_string(),   // `
                 TokenType::DoubleQuote => "DOUBLE_QUOTE".to_string(), // "
                 TokenType::SingleQuote => "SINGLE_QUOTE".to_string(), // '
                 // single math
-                TokenType::Plus     => "PLUS".to_string(),     // +
-                TokenType::Minus    => "MINUS".to_string(),    // -
-                TokenType::Multiply => "MULTIPLY".to_string(), // *
-                TokenType::Divide   => "DIVIDE".to_string(),   // /
-                TokenType::Equals   => "EQUALS".to_string(),   // =
-                TokenType::Modulo   => "MODULO".to_string(),   // %
+                TokenType::Plus     => "+".to_string(), // +
+                TokenType::Minus    => "-".to_string(), // -
+                TokenType::Multiply => "*".to_string(), // *
+                TokenType::Divide   => "/".to_string(), // /
+                TokenType::Equals   => "=".to_string(), // =
+                TokenType::Modulo   => "%".to_string(), // %
+                // TO:DO: ^ ???
                 // double math
-                TokenType::Increment      => "INCREMENT".to_string(),       // ++
-                TokenType::PlusEquals     => "PLUS_EQUALS".to_string(),     // +=
-                TokenType::Decrement      => "DECREMENT".to_string(),       // --
-                TokenType::MinusEquals    => "MINUS_EQUALS".to_string(),    // -=
-                TokenType::MultiplyEquals => "MULTIPLY_EQUALS".to_string(), // *=
-                TokenType::DivideEquals   => "DIVIDE_EQUALS".to_string(),   // /=
+                TokenType::Increment      => "++".to_string(), // ++
+                TokenType::PlusEquals     => "+=".to_string(), // +=
+                TokenType::Decrement      => "--".to_string(), // --
+                TokenType::MinusEquals    => "-=".to_string(), // -=
+                TokenType::MultiplyEquals => "*=".to_string(), // *=
+                TokenType::DivideEquals   => "/=".to_string(), // /=
                 // single logical
-                TokenType::GreaterThan => "GREATER_THAN".to_string(), // >
-                TokenType::LessThan    => "LESS_THAN".to_string(),    // <
-                TokenType::Question    => "QUESTION".to_string(),     // ?
-                TokenType::Not         => "NOT".to_string(),          // !
+                TokenType::GreaterThan => ">".to_string(), // >
+                TokenType::LessThan    => "<".to_string(), // <
+                TokenType::Question    => "?".to_string(), // ?
+                TokenType::Not         => "!".to_string(), // !
                 // double logical
-                TokenType::GreaterThanOrEquals => "GREATER_THAN_OR_EQUALS".to_string(), // >=
-                TokenType::LessThanOrEquals    => "LESS_THAN_OR_EQUALS".to_string(),    // <=
-                TokenType::NotEquals           => "NOT_EQUALS".to_string(),             // !=
-                TokenType::DoubleEquals        => "DOUBLE_EQUALS".to_string(),          // ==
-                TokenType::And                 => "AND".to_string(),                    // &&
-                TokenType::Or                  => "OR".to_string(),                     // ||
+                TokenType::GreaterThanOrEquals => ">=".to_string(),  // >=
+                TokenType::LessThanOrEquals    => "<=".to_string(),  // <=
+                TokenType::NotEquals           => "!=".to_string(),  // !=
+                TokenType::DoubleEquals        => "==".to_string(),  // ==
+                TokenType::And                 => "AND".to_string(), // &&
+                TokenType::Or                  => "OR".to_string(),  // ||
                 // brackets
-                TokenType::CircleBracketBegin => "CIRCLE_BRACKET_BEGIN".to_string(), // (
-                TokenType::CircleBracketEnd   => "CIRCLE_BRACKET_END".to_string(),   // )
-                TokenType::SquareBracketBegin => "SQUARE_BRACKET_BEGIN".to_string(), // [
-                TokenType::SquareBracketEnd   => "SQUARE_BRACKET_END".to_string(),   // ]
-                TokenType::FigureBracketBegin => "FIGURE_BRACKET_BEGIN".to_string(), // {
-                TokenType::FigureBracketEnd   => "FIGURE_BRACKET_END".to_string(),   // }
+                TokenType::CircleBracketBegin => "(".to_string(), // (
+                TokenType::CircleBracketEnd   => ")".to_string(), // )
+                TokenType::SquareBracketBegin => "[".to_string(), // [
+                TokenType::SquareBracketEnd   => "]".to_string(), // ]
+                TokenType::FigureBracketBegin => "{".to_string(), // {
+                TokenType::FigureBracketEnd   => "}".to_string(), // }
                 // other
-                TokenType::Colon => "COLON".to_string(),     // :
-                TokenType::Pointer => "POINTER".to_string(), // ->
+                TokenType::Colon => ":".to_string(),    // :
+                TokenType::Pointer => "->".to_string(), // ->
                 // words
                 TokenType::If => "IF".to_string(),     // if
                 TokenType::Else => "ELSE".to_string(), // else
@@ -135,5 +136,29 @@ pub mod token {
     pub struct Token {
         pub data: String,
         pub data_type: TokenType,
+        pub tokens: Vec<Token>,
+    }
+    impl Token {
+        pub fn new_empty(data_type: TokenType) -> Self {
+            Token {
+                data: String::new(),
+                data_type,
+                tokens: Vec::new(),
+            }
+        }
+        pub fn new(data_type: TokenType, data: String) -> Self {
+            Token {
+                data,
+                data_type,
+                tokens: Vec::new(),
+            }
+        }
+        pub fn new_full(data_type: TokenType, data: String, tokens: Vec<Token>) -> Self {
+            Token {
+                data,
+                data_type,
+                tokens,
+            }
+        }
     }
 }
