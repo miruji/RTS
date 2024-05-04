@@ -6,7 +6,7 @@ pub mod token {
     #[derive(PartialEq)]
     #[derive(Clone)]
     pub enum TokenType {
-        // basic
+    // basic
         None,    // none
         Word,    // word
         Int,     // integer
@@ -14,53 +14,52 @@ pub mod token {
         Endline, // endline
         Comma,   // ,
         Dot,     // .
-        // quotes
+    // quotes
         BackQuote,   // `
         DoubleQuote, // "
         SingleQuote, // '
-        // single math
+    // single math
         Plus,     // +
         Minus,    // -
         Multiply, // *
         Divide,   // /
         Equals,   // =
         Modulo,   // %
-        // double math
+    // double math
         Increment,      // ++
         PlusEquals,     // +=
         Decrement,      // --
         MinusEquals,    // -=
         MultiplyEquals, // *=
         DivideEquals,   // /=
-        // single logical
+    // single logical
         GreaterThan, // >
         LessThan,    // <
         Question,    // ?
         Not,         // !
-        // double logical
+    // double logical
         GreaterThanOrEquals, // >=
         LessThanOrEquals,    // <=
         NotEquals,           // !=
-        DoubleEquals,        // ==
-        And,                 // &&
-        Or,                  // ||
-        // brackets
+    // brackets
         CircleBracketBegin, // (
         CircleBracketEnd,   // )
         SquareBracketBegin, // [
         SquareBracketEnd,   // ]
         FigureBracketBegin, // {
         FigureBracketEnd,   // }
-        // other
+    // other
         Colon,   // :
         Pointer, // ->
-        // words
-        If,   // if
-        Else, // else
-        Elif, // else if
+    // words
+        If, // if
+        El, // else
+        Ef, // else if
+
+        And, // and
+        Or,  // or
         
-        While, // while
-        For,   // for
+        Loop, // loop
 
         Final, // final
         Const, // const
@@ -70,17 +69,17 @@ pub mod token {
         fn to_string(&self) -> String {
             match self {
                 // basic
-                TokenType::None    => "NONE".to_string(),  // none
-                TokenType::Word    => "WORD".to_string(),  // word
-                TokenType::Int     => "INT".to_string(),   // integer
-                TokenType::Float   => "FLOAT".to_string(), // float number
+                TokenType::None    => "none".to_string(),  // none
+                TokenType::Word    => "word".to_string(),  // word
+                TokenType::Int     => "int".to_string(),   // integer
+                TokenType::Float   => "float".to_string(), // float number
                 TokenType::Endline => "\\n".to_string(),   // endline
                 TokenType::Comma   => ",".to_string(),     // ,
                 TokenType::Dot     => ".".to_string(),     // .
                 // quotes
-                TokenType::BackQuote   => "BACK_QUOTE".to_string(),   // `
-                TokenType::DoubleQuote => "DOUBLE_QUOTE".to_string(), // "
-                TokenType::SingleQuote => "SINGLE_QUOTE".to_string(), // '
+                TokenType::BackQuote   => "back quote".to_string(),   // `
+                TokenType::DoubleQuote => "double quote".to_string(), // "
+                TokenType::SingleQuote => "single quote".to_string(), // '
                 // single math
                 TokenType::Plus     => "+".to_string(), // +
                 TokenType::Minus    => "-".to_string(), // -
@@ -105,9 +104,6 @@ pub mod token {
                 TokenType::GreaterThanOrEquals => ">=".to_string(),  // >=
                 TokenType::LessThanOrEquals    => "<=".to_string(),  // <=
                 TokenType::NotEquals           => "!=".to_string(),  // !=
-                TokenType::DoubleEquals        => "==".to_string(),  // ==
-                TokenType::And                 => "AND".to_string(), // &&
-                TokenType::Or                  => "OR".to_string(),  // ||
                 // brackets
                 TokenType::CircleBracketBegin => "(".to_string(), // (
                 TokenType::CircleBracketEnd   => ")".to_string(), // )
@@ -119,15 +115,17 @@ pub mod token {
                 TokenType::Colon => ":".to_string(),    // :
                 TokenType::Pointer => "->".to_string(), // ->
                 // words
-                TokenType::If => "IF".to_string(),     // if
-                TokenType::Else => "ELSE".to_string(), // else
-                TokenType::Elif => "ELIF".to_string(), // else if
+                TokenType::If   => "if".to_string(), // if
+                TokenType::El => "el".to_string(),   // else
+                TokenType::Ef => "ef".to_string(),   // else if
 
-                TokenType::While => "WHILE".to_string(), // while
-                TokenType::For => "FOR".to_string(),     // for
+                TokenType::And => "and".to_string(), // and
+                TokenType::Or  => "or".to_string(),  // or
 
-                TokenType::Final => "FINAL".to_string(), // final
-                TokenType::Const => "CONST".to_string(), // const
+                TokenType::Loop => "loop".to_string(), // while
+
+                TokenType::Final => "final".to_string(), // final
+                TokenType::Const => "const".to_string(), // const
             }
         }
     }

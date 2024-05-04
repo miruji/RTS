@@ -40,7 +40,7 @@ fn main() -> io::Result<()> {
     }
 
     let mut file_path: String = String::new();
-    let mut no_run = true;
+    let mut no_run: bool = true;
     for (key, values) in &args_keys {
         if key == "-rr" {
             if (&values).len() == 1 {

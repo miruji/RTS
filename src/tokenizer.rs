@@ -41,31 +41,31 @@ pub mod tokenizer {
             }
         }
     }
-
+    // get single char token
     fn get_single_char(c: char) -> bool {
-        // signle math
+        // math
         c == '+' || c == '-' || c == '*' || c == '/' || c == '=' || c == '%' ||
-            // single logical
-            c == '>' || c == '<' || c == '?' || c == '!' ||
-            // block
-            c == '(' || c == ')' ||
-            c == '{' || c == '}' ||
-            c == '[' || c == ']' ||
-            // other
-            c == ':' ||
-            c == ';' ||
-            c == ',' ||
-            c == '.'
+        // logical
+        c == '>' || c == '<' || c == '?' || c == '!' || c == '&' || c == '|' ||
+        // bracket
+        c == '(' || c == ')' ||
+        c == '{' || c == '}' ||
+        c == '[' || c == ']' ||
+        // other
+        c == ':' ||
+        c == ';' ||
+        c == ',' ||
+        c == '.'
     }
-
+    // get int-float token by buffer-index
     fn get_number(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
-        let mut index_buffer = *index;
+        let mut index_buffer: usize = *index;
         let mut result = String::new();
 
-        let mut is_dot_checked = false;
+        let mut is_dot_checked:bool = false;
         while index_buffer < *buffer_length {
-            let current_char = buffer[index_buffer] as char;
-            let next_char = if index_buffer+1 < *buffer_length {
+            let current_char: char = buffer[index_buffer] as char;
+            let next_char: char = if index_buffer+1 < *buffer_length {
                 buffer[index_buffer+1] as char
             } else {
                 '\0'
@@ -91,14 +91,14 @@ pub mod tokenizer {
         }
         Token::new(TokenType::Int, result)
     }
-
+    // get word token by buffer-index
     fn get_word(index: &mut usize, buffer: &[u8], buffer_length: &usize) -> Token {
-        let mut index_buffer = *index;
+        let mut index_buffer: usize = *index;
         let mut result = String::new();
 
         while index_buffer < *buffer_length {
-            let current_char = buffer[index_buffer] as char;
-            let next_char = if index_buffer + 1 < *buffer_length {
+            let current_char: char = buffer[index_buffer] as char;
+            let next_char: char = if index_buffer + 1 < *buffer_length {
                 buffer[index_buffer + 1] as char
             } else {
                 '\0'
@@ -118,39 +118,45 @@ pub mod tokenizer {
         //
         return if result == "if" {
             Token::new_empty(TokenType::If)
-        } else if result == "else" {
-            Token::new_empty(TokenType::Else)
-        } else if result == "elif" {
-            Token::new_empty(TokenType::Elif)
-        } else if result == "while" {
-            Token::new_empty(TokenType::While)
-        } else if result == "for" {
-            Token::new_empty(TokenType::For)
+        } else if result == "el" {
+            Token::new_empty(TokenType::El)
+        } else if result == "ef" {
+            Token::new_empty(TokenType::Ef)
+        //
+        } else if result == "and" {
+            Token::new_empty(TokenType::And)
+        } else if result == "or" {
+            Token::new_empty(TokenType::Or)
+        //
+        } else if result == "loop" {
+            Token::new_empty(TokenType::Loop)
+        //
         } else if result == "final" {
             Token::new_empty(TokenType::Final)
         } else if result == "const" {
             Token::new_empty(TokenType::Const)
+        //
         } else {
             Token::new(TokenType::Word, result)
         };
     }
-
+    // get quotes token by buffer-index
     fn get_quotes(quote: u8, index: &mut usize, buffer: &[u8]) -> Token {
-        let input_length = buffer.len();
+        let input_length: usize = buffer.len();
         let mut result = String::new();
         if buffer[*index] == quote {
             // if (counter+1 >= input_length) new Log(LogType.error,"[Tokenizer]: Quote was not closed at the end");
 
-            let mut open_single_comment = false;
+            let mut open_single_comment:bool = false;
 
             while *index < input_length {
-                let current_char = buffer[*index] as char;
+                let current_char: char = buffer[*index] as char;
                 result.push(current_char);
                 if current_char == quote as char {
-                    let mut no_slash = true;
+                    let mut no_slash: bool = true;
                     // check back slash of end quote
                     if buffer[*index-1] == b'\\' {
-                        let mut backslash_counter = 0;
+                        let mut backslash_counter:i32 = 0;
                         for i in (*index-1)..0 {
                             if buffer[i] == b'\\' {
                                 backslash_counter += 1;
@@ -184,9 +190,9 @@ pub mod tokenizer {
             Token::new_empty(TokenType::None)
         }
     }
-
+    // get operator token by buffer-index
     fn get_operator(index: &mut usize, buffer: &[u8]) -> Token {
-        let next_char = buffer[*index+1] as char;
+        let next_char: char = buffer[*index+1] as char;
         match buffer[*index] as char {
             // += ++ +
             '+' => if next_char == '=' {
@@ -254,10 +260,7 @@ pub mod tokenizer {
                 return Token::new_empty(TokenType::Not);
             },
             // == =
-            '=' => if next_char == '=' {
-                *index += 2;
-                return Token::new_empty(TokenType::DoubleEquals);
-            } else {
+            '=' => {
                 *index += 1;
                 return Token::new_empty(TokenType::Equals);
             },
@@ -273,7 +276,7 @@ pub mod tokenizer {
             },
             // single chars
             _ => {
-                let c = buffer[*index] as char;
+                let c: char = buffer[*index] as char;
 
                 // block
                 if c == '(' {
@@ -332,6 +335,11 @@ pub mod tokenizer {
         Token::new(TokenType::None, String::new())
     }
 
+    // bracket nasting [b bracket -> e bracket]
+    //             [+ recall in token child tokens]
+    // 1 () no tokens childrens -> 
+    // 2 [] tokens childrens 1  ->
+    // 3 {} tokens childres 1+2
     fn bracket_nesting(tokens: &mut Vec<Token>, begin_type: TokenType, end_type: TokenType) {
         for token in tokens.iter_mut() {
             if token.tokens.len() > 0 {
@@ -340,10 +348,11 @@ pub mod tokenizer {
         }
         block_nesting(tokens, begin_type.clone(), end_type.clone());
     }
+    // block nasting [b token -> e token]
     fn block_nesting(tokens: &mut Vec<Token>, begin_type: TokenType, end_type: TokenType) {
         let mut brackets = Vec::<usize>::new();
 
-        let mut i = 0;
+        let mut i: usize = 0;
         while i < tokens.len() {
             let token = tokens[i].clone();
             // begin
@@ -378,9 +387,9 @@ pub mod tokenizer {
             i += 1;
         }
     }
-
+    // line nesting [line -> line]
     fn line_nesting(lines: &mut Vec<Line>) {
-        let mut lines_len = lines.len();
+        let mut lines_len: usize = lines.len();
         let mut i: usize = 0;
         while i < lines_len {
             let ni: usize = i+1;
@@ -400,6 +409,7 @@ pub mod tokenizer {
         }
     }
 
+    // output token and its tokens
     fn output_tokens(tokens: &Vec<Token>, line_ident: usize, ident: usize) {
         for token in tokens {
             if !token.data.is_empty() {
@@ -412,6 +422,7 @@ pub mod tokenizer {
             }
         }
     }
+    // output line info
     fn output_lines(lines: &Vec<Line>, ident: usize) {
         for line in lines {
             println!("{}* Line", " ".repeat(ident+2));
@@ -425,16 +436,17 @@ pub mod tokenizer {
         }
     }
 
+    // main tokens reader cycle
     pub fn read_tokens(buffer: Vec<u8>) {
         let mut lines: Vec<Line> = Vec::new();
         let mut tokens: Vec<Token> = Vec::new();
         let mut line_ident: usize = 0;
         let mut read_line_ident: bool = true;
 
-        let buffer_length = buffer.len();
-        let mut index = 0;
+        let buffer_length: usize = buffer.len();
+        let mut index: usize = 0;
         while index < buffer_length {
-            let c = buffer[index] as char;
+            let c: char = buffer[index] as char;
 
             // ident
             if c == ' ' && read_line_ident {
@@ -444,7 +456,6 @@ pub mod tokenizer {
                 read_line_ident = false;
                 // get endline
                 if c == '\n' {
-                    tokens.push( Token::new_empty(TokenType::Endline) );
                     // bracket nesting
                     bracket_nesting(&mut tokens, TokenType::CircleBracketBegin, TokenType::CircleBracketEnd);
                     bracket_nesting(&mut tokens, TokenType::SquareBracketBegin, TokenType::SquareBracketEnd);
@@ -463,7 +474,7 @@ pub mod tokenizer {
                 if c == '#' {
                     delete_comment(&mut index, &buffer, &buffer_length);
                 } else
-                // get int/float
+                // get int-float
                 if c.is_digit(10) {
                     tokens.push( get_number(&mut index, &buffer, &buffer_length) );
                 } else
@@ -473,7 +484,7 @@ pub mod tokenizer {
                 } else
                 // get quotes ' " `
                 if c == '\'' || c == '"' || c == '`' {
-                    let token = get_quotes(buffer[index], &mut index, &buffer);
+                    let token: Token = get_quotes(buffer[index], &mut index, &buffer);
                     if token.data_type != TokenType::None {
                         tokens.push(token);
                     } else {
@@ -482,7 +493,7 @@ pub mod tokenizer {
                 } else
                 // get single and double chars
                 if get_single_char(c) {
-                    let token = get_operator(&mut index, &buffer);
+                    let token: Token = get_operator(&mut index, &buffer);
                     if token.data_type != TokenType::None {
                         tokens.push(token);
                     } else {
@@ -495,6 +506,7 @@ pub mod tokenizer {
             }
         }
 
+        // delete empty lines
         lines.retain(|line| {
             line.tokens.len() >= 1 && line.tokens[0].data_type != TokenType::Endline
         });

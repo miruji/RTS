@@ -1,10 +1,17 @@
 ##
-  if-else-equal test
+  if-else-equal
+  
+  declarate:
+    varName = 
+      down line  -> 
+      down lines -> 
+      block      -> 
+      value
 ##
 
 a = 10
-b = if a == 10
-  20
-else
-  30
-# next ret 0
+b = 
+  if a = 10
+    20
+  el
+    30

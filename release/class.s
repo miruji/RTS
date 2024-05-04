@@ -1,5 +1,13 @@
 ##
-  class test
+  class
+
+  struct
+    ** upper first char
+    Human
+      age    (public var)
+      constr (not   class name)
+      destr  (not ~ class name)
+      getAge (function)
 ##
 
 Human
