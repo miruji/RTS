@@ -6,6 +6,19 @@
     main function doesn't make sense
 ##
 
+Test
+  constr
+
+Test2
+  Man
+  Woman
+
+testList
+  "name": "test"
+
+testFunction
+  println(10)
+
 argv_len = argv.len()
 println(argc, argv.len())
 

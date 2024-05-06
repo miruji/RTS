@@ -7,9 +7,11 @@ use std::io::{self, Read};
 use std::env;
 
 mod tokenizer;
+mod parser;
 
 fn main() -> io::Result<()> {
-    use crate::tokenizer::tokenizer::*;
+    use crate::tokenizer::*;
+    use crate::parser::*;
 
     // get args --> key-values
     let mut args_keys: Vec<(String, Vec<String>)> = Vec::new();
@@ -82,8 +84,8 @@ fn main() -> io::Result<()> {
         }
     }
 
-    // read tokens
-    read_tokens(buffer);
+    // read
+    parse_lines( &mut read_tokens(buffer) );
 
     //
     Ok(())
