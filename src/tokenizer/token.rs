@@ -8,8 +8,6 @@ pub enum TokenType {
 // basic
     None,    // none
     Word,    // word
-    Int,     // integer
-    Float,   // float number
     Endline, // endline
     Comma,   // ,
     Dot,     // .
@@ -51,9 +49,12 @@ pub enum TokenType {
     Colon,   // :
     Pointer, // ->
 // words
-    If, // if
-    El, // else
-    Ef, // else if
+    Int,      // integer
+    UInt,     // unsigned integer
+    Float,    // float
+    UFloat,   // unsigned float
+    Rational, // rational
+    Complex,  // complex
 
     And, // and
     Or,  // or
@@ -61,70 +62,69 @@ pub enum TokenType {
     Loop, // loop
 
     Final, // final
-    Const, // const
 }
 
 impl ToString for TokenType {
     fn to_string(&self) -> String {
         match self {
             // basic
-            TokenType::None    => "none".to_string(),  // none
-            TokenType::Word    => "word".to_string(),  // word
-            TokenType::Int     => "int".to_string(),   // integer
-            TokenType::Float   => "float".to_string(), // float number
-            TokenType::Endline => "\\n".to_string(),   // endline
-            TokenType::Comma   => ",".to_string(),     // ,
-            TokenType::Dot     => ".".to_string(),     // .
+            TokenType::None    => String::from("None"),    // none
+            TokenType::Word    => String::from("Word"),    // word
+            TokenType::Endline => String::from("\\n"),     // endline
+            TokenType::Comma   => String::from(","),       // ,
+            TokenType::Dot     => String::from("."),       // .
             // quotes
-            TokenType::BackQuote   => "back quote".to_string(),   // `
-            TokenType::DoubleQuote => "double quote".to_string(), // "
-            TokenType::SingleQuote => "single quote".to_string(), // '
+            TokenType::BackQuote   => String::from("Back quote"),   // `
+            TokenType::DoubleQuote => String::from("Double quote"), // "
+            TokenType::SingleQuote => String::from("Single quote"), // '
             // single math
-            TokenType::Plus     => "+".to_string(), // +
-            TokenType::Minus    => "-".to_string(), // -
-            TokenType::Multiply => "*".to_string(), // *
-            TokenType::Divide   => "/".to_string(), // /
-            TokenType::Equals   => "=".to_string(), // =
-            TokenType::Modulo   => "%".to_string(), // %
+            TokenType::Plus     => String::from("+"), // +
+            TokenType::Minus    => String::from("-"), // -
+            TokenType::Multiply => String::from("*"), // *
+            TokenType::Divide   => String::from("/"), // /
+            TokenType::Equals   => String::from("="), // =
+            TokenType::Modulo   => String::from("%"), // %
             // TO:DO: ^ ???
             // double math
-            TokenType::Increment      => "++".to_string(), // ++
-            TokenType::PlusEquals     => "+=".to_string(), // +=
-            TokenType::Decrement      => "--".to_string(), // --
-            TokenType::MinusEquals    => "-=".to_string(), // -=
-            TokenType::MultiplyEquals => "*=".to_string(), // *=
-            TokenType::DivideEquals   => "/=".to_string(), // /=
+            TokenType::Increment      => String::from("++"), // ++
+            TokenType::PlusEquals     => String::from("+="), // +=
+            TokenType::Decrement      => String::from("--"), // --
+            TokenType::MinusEquals    => String::from("-="), // -=
+            TokenType::MultiplyEquals => String::from("*="), // *=
+            TokenType::DivideEquals   => String::from("/="), // /=
             // single logical
-            TokenType::GreaterThan => ">".to_string(), // >
-            TokenType::LessThan    => "<".to_string(), // <
-            TokenType::Question    => "?".to_string(), // ?
-            TokenType::Not         => "!".to_string(), // !
+            TokenType::GreaterThan => String::from(">"), // >
+            TokenType::LessThan    => String::from("<"), // <
+            TokenType::Question    => String::from("?"), // ?
+            TokenType::Not         => String::from("!"), // !
             // double logical
-            TokenType::GreaterThanOrEquals => ">=".to_string(),  // >=
-            TokenType::LessThanOrEquals    => "<=".to_string(),  // <=
-            TokenType::NotEquals           => "!=".to_string(),  // !=
+            TokenType::GreaterThanOrEquals => String::from(">="),  // >=
+            TokenType::LessThanOrEquals    => String::from("<="),  // <=
+            TokenType::NotEquals           => String::from("!="),  // !=
             // brackets
-            TokenType::CircleBracketBegin => "(".to_string(), // (
-            TokenType::CircleBracketEnd   => ")".to_string(), // )
-            TokenType::SquareBracketBegin => "[".to_string(), // [
-            TokenType::SquareBracketEnd   => "]".to_string(), // ]
-            TokenType::FigureBracketBegin => "{".to_string(), // {
-            TokenType::FigureBracketEnd   => "}".to_string(), // }
+            TokenType::CircleBracketBegin => String::from("("), // (
+            TokenType::CircleBracketEnd   => String::from(")"), // )
+            TokenType::SquareBracketBegin => String::from("["), // [
+            TokenType::SquareBracketEnd   => String::from("]"), // ]
+            TokenType::FigureBracketBegin => String::from("{"), // {
+            TokenType::FigureBracketEnd   => String::from("}"), // }
             // other
-            TokenType::Colon   => ":".to_string(),  // :
-            TokenType::Pointer => "->".to_string(), // ->
+            TokenType::Colon   => String::from(":"),  // :
+            TokenType::Pointer => String::from("->"), // ->
             // words
-            TokenType::If => "if".to_string(), // if
-            TokenType::El => "el".to_string(), // else
-            TokenType::Ef => "ef".to_string(), // else if
+            TokenType::Int      => String::from("Int"),      // integer
+            TokenType::UInt     => String::from("UInt"),     // unsigned integer
+            TokenType::Float    => String::from("Float"),    // float
+            TokenType::UFloat   => String::from("UFloat"),   // unsigned float
+            TokenType::Rational => String::from("Rational"), // rational
+            TokenType::Complex  => String::from("Complex"),  // complex
 
-            TokenType::And => "and".to_string(), // and
-            TokenType::Or  => "or".to_string(),  // or
+            TokenType::And => String::from("and"), // and
+            TokenType::Or  => String::from("or"),  // or
 
-            TokenType::Loop => "loop".to_string(), // while
+            TokenType::Loop => String::from("loop"), // while
 
-            TokenType::Final => "final".to_string(), // final
-            TokenType::Const => "const".to_string(), // const
+            TokenType::Final => String::from("final"), // final
         }
     }
 }
@@ -132,28 +132,28 @@ impl ToString for TokenType {
 #[derive(Clone)]
 pub struct Token {
     pub data: String,
-    pub data_type: TokenType,
+    pub dataType: TokenType,
     pub tokens: Vec<Token>,
 }
 impl Token {
-    pub fn new_empty(data_type: TokenType) -> Self {
+    pub fn newEmpty(dataType: TokenType) -> Self {
         Token {
             data: String::new(),
-            data_type,
+            dataType,
             tokens: Vec::new(),
         }
     }
-    pub fn new(data_type: TokenType, data: String) -> Self {
+    pub fn new(dataType: TokenType, data: String) -> Self {
         Token {
             data,
-            data_type,
+            dataType,
             tokens: Vec::new(),
         }
     }
-    pub fn new_full(data_type: TokenType, data: String, tokens: Vec<Token>) -> Self {
+    pub fn newFull(dataType: TokenType, data: String, tokens: Vec<Token>) -> Self {
         Token {
             data,
-            data_type,
+            dataType,
             tokens,
         }
     }

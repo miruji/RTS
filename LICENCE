@@ -1,4 +1,4 @@
-spl License 06.12.2023
+spl License 06.05.2024
 Copyright (c) 2023 miruji
 
 Hereinafter, simply 'Software' or 'Project' refers to the source code of the current 
@@ -6,10 +6,18 @@ project, the libraries created for it, documentation, and compiled files distrib
 by the licensor. The licensor grants the right to others to participate in the 
 development and modernization of the project, distribute them, and operate them.
 
-This License uses the date as its current version. Only the License that accompanied
-the distribution applies to this software. Therefore, this software is distributed
-under this License. It also means that previous Licenses have no dependency on
-subsequent Licenses and continue to operate independently of each other.
+This License uses the date as its current version. However, only the License that 
+accompanied the distribution applies to this software. Therefore, this software 
+is distributed under this License. In case of using newer versions of software,
+the accompanying newer available license should be specified. It also means that 
+previous licenses are independent of subsequent Licenses and continue to operate 
+independently of each other, but do not allow use of newer versions of this software.
+** It is possible to mix software of one version with another, but in this case you 
+   will have to strictly follow clause 4 of the Terms of Use, and you will also have 
+   to indicate all related licenses similar to this paragraph.
+
+It also means that previous Licenses have no dependency 
+on subsequent Licenses and continue to operate independently of each other.
 
 This software cannot be used and distributed in any form if the terms of use and
 distribution are violated. Additionally, no other licenses can be applied to this
@@ -32,7 +40,7 @@ of contract, tort or otherwise, arising from, out of or in connection with the
 software or the use or other dealings in the software.
 
 Neither the developer of this software nor the names of its contributors may 
-be used to endorse or promote products derived from this software without 
+be used to endorse or promote products derived from this software without their 
 specific prior written permission.
 
 Terms of Use:
@@ -43,8 +51,10 @@ Terms of Use:
 
   2. When distributing this software in either source or binary form, 
      you are obligated to retain the License for distributing the source code.
-     This can be done through comments, file headers, or other appropriate means.
-     You must reference the text of this License along with its current version.
+
+     This can also be done using comments, headers in the file or other suitable means.
+     You must refer to the text of this License together with the current version of it, 
+     and therefore explicitly provide it.
 
   3. You are not allowed to use this software for commercial purposes without prior 
      written permission from the author of this License. You may disregard this 
@@ -62,7 +72,8 @@ Terms of Use:
      of the modifications made.
 
      This does not apply to new authoring code, which does not change the source code, 
-     but is an addition to it. In this case, as stated above, you are responsible for it.
+     but is an addition to it. In this case, as stated above, you do it yourself as 
+     you wish.
 
   5. This License does not grant you any rights to patents, trademarks, or other 
      intellectual property associated with this software.

@@ -1,20 +1,9 @@
 ##
   ab
-
-  **
-    ** lower first char
-    name
-    parameters
-      final Int a -> = const first a value
-      final Int b -> = const first b value
-    return type
-      Int
-    content
-      a + b
 ##
+                          # if lower fist char
+ab(a: Int, b: Int) -> Int # final a, final b, expected Integer
+  = a + b                 # return Integer value
 
-ab(final Int a, final Int b) -> Int
-  = a + b
-
-c = ab(10, 20)
-println(c)
+c = ab(10, -20) # final Unsigned
+println(c)      # println c (-10)

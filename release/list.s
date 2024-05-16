@@ -1,21 +1,9 @@
 ##
   list
-
-  struct:
-    key-value
-
-  declarate:
-    ** lower first char
-    varName
-      ** next line + tab+1
-      content
-
-  appeal: 
-    listName.key -> get key value
 ##
 
-obj
-  "name": "test name"
+obj                   # if lower first char
+  "name": "test name" # items "key" -> value
   "id": 10
 
-println(obj.name, obj.id)
+println(obj.name, obj.id) # get key value

@@ -1,19 +1,15 @@
 ##
   array
-
-  declarate:
-    ** lower first char
-    varType varriableName = [content]
-
-  or:
-    ** lower first char
-    varName = [content]
-
-  appeal:
-    varName[index]
 ##
+                  # if lower first char
+~a = [10, 20, 30] # var locked-array
 
-a = [10, 20, 30]
-println(a[0]) # print 10
-a[2] = 40
-println(a[2]) # print 40
+println(a[2]) # println 30
+a[2] = 40     #  30 -> 40
+println(a[2]) # println 40
+
+b = a                     # copy a to final locked-Array
+~~c: Array<Unsigned> = b  # copy b to var unlocked-Array
+
+c[2] = -30    # now c is a Array<Integer>
+println(c[2]) # println -30

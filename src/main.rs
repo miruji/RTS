@@ -1,72 +1,99 @@
 /*
     spl init file
 */
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 use std::fs::File;
 use std::io::{self, Read};
 use std::env;
 
+mod logger;
 mod tokenizer;
 mod parser;
 
+pub static mut filePath: String = String::new();
 fn main() -> io::Result<()> {
+    use crate::logger::*;
     use crate::tokenizer::*;
     use crate::parser::*;
 
+    logSeparator("=> Reading arguments");
+
     // get args --> key-values
-    let mut args_keys: Vec<(String, Vec<String>)> = Vec::new();
+    let mut argsKeys: Vec<(String, Vec<String>)> = Vec::new();
     {
         let args: Vec<String> = env::args().collect();
-        let mut key_values: Vec<String> = Vec::new();
-        let mut read_key: String = String::new();
+        let mut keyValues: Vec<String> = Vec::new();
+        let mut readKey: String = String::new();
         for arg in args.iter().skip(1) {
-            if (arg.len() >= 2 && &arg[0..2] == "--") ||
-               (arg.len() >= 1 && &arg[0..1] == "-") {
+            //if (arg.len() >= 2 && &arg[0..2] == "--") ||
+            if arg.len() >= 1 && &arg[0..1] == "-" {
                 // --
-                if !read_key.is_empty() {
-                    args_keys.push((read_key.clone(), key_values.clone()));
-                    key_values.clear();
+                if !readKey.is_empty() {
+                    argsKeys.push((readKey.clone(), keyValues.clone()));
+                    keyValues.clear();
                 }
-                read_key = arg.clone();
+                readKey = arg.clone();
             } else {
                 // read key
-                if !read_key.is_empty() {
-                    key_values.push(arg.clone());
+                if !readKey.is_empty() {
+                    keyValues.push(arg.clone());
                 }
             }
         }
-        if !read_key.is_empty() {
-            args_keys.push((read_key.clone(), key_values.clone()));
-            key_values.clear();
+        if !readKey.is_empty() {
+            argsKeys.push((readKey.clone(), keyValues.clone()));
+            keyValues.clear();
         }
     }
 
-    let mut file_path: String = String::new();
-    let mut no_run: bool = true;
-    for (key, values) in &args_keys {
-        if key == "-rr" {
-            if (&values).len() == 1 {
-                file_path = values[0].clone();
-                no_run = false;
+    let mut noRun:     bool = true;
+    let mut debugMode: bool = false;
+    for (key, values) in &argsKeys {
+        let valuesLength: usize = (&values).len();
+        // realtime run
+        if key == "-r" {
+            if valuesLength == 1 {
+                unsafe{ filePath = values[0].clone() };
+                // todo: check filePath file type
+                noRun = false;
+                log("ok",&format!("Run \"{}\"",unsafe{&*filePath}));
+            // valuesLength == 0 -> in noRun if
             } else {
-                println!("[LOG][WARNING] Key [-rr] only accepts one value");
+                log("err","Key [-r] only accepts one value");
+                logExit();
             }
-        } else if key == "--debug" {
-            println!("[LOG][INFO] Started with debug mode");
+        } else
+        // debug mode
+        if key == "-d" {
+            debugMode = true;
+            // todo: add debug
         }
     }
 
-    if no_run {
-        eprintln!("[LOG][WARNING] Use the -rr <filename> flag");
-        std::process::exit(1);
+    if noRun {
+        log("err","Use the [-r <filename>] flag");
+        logExit();
     }
+
+    // print all flags
+    if debugMode {
+        log("ok","Debug mode");
+    }
+
+    logSeparator("=> Opening a file");
 
     // open file
-    let mut file = match File::open(&file_path) {
-        Ok(file) => file,
+    let mut file = match File::open(unsafe{&*filePath}) {
+        Ok(file) => {
+            log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*filePath}));
+            file
+        },
         Err(_) => {
-            eprintln!("[LOG][FATAL] Unable to opening file [{}]", &file_path);
-            std::process::exit(1);
+            log("err",&format!("Unable to opening file \"{}\"",unsafe{&*filePath}));
+            logExit();
+            std::process::exit(1)
         }
     };
     // read file into buffer
@@ -77,15 +104,21 @@ fn main() -> io::Result<()> {
             if !buffer.ends_with(&[b'\n']) {
                 buffer.push(b'\n');
             }
+            log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*filePath}));
         }
         Err(_) => {
-            eprintln!("[FATAL] Unable to read file [{}]", &file_path);
-            std::process::exit(1);
+            log("err",&format!("Unable to read file \"{}\"",unsafe{&*filePath}));
+            logExit();
+            ()
         }
     }
 
+    logSeparator("=> AST generation");
+
     // read
-    parse_lines( &mut read_tokens(buffer) );
+    unsafe {
+        parseLines( &mut readTokens(buffer) );
+    }
 
     //
     Ok(())

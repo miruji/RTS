@@ -1,39 +1,35 @@
 ##
   if-else
 
-  kinds:
-    if
-    ef -> else if
-    el -> else
-
+  **
     = (== not allowed)
 
   declarate kinds:
-    if condition
+    ? condition
       next lines
 
-    if condition
+    ? condition
       next lines
-    ef condition
+    ? condition
       enxt lines
 
-    if condition
+    ? condition
       next lines
-    el
+    ?
       next lines
 
-    if condition
+    ? condition
       next lines
-    ef condition
+    ? condition
       next lines
-    el
+    ?
       next lines
 ##
 
-a = 2
-if a = 0
+a = 2              # final Unsigned
+? a = 0            # a equal 0 ?
   println("false")
-ef a = 1
+? a = 1            # a equal 1 ?
   println("true")
-el
+?                  # else
   println("else")

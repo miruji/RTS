@@ -18,7 +18,7 @@ The code is read from top to bottom line by line and taking into account the lev
 > The sequence is:
 > 
 >   1. Lines of code (commands) -(form)-> code blocks (structures).
->   2. Everything is converted to machine code -(transmitted)-> CPU.
+>   2. Everything is converted to machine code -(transmit)-> CPU.
 > 
 >   (? Machine code is planned to be generated based on a separate module for translating AST -(to)-> assembly)
 
