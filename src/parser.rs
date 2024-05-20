@@ -20,7 +20,7 @@ use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
 // define upper struct [Class / Enum]
-fn defineUpperStruct(lines: &mut Vec<Line>, classes: &mut Vec<Class>, enums: &mut Vec<Enum>) {
+unsafe fn defineUpperStruct(classes: &mut Vec<Class>, enums: &mut Vec<Enum>) {
     let mut i:   usize = 0;
     let mut add: bool = true;
     while i < lines.len() {
@@ -66,7 +66,7 @@ fn defineUpperStruct(lines: &mut Vec<Line>, classes: &mut Vec<Class>, enums: &mu
     //
 }
 // define lower struct [function / procedure / list]
-fn defineLowerStruct(lines: &mut Vec<Line>, methods: &mut Vec<Method>, lists: &mut Vec<List>) {
+unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
     let mut i:   usize = 0;
     let mut add: bool = true;
     while i < lines.len() {
@@ -173,13 +173,72 @@ fn defineLowerStruct(lines: &mut Vec<Line>, methods: &mut Vec<Method>, lists: &m
     //
 }
 
+/* search methods calls
+   e:
+     methodCall(parameters)
+*/
+unsafe fn searchMethodsCalls() {
+    let mut i:       usize = 0;
+    let linesLength: usize = lines.len();
+    while i < linesLength {
+
+        let line = lines[i].clone();
+        let tokens = &line.tokens;
+        let tokensLength = tokens.len();
+        let mut j: usize = 0;
+        while j < tokensLength {
+
+            let token = &tokens[j];
+            if token.dataType == TokenType::Word {
+                // check lower first char
+                if token.data.starts_with(|c: char| c.is_lowercase()) {
+                // add method call
+                    if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
+                        lines[i].tokens[j].dataType = TokenType::MethodCall;
+                        lines[i].tokens[j].tokens = lines[i].tokens[j+1].tokens.clone();
+                        lines[i].tokens.remove(j+1);
+                        break;
+                    }
+                } else {
+                // read error
+                    log("syntax","");
+                    log("path",&format!(
+                        "{} -> Word \"{}\"",
+                        unsafe{&*filePath},
+                        token.data
+                    ));
+                    Line::outputTokens(&line);
+                    log("note","Method calls and variable names must begin with a lower char");
+                    logExit();
+                }
+            }
+
+            j += 1;
+        }
+
+        i += 1;
+    }
+}
+/* search conditional memory cell
+   e:
+       varName -> final    locked
+      ~varName -> variable locked
+     ~~varName -> variable unlocked
+*/
+unsafe fn searchConditionalMemoryCell() {
+
+}
+
 // parse lines
-pub fn parseLines(lines: &mut Vec<Line>) {
+static mut lines: Vec<Line> = Vec::new();
+pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 // preparation
+    lines = tokenizerLines;
+
     // define upper struct [Class / Enum]
     let mut classes: Vec<Class> = Vec::new();
     let mut enums:   Vec<Enum>  = Vec::new();
-    defineUpperStruct(lines, &mut classes, &mut enums);
+    defineUpperStruct(&mut classes, &mut enums);
 
     // output classes
     if !classes.is_empty() {
@@ -207,7 +266,7 @@ pub fn parseLines(lines: &mut Vec<Line>) {
     // define lower struct [function / procedure / list]
     let mut methods: Vec<Method> = Vec::new();
     let mut lists:   Vec<List>   = Vec::new();
-    defineLowerStruct(lines, &mut methods, &mut lists);
+    defineLowerStruct(&mut methods, &mut lists);
     // output methods
     if !methods.is_empty() {
         log("parserInfo", "Methods");
@@ -236,6 +295,10 @@ pub fn parseLines(lines: &mut Vec<Line>) {
         }
         println!();
     }
+
+    // search methods calls
+    searchMethodsCalls();
+    searchConditionalMemoryCell();
 
     // output lines
     log("parserInfo", "Lines");

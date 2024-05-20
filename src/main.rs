@@ -117,7 +117,7 @@ fn main() -> io::Result<()> {
 
     // read
     unsafe {
-        parseLines( &mut readTokens(buffer) );
+        parseLines( readTokens(buffer) );
     }
 
     //

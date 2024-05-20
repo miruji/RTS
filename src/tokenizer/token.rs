@@ -6,9 +6,9 @@
 #[derive(Clone)]
 pub enum TokenType {
 // basic
-    None,    // none
-    Word,    // word
-    Endline, // endline
+    None,    // None
+    Word,    // Word
+    Endline, // Endline
     Comma,   // ,
     Dot,     // .
 // quotes
@@ -49,28 +49,28 @@ pub enum TokenType {
     Colon,   // :
     Pointer, // ->
 // words
-    Int,      // integer
-    UInt,     // unsigned integer
-    Float,    // float
-    UFloat,   // unsigned float
-    Rational, // rational
-    Complex,  // complex
+    Int,      // Integer
+    UInt,     // Unsigned integer
+    Float,    // Float
+    UFloat,   // Unsigned float
+    Rational, // Rational
+    Complex,  // Complex
 
     And, // and
     Or,  // or
     
     Loop, // loop
 
-    Final, // final
+    MethodCall, // Method Call
 }
 
 impl ToString for TokenType {
     fn to_string(&self) -> String {
         match self {
             // basic
-            TokenType::None    => String::from("None"),    // none
-            TokenType::Word    => String::from("Word"),    // word
-            TokenType::Endline => String::from("\\n"),     // endline
+            TokenType::None    => String::from("None"),    // None
+            TokenType::Word    => String::from("Word"),    // Word
+            TokenType::Endline => String::from("\\n"),     // Endline
             TokenType::Comma   => String::from(","),       // ,
             TokenType::Dot     => String::from("."),       // .
             // quotes
@@ -112,19 +112,19 @@ impl ToString for TokenType {
             TokenType::Colon   => String::from(":"),  // :
             TokenType::Pointer => String::from("->"), // ->
             // words
-            TokenType::Int      => String::from("Int"),      // integer
-            TokenType::UInt     => String::from("UInt"),     // unsigned integer
-            TokenType::Float    => String::from("Float"),    // float
-            TokenType::UFloat   => String::from("UFloat"),   // unsigned float
-            TokenType::Rational => String::from("Rational"), // rational
-            TokenType::Complex  => String::from("Complex"),  // complex
+            TokenType::Int      => String::from("Int"),      // Integer
+            TokenType::UInt     => String::from("UInt"),     // Unsigned integer
+            TokenType::Float    => String::from("Float"),    // Float
+            TokenType::UFloat   => String::from("UFloat"),   // Unsigned float
+            TokenType::Rational => String::from("Rational"), // Rational
+            TokenType::Complex  => String::from("Complex"),  // Complex
 
             TokenType::And => String::from("and"), // and
             TokenType::Or  => String::from("or"),  // or
 
             TokenType::Loop => String::from("loop"), // while
 
-            TokenType::Final => String::from("final"), // final
+            TokenType::MethodCall => String::from("Method Call"), // method call
         }
     }
 }

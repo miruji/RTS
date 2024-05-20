@@ -104,14 +104,11 @@ pub fn log(textType: &str, text: &str) {
 	//
 	if textType == "syntax" {
 		if let Some(textColor) = hexToTermionColor("e91a34") {
-			println!(
-				"{}{}Syntax{}: {}{}{}",
+			print!(
+				"{}{}Syntax {}",
 				style::Bold,
 				Fg(textColor),
 				style::Reset,
-				style::Bold,
-				text,
-				style::Reset
 			);
 		}
 	} else
@@ -197,7 +194,7 @@ pub fn log(textType: &str, text: &str) {
 		if let Some(firstTextColor)  = hexToTermionColor("55af96") {
 		if let Some(secondTextColor) = hexToTermionColor("f0f8ff") {
 			println!(
-				"{}{}+{} {}{}{}{}",
+				"  {}{}+{} {}{}{}{}",
 				style::Bold,
 				Fg(firstTextColor),
 				style::Reset,
@@ -212,7 +209,7 @@ pub fn log(textType: &str, text: &str) {
 		if let Some(firstTextColor)  = hexToTermionColor("e91a34") {
 		if let Some(secondTextColor) = hexToTermionColor("f0f8ff") {
 			println!(
-				"{}{}-{} {}{}{}{}",
+				"  {}{}-{} {}{}{}{}",
 				style::Bold,
 				Fg(firstTextColor),
 				style::Reset,
@@ -226,7 +223,7 @@ pub fn log(textType: &str, text: &str) {
 	if textType == "note" {
 		if let Some(textColor) = hexToTermionColor("f0f8ff") {
 			println!(
-				"{}{}Note:{} {}",
+				"  {}{}Note:{} {}",
 				style::Bold,
 				Fg(textColor),
 				style::Reset,
@@ -247,7 +244,7 @@ pub fn log(textType: &str, text: &str) {
 	    	);
 		    let outputParts = 
 		    	&format!(
-		    		"  {}{}-> {}{}",
+		    		"{}{}-> {}{}",
 		    		style::Bold,
 		    		Fg(textColor),
 		    		style::Reset,
@@ -256,6 +253,38 @@ pub fn log(textType: &str, text: &str) {
 			println!(
 				"{}",
 				outputParts,
+			);
+		}
+	} else
+	if textType == "line" {
+		if let Some(textColor) = hexToTermionColor("d9d9d9") {
+			let parts: Vec<&str> = text.split("|").collect();
+			let mut outputParts: Vec<String> = Vec::new();
+			//
+			if let Some(firstPart) = parts.first() {
+				outputParts.push(
+					format!(
+						"  {}{}{} | {}",
+						style::Bold,
+						Fg(textColor),
+						firstPart.to_string(),
+						style::Reset
+					)
+				);
+			}
+			//
+			for part in parts.iter().skip(1) {
+				outputParts.push(format!(
+					"{}",
+					part
+				));
+			}
+			println!("{}", 
+				&format!(
+					"{}{}",
+					outputParts.join(""),
+					style::Reset
+				)
 			);
 		}
 	} else {

@@ -34,6 +34,7 @@ unsafe fn deleteComment(buffer: &[u8]) {
                     index += 2;
                 }
                 linesCount += 1;
+                linesDeleted += 1;
                 return;
             }
         }
@@ -43,6 +44,7 @@ unsafe fn deleteComment(buffer: &[u8]) {
         while index < bufferLength {
             index += 1;
             if buffer[index] == b'\n' {
+                linesDeleted += 1;
                 return;
             }
         }
@@ -177,9 +179,6 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
     } else if result == "loop" {
         Token::newEmpty(TokenType::Loop)
     //
-    } else if result == "final" {
-        Token::newEmpty(TokenType::Final)
-    //
     } else {
         Token::new(TokenType::Word, result)
     }
@@ -196,19 +195,20 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             let currentChar: u8 = buffer[index];
             // check endline error
             if currentChar == b'\n' {
-                log("syntax","Quotes were not closed!");
+                log("syntax","");
                 log("path",&format!(
                     "{}:{}:{}", 
                     filePath,
                     linesCount,
                     indexCount
                 ));
+                log("note","Quotes were not closed!");
                 logExit();
             }
             // read quote
             if currentChar != quote {
                 result.push(currentChar as char);
-            }
+            } else
             if currentChar == quote {
                 let mut noSlash: bool = true;
                 // check back slash of end quote
@@ -222,6 +222,8 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
                         }
                     }
                     if backslashCounter % 2 == 1 {
+                        // add slash (\' \" \`)
+                        result.push(currentChar as char);
                         noSlash = false;
                     }
                 }
@@ -237,24 +239,30 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             index += 1;
             indexCount += 1;
         }
+        /*
         if !open {
-            log("syntax",&format!(
-                "Quotes were not closed at the end!\n  -> {}\n{} | {}", 
+            log("syntax","");
+            log("path",&format!(
+                "{}:{}:{}", 
                 filePath,
                 linesCount,
                 indexCount
             ));
+            log("note","Quotes were not closed at the end!");
             logExit();
         }
+        */
     }
     return if quote == b'\'' {
         return if result.len() > 1 {
-            log("syntax",&format!(
-                "Single quotes can only contain 1 character!\n  -> {}\n{} | {}", 
+            log("syntax","");
+            log("path",&format!(
+                "{}:{}:{}", 
                 filePath,
                 linesCount,
                 indexCount
             ));
+            log("note","Single quotes can only contain 1 character!");
             logExit();
             std::process::exit(1)
         } else {
@@ -591,6 +599,7 @@ static mut bufferLength: usize = 0; // than to shove it into methods every time.
                                     // but it is not :( and i like unsafe!
 static mut linesCount:   usize = 1; // even if these variables are not used,
 static mut indexCount:   usize = 0; // their use is better than a vector of strings
+static mut linesDeleted: usize = 0; // <- save deleted lines num for logger
 pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     let mut lines:  Vec<Line>  = Vec::new();
     let mut tokens: Vec<Token> = Vec::new();
@@ -618,7 +627,13 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
 
                 // add new line
                 lineIdent = if lineIdent % 2 == 0 { lineIdent / 2 } else { (lineIdent - 1) / 2 };
-                lines.push( Line { tokens: tokens.clone(), ident: lineIdent, lines: Vec::new() } );
+                lines.push( Line {
+                    tokens:       tokens.clone(),
+                    ident:        lineIdent,
+                    lines:        Vec::new(),
+                    linesDeleted: linesDeleted+linesCount
+                } );
+                linesDeleted = 0;
                 lineIdent = 0;
 
                 readLineIdent = true;

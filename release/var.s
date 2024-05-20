@@ -1,8 +1,12 @@
 ##
   variable
+
+    varName -> final    locked
+   ~varName -> variable locked
+  ~~varName -> variable unlocked
 ##
 
-a          # final
+a          # locked final
 a = 10     # now a is a constant Unsigned
 
 b: U = 20  # final locked-Unsigned

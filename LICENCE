@@ -1,5 +1,5 @@
-spl License 06.05.2024
-Copyright (c) 2023 miruji
+spl License 17.05.2024
+Copyright (c) miruji
 
 Hereinafter, simply 'Software' or 'Project' refers to the source code of the current 
 project, the libraries created for it, documentation, and compiled files distributed 
@@ -15,9 +15,6 @@ independently of each other, but do not allow use of newer versions of this soft
 ** It is possible to mix software of one version with another, but in this case you 
    will have to strictly follow clause 4 of the Terms of Use, and you will also have 
    to indicate all related licenses similar to this paragraph.
-
-It also means that previous Licenses have no dependency 
-on subsequent Licenses and continue to operate independently of each other.
 
 This software cannot be used and distributed in any form if the terms of use and
 distribution are violated. Additionally, no other licenses can be applied to this
