@@ -13,19 +13,15 @@ pub struct Line {
     pub linesDeleted: usize,      // deleted lines
 }
 impl Line {
-    pub fn outputTokens(token: &Line) {
+    pub fn outputTokens(line: &Line) {
         let mut tokensString: String = String::new();
-        for token in &token.tokens {
-            if token.data.is_empty() {
-                tokensString.push_str(&token.dataType.to_string());
-            } else {
-                tokensString.push_str(&token.data);
-            }
+        for token in &line.tokens {
+            tokensString.push_str( &Token::getTokenData(&token) );
         }
         log("line",
             &format!(
                 "{}|{}",
-                token.linesDeleted.to_string().as_str(),
+                line.linesDeleted.to_string(),
                 &tokensString
             )
         );

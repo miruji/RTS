@@ -48,6 +48,7 @@ pub enum TokenType {
 // other
     Colon,   // :
     Pointer, // ->
+    Tilde,   // ~
 // words
     Int,      // Integer
     UInt,     // Unsigned integer
@@ -62,6 +63,10 @@ pub enum TokenType {
     Loop, // loop
 
     MethodCall, // Method Call
+
+    LockedFinal,      // Locked   Final
+    LockedVariable,   // Locked   Variable
+    UnlockedVariable, // Unlocked Variable
 }
 
 impl ToString for TokenType {
@@ -84,7 +89,7 @@ impl ToString for TokenType {
             TokenType::Divide   => String::from("/"), // /
             TokenType::Equals   => String::from("="), // =
             TokenType::Modulo   => String::from("%"), // %
-            // TO:DO: ^ ???
+            // todo: ^ ???
             // double math
             TokenType::Increment      => String::from("++"), // ++
             TokenType::PlusEquals     => String::from("+="), // +=
@@ -111,6 +116,7 @@ impl ToString for TokenType {
             // other
             TokenType::Colon   => String::from(":"),  // :
             TokenType::Pointer => String::from("->"), // ->
+            TokenType::Tilde   => String::from("~"),  // ~
             // words
             TokenType::Int      => String::from("Int"),      // Integer
             TokenType::UInt     => String::from("UInt"),     // Unsigned integer
@@ -124,7 +130,11 @@ impl ToString for TokenType {
 
             TokenType::Loop => String::from("loop"), // while
 
-            TokenType::MethodCall => String::from("Method Call"), // method call
+            TokenType::MethodCall => String::from("Method Call"), // Method call
+
+            TokenType::LockedFinal      => String::from("Locked Final"),      // Locked   Final
+            TokenType::LockedVariable   => String::from("Locked Variable"),   // Locked   Variable
+            TokenType::UnlockedVariable => String::from("Unlocked Variable"), // Unlocked Variable
         }
     }
 }
@@ -136,25 +146,42 @@ pub struct Token {
     pub tokens: Vec<Token>,
 }
 impl Token {
-    pub fn newEmpty(dataType: TokenType) -> Self {
+    pub fn newEmpty(
+        dataType: TokenType
+    ) -> Self {
         Token {
             data: String::new(),
             dataType,
             tokens: Vec::new(),
         }
     }
-    pub fn new(dataType: TokenType, data: String) -> Self {
+    pub fn new(
+        dataType: TokenType,
+        data:     String
+    ) -> Self {
         Token {
             data,
             dataType,
             tokens: Vec::new(),
         }
     }
-    pub fn newFull(dataType: TokenType, data: String, tokens: Vec<Token>) -> Self {
+    pub fn newFull(
+        dataType: TokenType,
+        data:     String,
+        tokens:   Vec<Token>
+    ) -> Self {
         Token {
             data,
             dataType,
             tokens,
         }
+    }
+    pub fn getTokenData(token: &Token) -> String {
+        return 
+            if token.data.is_empty() {
+               token.dataType.to_string()
+            } else {
+                token.data.clone()
+            }
     }
 }

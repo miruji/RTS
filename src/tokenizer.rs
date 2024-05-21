@@ -64,7 +64,8 @@ fn getSingleChar(c: char) -> bool {
     c == ':' ||
     c == ';' ||
     c == ',' ||
-    c == '.'
+    c == '.' ||
+    c == '~'
 }
 // get int-float token by buffer-index
 unsafe fn getNumber(buffer: &[u8]) -> Token {
@@ -170,6 +171,7 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
     } else if result == "Rational" {
         Token::newEmpty(TokenType::Rational)
         // todo: complex number
+        // and other types
     //
     } else if result == "and" {
         Token::newEmpty(TokenType::And)
@@ -290,8 +292,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::Increment);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Plus);
         },
         // -= -- -
@@ -308,8 +310,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::Pointer);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Minus);
         },
         // *= *
@@ -318,8 +320,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::MultiplyEquals);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Multiply);
         },
         // /= /
@@ -328,8 +330,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::DivideEquals);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Divide);
         },
         // >= >
@@ -338,8 +340,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::GreaterThanOrEquals);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::GreaterThan);
         },
         // <=
@@ -348,8 +350,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::LessThanOrEquals);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::LessThan);
         },
         // != !
@@ -358,14 +360,14 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             indexCount += 2;
             return Token::newEmpty(TokenType::NotEquals);
         } else {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Not);
         },
         // == =
         '=' => {
-            index += 2;
-            indexCount += 2;
+            index += 1;
+            indexCount += 1;
             return Token::newEmpty(TokenType::Equals);
         },
         // &&
@@ -445,6 +447,11 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
                 index += 1;
                 indexCount += 1;
                 return Token::newEmpty(TokenType::Question);
+            } else
+            if c == '~' {
+                index += 1;
+                indexCount += 1;
+                return Token::newEmpty(TokenType::Tilde);
             }
         },
     }
@@ -518,7 +525,7 @@ fn lineNesting(lines: &mut Vec<Line>) {
                 lines[i].lines.push(next_line);    // nesting
                 lines.remove(ni);                  // delete next
                 lines_len = lines.len();           // update vec len
-                lineNesting(&mut lines[i].lines); // cycle
+                lineNesting(&mut lines[i].lines);  // cycle
             } else {
                 i += 1; // next line < current line => skip
             }

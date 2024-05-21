@@ -177,28 +177,24 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
    e:
      methodCall(parameters)
 */
-unsafe fn searchMethodsCalls() {
-    let mut i:       usize = 0;
-    let linesLength: usize = lines.len();
-    while i < linesLength {
+unsafe fn searchMethodsCalls(line: &mut Line) {
+    let lineSave: Line = line.clone(); // save line now for logger
 
-        let line = lines[i].clone();
-        let tokens = &line.tokens;
-        let tokensLength = tokens.len();
-        let mut j: usize = 0;
-        while j < tokensLength {
+    let tokens:       &mut Vec<Token> = &mut line.tokens;
+    let tokensLength: usize           = tokens.len();
+    let mut j: usize = 0;
+    while j < tokensLength {
+        let token = &tokens[j];
+        if token.dataType == TokenType::Word {
 
-            let token = &tokens[j];
-            if token.dataType == TokenType::Word {
+            // add method call
+            if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
                 // check lower first char
                 if token.data.starts_with(|c: char| c.is_lowercase()) {
-                // add method call
-                    if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
-                        lines[i].tokens[j].dataType = TokenType::MethodCall;
-                        lines[i].tokens[j].tokens = lines[i].tokens[j+1].tokens.clone();
-                        lines[i].tokens.remove(j+1);
-                        break;
-                    }
+                    tokens[j].dataType = TokenType::MethodCall;
+                    tokens[j].tokens = tokens[j+1].tokens.clone();
+                    tokens.remove(j+1);
+                    break;
                 } else {
                 // read error
                     log("syntax","");
@@ -207,26 +203,149 @@ unsafe fn searchMethodsCalls() {
                         unsafe{&*filePath},
                         token.data
                     ));
-                    Line::outputTokens(&line);
+                    Line::outputTokens(&lineSave);
                     log("note","Method calls and variable names must begin with a lower char");
                     logExit();
                 }
             }
-
-            j += 1;
         }
 
-        i += 1;
+        j += 1;
     }
+}
+// check memory cell type
+fn checkMemoryCellType(dataType: TokenType) -> bool {
+    return 
+        if dataType == TokenType::Int    || 
+           dataType == TokenType::UInt   || 
+           dataType == TokenType::Float  || 
+           dataType == TokenType::UFloat || 
+           dataType == TokenType::Rational
+        {
+            true
+            // todo: complex number
+            // and other types
+        } else {
+            false
+        }
+}
+// check operator
+fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
+    return 
+        if dataType == TokenType::Equals         || // =
+           dataType == TokenType::Increment      || // ++
+           dataType == TokenType::PlusEquals     || // +=
+           dataType == TokenType::Decrement      || // --
+           dataType == TokenType::MinusEquals    || // -=
+           dataType == TokenType::MultiplyEquals || // *=
+           dataType == TokenType::DivideEquals      // /=
+        {
+            true
+            // todo: complex number
+            // and other types
+        } else {
+            false
+        }
 }
 /* search conditional memory cell
    e:
-       varName -> final    locked
-      ~varName -> variable locked
-     ~~varName -> variable unlocked
+     varName   -> final    locked
+     varName~  -> variable locked
+     varName~~ -> variable unlocked
 */
-unsafe fn searchConditionalMemoryCell() {
+unsafe fn searchConditionalMemoryCell(line: &mut Line) {
+    let tokens:           &mut Vec<Token> = &mut line.tokens;
+    let mut tokensLength: usize           = tokens.len();
+    let mut j:            usize           = 0;
+    let mut goNext:       bool            = true;
 
+    let mut nameBuffer:     String    = String::new();
+    let mut modeBuffer:     TokenType = TokenType::None;
+    let mut modeReceived:   bool      = false;
+
+    let mut typeBuffer:     TokenType = TokenType::None;
+    let mut typeReceived:   bool      = false;
+
+    let mut operatorBuffer: TokenType  = TokenType::None;
+    let mut valueBuffer:    Vec<Token> = Vec::new();
+
+    while j < tokensLength {
+
+        let token = &tokens[j];
+        if token.dataType == TokenType::Word || modeReceived == true {
+            // check mode
+            if !modeReceived {
+                nameBuffer = token.data.clone();
+                // e: variableName~~
+                if j+2 < tokensLength && tokens[j+2].dataType == TokenType::Tilde {
+                    modeBuffer = TokenType::UnlockedVariable;
+                    tokens.remove(j); // remove name
+                    tokens.remove(j); // remove ~
+                    tokens.remove(j); // remove ~
+                    tokensLength -= 3;
+                // e: variableName~
+                } else
+                if j+1 < tokensLength && tokens[j+1].dataType == TokenType::Tilde {
+                    modeBuffer = TokenType::LockedVariable;
+                    tokens.remove(j); // remove name
+                    tokens.remove(j); // remove ~
+                    tokensLength -= 2;
+                // e: variableName
+                } else {
+                    modeBuffer = TokenType::LockedFinal;
+                    tokens.remove(j);
+                    tokensLength -= 1; // remove name
+                }
+                //
+                goNext = false;
+                modeReceived = true;
+            }
+            // check type
+            else
+            if !typeReceived {
+                if (j < tokensLength && token.dataType == TokenType::Colon) && j+1 < tokensLength {
+                    let nextTokenType = tokens[j+1].dataType.clone();
+                    if checkMemoryCellType(nextTokenType.clone()) {
+                        typeBuffer = nextTokenType;
+                        tokens.remove(j); // remove :
+                        tokens.remove(j); // remove type
+                        tokensLength -= 2;
+                    }
+                }
+                //
+                goNext = false;
+                typeReceived = true;
+            }
+            // check value
+            else {
+                if (j < tokensLength && checkMemoryCellMathOperator(token.dataType.clone())) && j+1 < tokensLength {
+                    // operator
+                    operatorBuffer = token.dataType.clone();
+                    // value
+                    valueBuffer = tokens[j+1..(tokensLength)].to_vec();
+                    tokens.clear();
+                }
+                break;
+            }
+        }
+
+        if goNext {
+            j += 1;
+        } else {
+            goNext = true;
+        }
+    }
+
+    if !nameBuffer.is_empty() {
+        println!("    ! Memory Cell \"{}\":", nameBuffer);
+        println!("      Mode     : \"{}\"",   modeBuffer.to_string());
+        println!("      Type     : \"{}\"",   typeBuffer.to_string());
+        println!("      Operator : \"{}\"",   operatorBuffer.to_string());
+        if !valueBuffer.is_empty() {
+            println!("      Value");
+            outputTokens(&valueBuffer, 0, 4);
+        }
+    }
 }
 
 // parse lines
@@ -296,22 +415,34 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         println!();
     }
 
-    // search methods calls
-    searchMethodsCalls();
-    searchConditionalMemoryCell();
-
-    // output lines
+// read lines
     log("parserInfo", "Lines");
     let ident_str1: String = " ".repeat(2);
     let ident_str2: String = " ".repeat(4);
-    for (i, line) in lines.iter().enumerate() {
+
+    let mut i:       usize = 0;
+    let linesLength: usize = lines.len();
+    while i < linesLength {
         log("parserBegin", &format!("{}+{}", ident_str1, i));
-        log("parserHeader", &format!("{}Tokens", ident_str2));
-        outputTokens(&line.tokens, 0, 3);
-        if (&line.lines).len() > 0 {
+        let line = &mut lines[i];
+
+        // search methods calls
+        searchMethodsCalls(line);
+        searchConditionalMemoryCell(line);
+
+        // output
+        if !line.tokens.is_empty() {
+            log("parserHeader", &format!("{}Tokens", ident_str2));
+            outputTokens(&line.tokens, 0, 3);
+        }
+
+        if !line.lines.is_empty() {
             log("parserHeader", &format!("{}Lines", ident_str2));
             outputLines(&line.lines, 3);
         }
+
+        //
         log("parserEnd", &format!("{}-{}", ident_str1, i));
+        i += 1;
     }
 }
