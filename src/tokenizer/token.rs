@@ -63,10 +63,6 @@ pub enum TokenType {
     Loop, // loop
 
     MethodCall, // Method Call
-
-    LockedFinal,      // Locked   Final
-    LockedVariable,   // Locked   Variable
-    UnlockedVariable, // Unlocked Variable
 }
 
 impl ToString for TokenType {
@@ -131,10 +127,6 @@ impl ToString for TokenType {
             TokenType::Loop => String::from("loop"), // while
 
             TokenType::MethodCall => String::from("Method Call"), // Method call
-
-            TokenType::LockedFinal      => String::from("Locked Final"),      // Locked   Final
-            TokenType::LockedVariable   => String::from("Locked Variable"),   // Locked   Variable
-            TokenType::UnlockedVariable => String::from("Unlocked Variable"), // Unlocked Variable
         }
     }
 }
@@ -176,7 +168,17 @@ impl Token {
             tokens,
         }
     }
-    pub fn getTokenData(token: &Token) -> String {
+    pub fn newNesting(
+        dataType: TokenType,
+        tokens:   Vec<Token>
+    ) -> Self {
+        Token {
+            data: String::new(),
+            dataType,
+            tokens,
+        }
+    }
+    pub fn getData(token: &Token) -> String {
         return 
             if token.data.is_empty() {
                token.dataType.to_string()

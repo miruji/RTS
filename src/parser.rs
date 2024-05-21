@@ -2,14 +2,20 @@
     parser
 */
 
+use std::sync::Mutex;
+
 use crate::logger::*;
 use crate::filePath;
+
+pub mod memoryCell;
+pub mod memoryCellList;
+use crate::parser::memoryCell::*;
+use crate::parser::memoryCellList::*;
 
 pub mod class;
 pub mod r#enum;
 pub mod method;
 pub mod list;
-
 use crate::parser::class::*;
 use crate::parser::r#enum::*;
 use crate::parser::method::*;
@@ -259,9 +265,9 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
     let mut j:            usize           = 0;
     let mut goNext:       bool            = true;
 
-    let mut nameBuffer:     String    = String::new();
-    let mut modeBuffer:     TokenType = TokenType::None;
-    let mut modeReceived:   bool      = false;
+    let mut nameBuffer:     String         = String::new();
+    let mut modeBuffer:     MemoryCellMode = MemoryCellMode::LockedFinal;
+    let mut modeReceived:   bool           = false;
 
     let mut typeBuffer:     TokenType = TokenType::None;
     let mut typeReceived:   bool      = false;
@@ -278,7 +284,7 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                 nameBuffer = token.data.clone();
                 // e: variableName~~
                 if j+2 < tokensLength && tokens[j+2].dataType == TokenType::Tilde {
-                    modeBuffer = TokenType::UnlockedVariable;
+                    modeBuffer = MemoryCellMode::UnlockedVariable;
                     tokens.remove(j); // remove name
                     tokens.remove(j); // remove ~
                     tokens.remove(j); // remove ~
@@ -286,13 +292,13 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                 // e: variableName~
                 } else
                 if j+1 < tokensLength && tokens[j+1].dataType == TokenType::Tilde {
-                    modeBuffer = TokenType::LockedVariable;
+                    modeBuffer = MemoryCellMode::LockedVariable;
                     tokens.remove(j); // remove name
                     tokens.remove(j); // remove ~
                     tokensLength -= 2;
                 // e: variableName
                 } else {
-                    modeBuffer = TokenType::LockedFinal;
+                    modeBuffer = MemoryCellMode::LockedFinal;
                     tokens.remove(j);
                     tokensLength -= 1; // remove name
                 }
@@ -325,6 +331,10 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                     valueBuffer = tokens[j+1..(tokensLength)].to_vec();
                     tokens.clear();
                 }
+                // todo:
+                //   if + or - or * or / and more ...
+                //   -> skip this line
+                //   e: a + 10
                 break;
             }
         }
@@ -337,19 +347,51 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
     }
 
     if !nameBuffer.is_empty() {
-        println!("    ! Memory Cell \"{}\":", nameBuffer);
-        println!("      Mode     : \"{}\"",   modeBuffer.to_string());
-        println!("      Type     : \"{}\"",   typeBuffer.to_string());
-        println!("      Operator : \"{}\"",   operatorBuffer.to_string());
+        println!("    Name:\"{}\"",nameBuffer);
+        println!("      Operator: \"{}\"",operatorBuffer.to_string());
         if !valueBuffer.is_empty() {
             println!("      Value");
             outputTokens(&valueBuffer, 0, 4);
+        }
+        // varName = value
+        let mut mcl = _mcl.lock().unwrap();
+        if operatorBuffer == TokenType::Equals {
+            mcl.push(
+                MemoryCell::new(
+                    nameBuffer.clone(),
+                    modeBuffer,
+                    typeBuffer.clone(),
+                    Token::newNesting(
+                        TokenType::None,
+                        valueBuffer.clone()
+                    )
+                )
+            );
+
+            let mc: &MemoryCell = mcl.last();
+            println!("      Mode: \"{}\"",mc.mode.to_string());
+            println!("      Type: \"{}\"",mc.valueType.to_string());
+        // varName op value
+        } else
+        if operatorBuffer != TokenType::None {
+            mcl.op(
+                nameBuffer,
+                OpType::MinusEquals,
+                Token::newNesting(
+                    TokenType::None,
+                    valueBuffer.clone()
+                )
+            );
         }
     }
 }
 
 // parse lines
 static mut lines: Vec<Line> = Vec::new();
+lazy_static! {
+    static ref _mcl: Mutex<MemoryCellList> = Mutex::new(MemoryCellList::new());
+}
+
 pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 // preparation
     lines = tokenizerLines;

@@ -4,6 +4,9 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::fs::File;
 use std::io::{self, Read};
 use std::env;

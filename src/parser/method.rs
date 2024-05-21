@@ -1,5 +1,5 @@
 /*
-    class
+    Method
 */
 
 use crate::tokenizer::line::*;

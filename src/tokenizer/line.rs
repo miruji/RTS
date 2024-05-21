@@ -16,7 +16,7 @@ impl Line {
     pub fn outputTokens(line: &Line) {
         let mut tokensString: String = String::new();
         for token in &line.tokens {
-            tokensString.push_str( &Token::getTokenData(&token) );
+            tokensString.push_str( &Token::getData(&token) );
         }
         log("line",
             &format!(

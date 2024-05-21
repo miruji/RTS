@@ -100,10 +100,12 @@ unsafe fn getNumber(buffer: &[u8]) -> Token {
             result.push(currentChar);
             indexBuffer += 1;
         } else
-        if currentChar == '/' && !dotCheck && nextChar.is_digit(10) {
+        if currentChar == '/' && nextChar == '/' && !dotCheck && 
+           (indexBuffer+2 < bufferLength && (buffer[indexBuffer+2] as char).is_digit(10)) {
             rationalCheck = true;
-            result.push(currentChar);
-            indexBuffer += 1;
+            result.push('/');
+            result.push('/');
+            indexBuffer += 2;
         } else {
             break;
         }
@@ -477,8 +479,8 @@ fn bracketNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenT
 // block nasting [b token -> e token]
 fn blockNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenType) {
     let mut brackets = Vec::<usize>::new();
-
     let mut i: usize = 0;
+
     while i < tokens.len() {
         let token = tokens[i].clone();
         // begin
@@ -486,29 +488,25 @@ fn blockNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenTyp
             brackets.push(i);
         // end
         } else if token.dataType == endType {
-            if let Some(penultBracket) = brackets.len().checked_sub(1) {
-                if penultBracket > 0 {
-                    if let Some(lastBracket) = brackets.last().cloned() {
-                        let copy_token = tokens[lastBracket].clone();
-                        tokens[penultBracket].tokens.push( copy_token );
-
-                        tokens.remove(lastBracket);
-                        i -= 1;
-                    }
+            if let Some(penultBracket) = brackets.pop() {
+                if let Some(&lastBracket) = brackets.last() {
+                    let copyToken = tokens[penultBracket].clone();
+                    tokens[lastBracket].tokens.push(copyToken);
+                    tokens.remove(penultBracket);
+                    i -= 1;
                 }
             }
-            brackets.pop();
             tokens.remove(i);
-            i -= 1;
+            continue;
         // add new childrens to token
         } else if !brackets.is_empty() {
-            if let Some(bracket) = brackets.last().cloned() {
+            if let Some(&bracket) = brackets.last() {
                 tokens[bracket].tokens.push(
                     Token::newFull(token.dataType, token.data, token.tokens)
                 );
             }
             tokens.remove(i);
-            i -= 1;
+            continue;
         }
         i += 1;
     }

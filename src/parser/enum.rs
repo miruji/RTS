@@ -1,5 +1,5 @@
 /*
-    enum
+    Enum
 */
 
 use crate::tokenizer::line::*;
