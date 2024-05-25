@@ -85,6 +85,7 @@ unsafe fn getNumber(buffer: &[u8]) -> Token {
             };
 
         if currentChar == '-' && !negativeCheck {
+            result.push(currentChar);
             negativeCheck = true;
             indexBuffer += 1;
         } else
@@ -282,7 +283,12 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
 }
 // get operator token by buffer-index
 unsafe fn getOperator(buffer: &[u8]) -> Token {
-    let nextChar: char = buffer[index+1] as char;
+    let nextChar: char = 
+        if index+1 < bufferLength {
+            buffer[index+1] as char
+        } else {
+            '\0'
+        };
     match buffer[index] as char {
         // += ++ +
         '+' => if nextChar == '=' {
@@ -314,6 +320,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
         } else {
             index += 1;
             indexCount += 1;
+            println!("---");
             return Token::newEmpty(TokenType::Minus);
         },
         // *= *

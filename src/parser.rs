@@ -376,7 +376,7 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
         if operatorBuffer != TokenType::None {
             mcl.op(
                 nameBuffer,
-                OpType::MinusEquals,
+                operatorBuffer,
                 Token::newNesting(
                     TokenType::None,
                     valueBuffer.clone()
