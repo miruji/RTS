@@ -18,7 +18,10 @@ unsafe fn deleteComment(buffer: &[u8]) {
     index += 1; // skip first #
     if buffer[index] == b'#' {
         linesCount += 1;
+        index += 1;
+        indexCount += 2;
         // double comment
+        /*
         index += 1;
         while index < bufferLength {
             index += 1;
@@ -38,6 +41,8 @@ unsafe fn deleteComment(buffer: &[u8]) {
                 return;
             }
         }
+        */
+        lineTokens.push( Token::newEmpty(TokenType::DoubleComment) );
     } else {
         // single comment
         index += 1;
@@ -84,7 +89,7 @@ unsafe fn getNumber(buffer: &[u8]) -> Token {
                 '\0'
             };
 
-        if currentChar == '-' && !negativeCheck {
+        if !negativeCheck && buffer[index] as char == '-' {
             result.push(currentChar);
             negativeCheck = true;
             indexBuffer += 1;
@@ -520,16 +525,16 @@ fn blockNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenTyp
 }
 // line nesting [line -> line]
 fn lineNesting(lines: &mut Vec<Line>) {
-    let mut lines_len: usize = lines.len();
+    let mut linesLen: usize = lines.len();
     let mut i: usize = 0;
-    while i < lines_len {
+    while i < linesLen {
         let ni: usize = i+1;
-        if ni < lines_len {
+        if ni < linesLen {
             if lines[i].ident < lines[ni].ident {
                 let next_line = lines[ni].clone(); // clone next line
                 lines[i].lines.push(next_line);    // nesting
                 lines.remove(ni);                  // delete next
-                lines_len = lines.len();           // update vec len
+                linesLen = lines.len();            // update vec len
                 lineNesting(&mut lines[i].lines);  // cycle
             } else {
                 i += 1; // next line < current line => skip
@@ -612,10 +617,12 @@ static mut bufferLength: usize = 0; // than to shove it into methods every time.
 static mut linesCount:   usize = 1; // even if these variables are not used,
 static mut indexCount:   usize = 0; // their use is better than a vector of strings
 static mut linesDeleted: usize = 0; // <- save deleted lines num for logger
+
+static mut linesIdent: usize = 0;
+static mut lineTokens: Vec<Token> = Vec::new();
+
 pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     let mut lines:  Vec<Line>  = Vec::new();
-    let mut tokens: Vec<Token> = Vec::new();
-    let mut lineIdent:     usize = 0;
     let mut readLineIdent: bool  = true;
 
     bufferLength = buffer.len();
@@ -625,31 +632,42 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         // ident
         if c == ' ' && readLineIdent {
             index += 1;
-
-            lineIdent += 1;
             indexCount += 1;
+            linesIdent += 1;
         } else {
             readLineIdent = false;
             // get endline
             if c == '\n' {
                 // bracket nesting
-                bracketNesting(&mut tokens, TokenType::CircleBracketBegin, TokenType::CircleBracketEnd);
-                bracketNesting(&mut tokens, TokenType::SquareBracketBegin, TokenType::SquareBracketEnd);
-                bracketNesting(&mut tokens, TokenType::FigureBracketBegin, TokenType::FigureBracketEnd);
+                bracketNesting(
+                    &mut lineTokens,
+                    TokenType::CircleBracketBegin, 
+                    TokenType::CircleBracketEnd
+                );
+                bracketNesting(
+                    &mut lineTokens,
+                    TokenType::SquareBracketBegin, 
+                    TokenType::SquareBracketEnd
+                );
+                bracketNesting(
+                    &mut lineTokens,
+                    TokenType::FigureBracketBegin, 
+                    TokenType::FigureBracketEnd
+                );
 
                 // add new line
-                lineIdent = if lineIdent % 2 == 0 { lineIdent / 2 } else { (lineIdent - 1) / 2 };
+                linesIdent = if linesIdent%2 == 0 { linesIdent/2 } else { (linesIdent-1)/2 };
                 lines.push( Line {
-                    tokens:       tokens.clone(),
-                    ident:        lineIdent,
+                    tokens:       lineTokens.clone(),
+                    ident:        linesIdent,
                     lines:        Vec::new(),
                     linesDeleted: linesDeleted+linesCount
                 } );
                 linesDeleted = 0;
-                lineIdent = 0;
+                linesIdent = 0;
 
                 readLineIdent = true;
-                tokens.clear();
+                lineTokens.clear();
                 index += 1;
 
                 linesCount += 1;
@@ -661,17 +679,17 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             } else
             // get int-float
             if c.is_digit(10) || (c == '-' && index+1 < bufferLength && (buffer[index+1] as char).is_digit(10)) {
-                tokens.push( getNumber(&buffer) );
+                lineTokens.push( getNumber(&buffer) );
             } else
             // get word
             if c.is_alphabetic() {
-                tokens.push( getWord(&buffer) );
+                lineTokens.push( getWord(&buffer) );
             } else
             // get quotes ' " `
             if c == '\'' || c == '"' || c == '`' {
                 let token: Token = getQuotes(&buffer);
                 if token.dataType != TokenType::None {
-                    tokens.push(token);
+                    lineTokens.push(token);
                 } else {
                     index += 1;
                     indexCount += 1;
@@ -681,7 +699,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             if getSingleChar(c) {
                 let token: Token = getOperator(&buffer);
                 if token.dataType != TokenType::None {
-                    tokens.push(token);
+                    lineTokens.push(token);
                 } else {
                     index += 1;
                     indexCount += 1;
@@ -700,6 +718,11 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     });
     // line nesting
     lineNesting(&mut lines);
+    // delete DoubleComment
+    lines.retain(|line| {
+        let tokens = &line.tokens;
+        !tokens.iter().any(|token| token.dataType == TokenType::DoubleComment)
+    });
     //
     lines
 }

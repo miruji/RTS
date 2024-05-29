@@ -11,6 +11,8 @@ pub enum TokenType {
     Endline, // Endline
     Comma,   // ,
     Dot,     // .
+
+    DoubleComment, // ##
 // quotes
     BackQuote,   // `
     DoubleQuote, // "
@@ -74,10 +76,12 @@ impl ToString for TokenType {
             TokenType::Endline => String::from("\\n"),     // Endline
             TokenType::Comma   => String::from(","),       // ,
             TokenType::Dot     => String::from("."),       // .
+
+            TokenType::DoubleComment => String::from("Double Comment"), // ##
             // quotes
-            TokenType::BackQuote   => String::from("Back quote"),   // `
-            TokenType::DoubleQuote => String::from("Double quote"), // "
-            TokenType::SingleQuote => String::from("Single quote"), // '
+            TokenType::BackQuote   => String::from("Back Quote"),   // `
+            TokenType::DoubleQuote => String::from("Double Quote"), // "
+            TokenType::SingleQuote => String::from("Single Quote"), // '
             // single math
             TokenType::Plus     => String::from("+"), // +
             TokenType::Minus    => String::from("-"), // -
@@ -133,16 +137,16 @@ impl ToString for TokenType {
 
 #[derive(Clone)]
 pub struct Token {
-    pub data: String,
+    pub data:     String,
     pub dataType: TokenType,
-    pub tokens: Vec<Token>,
+    pub tokens:   Vec<Token>,
 }
 impl Token {
     pub fn newEmpty(
         dataType: TokenType
     ) -> Self {
         Token {
-            data: String::new(),
+            data:   String::new(),
             dataType,
             tokens: Vec::new(),
         }
@@ -169,12 +173,11 @@ impl Token {
         }
     }
     pub fn newNesting(
-        dataType: TokenType,
-        tokens:   Vec<Token>
+        tokens: Vec<Token>
     ) -> Self {
         Token {
-            data: String::new(),
-            dataType,
+            data:     String::new(),
+            dataType: TokenType::None,
             tokens,
         }
     }

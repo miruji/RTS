@@ -2,8 +2,6 @@
     parser
 */
 
-use std::sync::Mutex;
-
 use crate::logger::*;
 use crate::filePath;
 
@@ -152,6 +150,7 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
                         );
                     } else {
                     // read error
+                        // to:do no working here
                         log("syntax","");
                         log("path",&format!(
                             "{} -> Method \"{}\"",
@@ -184,8 +183,6 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
      methodCall(parameters)
 */
 unsafe fn searchMethodsCalls(line: &mut Line) {
-    let lineSave: Line = line.clone(); // save line now for logger
-
     let tokens:       &mut Vec<Token> = &mut line.tokens;
     let tokensLength: usize           = tokens.len();
     let mut j: usize = 0;
@@ -197,9 +194,15 @@ unsafe fn searchMethodsCalls(line: &mut Line) {
             if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
                 // check lower first char
                 if token.data.starts_with(|c: char| c.is_lowercase()) {
-                    tokens[j].dataType = TokenType::MethodCall;
-                    tokens[j].tokens = tokens[j+1].tokens.clone();
-                    tokens.remove(j+1);
+                    let mut expressionValue: Vec<Token> = tokens[j+1].tokens.clone();
+                    let mut mcl = getMemoryCellList();
+                    println!("{}",
+                        mcl.expression(
+                            &mut expressionValue,
+                            0
+                        ).data
+                    );
+
                     break;
                 } else {
                 // read error
@@ -209,7 +212,7 @@ unsafe fn searchMethodsCalls(line: &mut Line) {
                         unsafe{&*filePath},
                         token.data
                     ));
-                    Line::outputTokens(&lineSave);
+                    Line::outputTokens( &getSavedLine() );
                     log("note","Method calls and variable names must begin with a lower char");
                     logExit();
                 }
@@ -253,11 +256,11 @@ fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
             false
         }
 }
-/* search conditional memory cell
+/* search conditional MemoryCell
    e:
-     varName   -> final    locked
-     varName~  -> variable locked
-     varName~~ -> variable unlocked
+     memoryCellName   -> final    locked
+     memoryCellName~  -> variable locked
+     memoryCellName~~ -> variable unlocked
 */
 unsafe fn searchConditionalMemoryCell(line: &mut Line) {
     let tokens:           &mut Vec<Token> = &mut line.tokens;
@@ -353,44 +356,54 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
             println!("      Value");
             outputTokens(&valueBuffer, 0, 4);
         }
-        // varName = value
-        let mut mcl = _mcl.lock().unwrap();
+        // memoryCellName - op - value
+        let mut mcl = getMemoryCellList();
         if operatorBuffer == TokenType::Equals {
-            mcl.push(
-                MemoryCell::new(
-                    nameBuffer.clone(),
-                    modeBuffer,
-                    typeBuffer.clone(),
-                    Token::newNesting(
-                        TokenType::None,
-                        valueBuffer.clone()
-                    )
-                )
-            );
+            // todo: check ~~ mode-type
 
-            let mc: &MemoryCell = mcl.last();
-            println!("      Mode: \"{}\"",mc.mode.to_string());
-            println!("      Type: \"{}\"",mc.valueType.to_string());
-        // varName op value
+            // new value to MemoryCell
+            if let Some(mc) = mcl.getCell( &nameBuffer ) {
+                let mcName      = mc.name.clone();
+                let mcMode      = mc.mode.to_string();
+                let mcValueType = mc.valueType.to_string();
+
+                mcl.op(
+                    nameBuffer,
+                    operatorBuffer,
+                    Token::newNesting(valueBuffer.clone())
+                );
+
+                println!("      Mode: \"{}\"",mcMode);
+                println!("      Type: \"{}\"",mcValueType);
+            // create MemoryCell
+            } else {
+                mcl.push(
+                    MemoryCell::new(
+                        nameBuffer.clone(),
+                        modeBuffer,
+                        typeBuffer.clone(),
+                        Token::newNesting( valueBuffer.clone() )
+                    )
+                );
+
+                let mc: &MemoryCell = mcl.last();
+                println!("      Mode: \"{}\"",mc.mode.to_string());
+                println!("      Type: \"{}\"",mc.valueType.to_string());
+            }
+        // op
         } else
         if operatorBuffer != TokenType::None {
             mcl.op(
                 nameBuffer,
                 operatorBuffer,
-                Token::newNesting(
-                    TokenType::None,
-                    valueBuffer.clone()
-                )
+                Token::newNesting( valueBuffer.clone() )
             );
         }
     }
 }
 
 // parse lines
-static mut lines: Vec<Line> = Vec::new();
-lazy_static! {
-    static ref _mcl: Mutex<MemoryCellList> = Mutex::new(MemoryCellList::new());
-}
+static mut lines:    Vec<Line> = Vec::new();
 
 pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 // preparation
@@ -466,7 +479,9 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     let linesLength: usize = lines.len();
     while i < linesLength {
         log("parserBegin", &format!("{}+{}", ident_str1, i));
-        let line = &mut lines[i];
+
+        replaceSavedLine( lines[i].clone() ); // save line now for logger
+        let line = &mut lines[i];             // set editable line
 
         // search methods calls
         searchMethodsCalls(line);

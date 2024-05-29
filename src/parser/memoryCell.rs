@@ -4,12 +4,13 @@
 
 use crate::tokenizer::token::*;
 
+// MemoryCellMode
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub enum MemoryCellMode {
-    LockedFinal,      // variableName
-    LockedVariable,   // variableName~
-    UnlockedVariable, // variableName~~
+    LockedFinal,      // memoryCellName
+    LockedVariable,   // memoryCellName~
+    UnlockedVariable, // memoryCellName~~
 }
 impl ToString for MemoryCellMode {
     fn to_string(&self) -> String {
@@ -21,7 +22,7 @@ impl ToString for MemoryCellMode {
         }
     }
 }
-
+// MemoryCell
 #[derive(Clone)]
 pub struct MemoryCell {
     pub name:       String,         // unique name
