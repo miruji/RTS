@@ -49,7 +49,7 @@ impl MemoryCellList {
     }
 
     pub fn op(&mut self, name: String, op: TokenType, opValue: Token) {
-        print!("{}: ",name);
+        //print!("{}: ",name);
         if op != TokenType::Equals &&
            op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
            op != TokenType::MultiplyEquals && op != TokenType::DivideEquals {
@@ -62,7 +62,7 @@ impl MemoryCellList {
             let mcl = self.clone();
             let mcConst = self.value[i].clone();
             if mcConst.name == name {
-                println!("{}", mcConst.name);
+                //println!("{}", mcConst.name);
                 let rightValue: Token = mcl.expression(&mut opValue.tokens.clone(), 0);
                 let mc = &mut self.value[i];
                 // =
@@ -87,7 +87,7 @@ impl MemoryCellList {
                 if mc.value.data.starts_with('-') && mc.value.dataType == TokenType::UInt {
                     mc.value.dataType = TokenType::Int;
                 }
-                println!("  = {}", mc.value.data);
+                //println!("  = {}", mc.value.data);
             }
             i += 1;
         }
@@ -259,7 +259,7 @@ impl Mul for Value {
 // calculate
 fn calculate(op: &TokenType, left: &Token, right: &Token) -> String {
     // set types
-    println!("calc1: {} -> {}:{}",op.to_string(),left.dataType.to_string(),right.dataType.to_string());
+    //println!("calc1: {} -> {}:{}",op.to_string(),left.dataType.to_string(),right.dataType.to_string());
     let leftValue = match left.dataType {
         TokenType::Int => {
             left.data.parse::<i64>().map(Value::Signed).unwrap_or(Value::Signed(0))
@@ -278,7 +278,7 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> String {
         },
         _ => Value::Signed(0),
     };
-    println!("calc2: {}:{}",leftValue,rightValue);
+    //println!("calc2: {}:{}",leftValue,rightValue);
     // calculate
     return if *op == TokenType::Plus {
         (leftValue+rightValue).to_string()

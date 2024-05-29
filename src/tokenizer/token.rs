@@ -63,8 +63,6 @@ pub enum TokenType {
     Or,  // or
     
     Loop, // loop
-
-    MethodCall, // Method Call
 }
 
 impl ToString for TokenType {
@@ -129,8 +127,6 @@ impl ToString for TokenType {
             TokenType::Or  => String::from("or"),  // or
 
             TokenType::Loop => String::from("loop"), // while
-
-            TokenType::MethodCall => String::from("Method Call"), // Method call
         }
     }
 }

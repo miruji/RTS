@@ -350,12 +350,12 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
     }
 
     if !nameBuffer.is_empty() {
-        println!("    Name:\"{}\"",nameBuffer);
-        println!("      Operator: \"{}\"",operatorBuffer.to_string());
-        if !valueBuffer.is_empty() {
-            println!("      Value");
-            outputTokens(&valueBuffer, 0, 4);
-        }
+        //println!("    Name:\"{}\"",nameBuffer);
+        //println!("      Operator: \"{}\"",operatorBuffer.to_string());
+        //if !valueBuffer.is_empty() {
+        //    println!("      Value");
+        //    outputTokens(&valueBuffer, 0, 4);
+        //}
         // memoryCellName - op - value
         let mut mcl = getMemoryCellList();
         if operatorBuffer == TokenType::Equals {
@@ -373,8 +373,8 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                     Token::newNesting(valueBuffer.clone())
                 );
 
-                println!("      Mode: \"{}\"",mcMode);
-                println!("      Type: \"{}\"",mcValueType);
+                //println!("      Mode: \"{}\"",mcMode);
+                //println!("      Type: \"{}\"",mcValueType);
             // create MemoryCell
             } else {
                 mcl.push(
@@ -387,8 +387,8 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                 );
 
                 let mc: &MemoryCell = mcl.last();
-                println!("      Mode: \"{}\"",mc.mode.to_string());
-                println!("      Type: \"{}\"",mc.valueType.to_string());
+                //println!("      Mode: \"{}\"",mc.mode.to_string());
+                //println!("      Type: \"{}\"",mc.valueType.to_string());
             }
         // op
         } else
@@ -413,7 +413,7 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     let mut classes: Vec<Class> = Vec::new();
     let mut enums:   Vec<Enum>  = Vec::new();
     defineUpperStruct(&mut classes, &mut enums);
-
+    /*
     // output classes
     if !classes.is_empty() {
         log("parserInfo", "Classes");
@@ -436,11 +436,13 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         }
         println!();
     }
+    */
 
     // define lower struct [function / procedure / list]
     let mut methods: Vec<Method> = Vec::new();
     let mut lists:   Vec<List>   = Vec::new();
     defineLowerStruct(&mut methods, &mut lists);
+    /*
     // output methods
     if !methods.is_empty() {
         log("parserInfo", "Methods");
@@ -469,16 +471,17 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         }
         println!();
     }
+    */
 
 // read lines
-    log("parserInfo", "Lines");
-    let ident_str1: String = " ".repeat(2);
-    let ident_str2: String = " ".repeat(4);
+    //log("parserInfo", "Lines");
+    //let ident_str1: String = " ".repeat(2);
+    //let ident_str2: String = " ".repeat(4);
 
     let mut i:       usize = 0;
     let linesLength: usize = lines.len();
     while i < linesLength {
-        log("parserBegin", &format!("{}+{}", ident_str1, i));
+        //log("parserBegin", &format!("{}+{}", ident_str1, i));
 
         replaceSavedLine( lines[i].clone() ); // save line now for logger
         let line = &mut lines[i];             // set editable line
@@ -488,6 +491,7 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         searchConditionalMemoryCell(line);
 
         // output
+        /*
         if !line.tokens.is_empty() {
             log("parserHeader", &format!("{}Tokens", ident_str2));
             outputTokens(&line.tokens, 0, 3);
@@ -497,9 +501,10 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
             log("parserHeader", &format!("{}Lines", ident_str2));
             outputLines(&line.lines, 3);
         }
+        */
 
         //
-        log("parserEnd", &format!("{}-{}", ident_str1, i));
+        //log("parserEnd", &format!("{}-{}", ident_str1, i));
         i += 1;
     }
 }

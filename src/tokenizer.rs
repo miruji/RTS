@@ -325,7 +325,6 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
         } else {
             index += 1;
             indexCount += 1;
-            println!("---");
             return Token::newEmpty(TokenType::Minus);
         },
         // *= *
