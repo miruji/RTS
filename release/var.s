@@ -1,11 +1,11 @@
-##
+#
   variable
 
   memoryCellName   -> final    locked
   memoryCellName~  -> variable locked
   memoryCellName~~ -> variable unlocked
 
-##
+#
   a            # locked final
   a = 10       # now a is a constant Unsigned
 
@@ -21,11 +21,22 @@
   d~~ = c      # var unlocked-Unsigned
   d -= 31      # now d is a Integer, = -1
 
-a~ = 10
-a -= (((10+(10+20)*3+10)*2)/10/2-10+2)/3-1 # 0
+a = 10
+b = 20
+c = (a+b)*0.5
+println(c-0.5) # 14.5
 
-b = a+10   # 20
-a = b+10   # 30
-println(a) # println 30
+println(1) # next todo
+  a~ = 5
+  println(--a) # now -, out 4
+  println(a--) # out 4, now 3
+  println(++a) # now +, out 4
+  println(a++) # out 4, now 5
+  println(a)   # out 5
+println(2)
 
-println(a+10)
+# todo ++ -- ** // %% ^^
+# todo %= ^=
+# todo print
+# todo print-println multi-arg
+# todo String in print-println

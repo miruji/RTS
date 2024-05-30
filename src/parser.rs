@@ -5,19 +5,15 @@
 use crate::logger::*;
 use crate::filePath;
 
-pub mod memoryCell;
-pub mod memoryCellList;
-use crate::parser::memoryCell::*;
-use crate::parser::memoryCellList::*;
+pub mod memoryCell;     use crate::parser::memoryCell::*;
+pub mod memoryCellList; use crate::parser::memoryCellList::*;
 
-pub mod class;
-pub mod r#enum;
-pub mod method;
-pub mod list;
-use crate::parser::class::*;
-use crate::parser::r#enum::*;
-use crate::parser::method::*;
-use crate::parser::list::*;
+pub mod value;
+pub mod uf64;
+pub mod class;  use crate::parser::class::*;
+pub mod r#enum; use crate::parser::r#enum::*;
+pub mod method; use crate::parser::method::*;
+pub mod list;   use crate::parser::list::*;
 
 use crate::tokenizer::*;
 use crate::tokenizer::token::*;
@@ -242,12 +238,24 @@ fn checkMemoryCellType(dataType: TokenType) -> bool {
 fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
     return 
         if dataType == TokenType::Equals         || // =
-           dataType == TokenType::Increment      || // ++
+
+           dataType == TokenType::UnaryPlus      || // ++
            dataType == TokenType::PlusEquals     || // +=
-           dataType == TokenType::Decrement      || // --
+
+           dataType == TokenType::UnaryMinus     || // --
            dataType == TokenType::MinusEquals    || // -=
+
+           dataType == TokenType::UnaryMultiply  || // **
            dataType == TokenType::MultiplyEquals || // *=
-           dataType == TokenType::DivideEquals      // /=
+
+           dataType == TokenType::UnaryDivide    || // //
+           dataType == TokenType::DivideEquals   || // /=
+
+           dataType == TokenType::UnaryModulo    || // %%
+           dataType == TokenType::ModuloEquals   || // %=
+
+           dataType == TokenType::UnaryExponent  || // ^^
+           dataType == TokenType::ExponentEquals    // ^=
         {
             true
             // todo: complex number
@@ -486,10 +494,6 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         replaceSavedLine( lines[i].clone() ); // save line now for logger
         let line = &mut lines[i];             // set editable line
 
-        // search methods calls
-        searchMethodsCalls(line);
-        searchConditionalMemoryCell(line);
-
         // output
         /*
         if !line.tokens.is_empty() {
@@ -502,6 +506,10 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
             outputLines(&line.lines, 3);
         }
         */
+
+        // search methods calls
+        searchMethodsCalls(line);
+        searchConditionalMemoryCell(line);
 
         //
         //log("parserEnd", &format!("{}-{}", ident_str1, i));

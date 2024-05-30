@@ -24,13 +24,25 @@ pub enum TokenType {
     Divide,   // /
     Equals,   // =
     Modulo,   // %
+    Exponent, // ^
 // double math
-    Increment,      // ++
+    UnaryPlus,      // ++
     PlusEquals,     // +=
-    Decrement,      // --
+
+    UnaryMinus,     // --
     MinusEquals,    // -=
+
+    UnaryMultiply,  // **
     MultiplyEquals, // *=
+
+    UnaryDivide,    // //
     DivideEquals,   // /=
+
+    UnaryModulo,    // %%
+    ModuloEquals,   // %=
+
+    UnaryExponent,  // ^^
+    ExponentEquals, // ^=
 // single logical
     GreaterThan, // >
     LessThan,    // <
@@ -76,10 +88,12 @@ impl ToString for TokenType {
             TokenType::Dot     => String::from("."),       // .
 
             TokenType::DoubleComment => String::from("Double Comment"), // ##
+            
             // quotes
             TokenType::BackQuote   => String::from("Back Quote"),   // `
             TokenType::DoubleQuote => String::from("Double Quote"), // "
             TokenType::SingleQuote => String::from("Single Quote"), // '
+           
             // single math
             TokenType::Plus     => String::from("+"), // +
             TokenType::Minus    => String::from("-"), // -
@@ -87,23 +101,38 @@ impl ToString for TokenType {
             TokenType::Divide   => String::from("/"), // /
             TokenType::Equals   => String::from("="), // =
             TokenType::Modulo   => String::from("%"), // %
-            // todo: ^ ???
+            TokenType::Exponent => String::from("^"), // ^
+            
             // double math
-            TokenType::Increment      => String::from("++"), // ++
+            TokenType::UnaryPlus      => String::from("++"), // ++
             TokenType::PlusEquals     => String::from("+="), // +=
-            TokenType::Decrement      => String::from("--"), // --
+
+            TokenType::UnaryMinus     => String::from("--"), // --
             TokenType::MinusEquals    => String::from("-="), // -=
+
+            TokenType::UnaryMultiply  => String::from("**"), // **
             TokenType::MultiplyEquals => String::from("*="), // *=
+
+            TokenType::UnaryDivide    => String::from("//"), // //
             TokenType::DivideEquals   => String::from("/="), // /=
+
+            TokenType::UnaryModulo    => String::from("%%"), // %%
+            TokenType::ModuloEquals   => String::from("%="), // %=
+
+            TokenType::UnaryExponent  => String::from("^^"), // ^^
+            TokenType::ExponentEquals => String::from("^="), // ^=
+
             // single logical
             TokenType::GreaterThan => String::from(">"), // >
             TokenType::LessThan    => String::from("<"), // <
             TokenType::Question    => String::from("?"), // ?
             TokenType::Not         => String::from("!"), // !
+            
             // double logical
             TokenType::GreaterThanOrEquals => String::from(">="),  // >=
             TokenType::LessThanOrEquals    => String::from("<="),  // <=
             TokenType::NotEquals           => String::from("!="),  // !=
+            
             // brackets
             TokenType::CircleBracketBegin => String::from("("), // (
             TokenType::CircleBracketEnd   => String::from(")"), // )
@@ -111,10 +140,12 @@ impl ToString for TokenType {
             TokenType::SquareBracketEnd   => String::from("]"), // ]
             TokenType::FigureBracketBegin => String::from("{"), // {
             TokenType::FigureBracketEnd   => String::from("}"), // }
+            
             // other
             TokenType::Colon   => String::from(":"),  // :
             TokenType::Pointer => String::from("->"), // ->
             TokenType::Tilde   => String::from("~"),  // ~
+            
             // words
             TokenType::Int      => String::from("Int"),      // Integer
             TokenType::UInt     => String::from("UInt"),     // Unsigned integer

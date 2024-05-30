@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
     use crate::tokenizer::*;
     use crate::parser::*;
 
-    //logSeparator("=> Reading arguments");
+    logSeparator("=> Reading arguments");
 
     // get args --> key-values
     let mut argsKeys: Vec<(String, Vec<String>)> = Vec::new();
@@ -61,7 +61,7 @@ fn main() -> io::Result<()> {
                 unsafe{ filePath = values[0].clone() };
                 // todo: check filePath file type
                 noRun = false;
-                //log("ok",&format!("Run \"{}\"",unsafe{&*filePath}));
+                log("ok",&format!("Run \"{}\"",unsafe{&*filePath}));
             // valuesLength == 0 -> in noRun if
             } else {
                 log("err","Key [-r] only accepts one value");
@@ -82,15 +82,15 @@ fn main() -> io::Result<()> {
 
     // print all flags
     if debugMode {
-        //log("ok","Debug mode");
+        log("ok","Debug mode");
     }
 
-    //logSeparator("=> Opening a file");
+    logSeparator("=> Opening a file");
 
     // open file
     let mut file = match File::open(unsafe{&*filePath}) {
         Ok(file) => {
-            //log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*filePath}));
+            log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*filePath}));
             file
         },
         Err(_) => {
@@ -107,7 +107,7 @@ fn main() -> io::Result<()> {
             if !buffer.ends_with(&[b'\n']) {
                 buffer.push(b'\n');
             }
-            //log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*filePath}));
+            log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*filePath}));
         }
         Err(_) => {
             log("err",&format!("Unable to read file \"{}\"",unsafe{&*filePath}));
@@ -116,7 +116,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    //logSeparator("=> AST generation");
+    logSeparator("=> AST generation");
 
     // read
     unsafe {

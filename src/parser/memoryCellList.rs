@@ -6,6 +6,8 @@ use crate::logger::*;
 use crate::filePath;
 
 use crate::parser::memoryCell::*;
+use crate::parser::value::*;
+use crate::parser::uf64::*;
 use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
@@ -74,18 +76,14 @@ impl MemoryCellList {
                     //println!("{}:{}", leftValue.data, rightValue.data);
                     //println!("{}:{}", leftValue.dataType.to_string(), rightValue.dataType.to_string());
                     if op == TokenType::PlusEquals {
-                        mc.value.data = calculate(&TokenType::Plus, &leftValue, &rightValue);
+                        mc.value = calculate(&TokenType::Plus, &leftValue, &rightValue);
                     } else if op == TokenType::MinusEquals {
-                        mc.value.data = calculate(&TokenType::Minus, &leftValue, &rightValue);
+                        mc.value = calculate(&TokenType::Minus, &leftValue, &rightValue);
                     } else if op == TokenType::MultiplyEquals {
-                        mc.value.data = calculate(&TokenType::Multiply, &leftValue, &rightValue);
+                        mc.value = calculate(&TokenType::Multiply, &leftValue, &rightValue);
                     } else if op == TokenType::DivideEquals {
-                        mc.value.data = calculate(&TokenType::Divide, &leftValue, &rightValue);
+                        mc.value = calculate(&TokenType::Divide, &leftValue, &rightValue);
                     }
-                }
-                // type changed ?
-                if mc.value.data.starts_with('-') && mc.value.dataType == TokenType::UInt {
-                    mc.value.dataType = TokenType::Int;
                 }
                 //println!("  = {}", mc.value.data);
             }
@@ -110,7 +108,7 @@ impl MemoryCellList {
 
         //
         let mut i: usize = 0;
-        // check bracket
+        // bracket
         while i < valueLength {
             let token = value[i].clone();
             if token.dataType == TokenType::CircleBracketBegin {
@@ -118,7 +116,7 @@ impl MemoryCellList {
             }
             i += 1;
         }
-        // check MemoryCell
+        // MemoryCell
         i = 0;
         while i < valueLength {
             if value[i].dataType == TokenType::Word {
@@ -130,7 +128,7 @@ impl MemoryCellList {
             }
             i += 1;
         }
-        // check * and /
+        // * /
         i = 0;
         while i < valueLength {
             if valueLength == 1 {
@@ -143,7 +141,7 @@ impl MemoryCellList {
 
             let token = value[i].clone();
             if i+1 < valueLength && (token.dataType == TokenType::Multiply || token.dataType == TokenType::Divide) {
-                value[i-1].data = calculate(&token.dataType, &value[i-1], &value[i+1]);
+                value[i-1] = calculate(&token.dataType, &value[i-1], &value[i+1]);
 
                 value.remove(i); // remove op
                 value.remove(i); // remove right value
@@ -153,7 +151,7 @@ impl MemoryCellList {
 
             i += 1;
         }
-        // check + and -
+        // + -
         i = 0;
         while i < valueLength {
             if valueLength == 1 {
@@ -165,9 +163,9 @@ impl MemoryCellList {
             }
 
             let token = value[i].clone();
-            // + or -
+            // + -
             if i+1 < valueLength && (token.dataType == TokenType::Plus || token.dataType == TokenType::Minus) {
-                value[i-1].data = calculate(&token.dataType, &value[i-1], &value[i+1]);
+                value[i-1] = calculate(&token.dataType, &value[i-1], &value[i+1]);
 
                 value.remove(i); // remove op
                 value.remove(i); // remove right value
@@ -175,8 +173,8 @@ impl MemoryCellList {
                 continue;
             } else
             // value -value2
-            if token.dataType == TokenType::Int {
-                value[i-1].data = calculate(&TokenType::Plus, &value[i-1], &value[i]);
+            if token.dataType == TokenType::Int || token.dataType == TokenType::Float {
+                value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
                 value.remove(i); // remove UInt
                 valueLength -= 1;
@@ -189,115 +187,85 @@ impl MemoryCellList {
         value[0].clone()
     }
 }
-// Value
-enum Value {
-    Signed(i64),
-    Unsigned(u64),
-}
-use std::fmt;
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Value::Signed(val) => write!(f, "{}", val),
-            Value::Unsigned(val) => write!(f, "{}", val),
-        }
-    }
-}
-use std::ops::{Add, Sub, Div, Mul};
-impl Add for Value {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        match (self, other) {
-            (Value::Signed(x),   Value::Signed(y))   => Value::Signed(x+y),
-            (Value::Unsigned(x), Value::Unsigned(y)) => Value::Unsigned(x+y),
-            (Value::Unsigned(x), Value::Signed(y))   => Value::Signed(x as i64 + y),
-            (Value::Signed(x),   Value::Unsigned(y)) => Value::Signed(x + y as i64),
-            _ => panic!("Unsupported operation: addition with mixed types"),
-        }
-    }
-}
-impl Sub for Value {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        match (self, other) {
-            (Value::Signed(x),   Value::Signed(y))   => Value::Signed(x-y),
-            (Value::Unsigned(x), Value::Unsigned(y)) => Value::Signed(x as i64-y as i64),
-            (Value::Unsigned(x), Value::Signed(y))   => Value::Signed(x as i64 -y),
-            (Value::Signed(x),   Value::Unsigned(y)) => Value::Signed(x- y as i64),
-            _ => panic!("Unsupported operation: subtraction with mixed types"),
-        }
-    }
-}
-impl Div for Value {
-    type Output = Self;
-
-    fn div(self, other: Self) -> Self {
-        match (self, other) {
-            (Value::Signed(x),   Value::Signed(y))   => Value::Signed(x/y),
-            (Value::Unsigned(x), Value::Unsigned(y)) => Value::Unsigned(x/y),
-            (Value::Unsigned(x), Value::Signed(y))   => Value::Signed(x as i64 /y),
-            (Value::Signed(x),   Value::Unsigned(y)) => Value::Signed(x/ y as i64),
-            _ => panic!("Unsupported operation: division with mixed types"),
-        }
-    }
-}
-impl Mul for Value {
-    type Output = Self;
-
-    fn mul(self, other: Self) -> Self {
-        match (self, other) {
-            (Value::Signed(x),   Value::Signed(y))   => Value::Signed(x*y),
-            (Value::Unsigned(x), Value::Unsigned(y)) => Value::Unsigned(x*y),
-            (Value::Unsigned(x), Value::Signed(y))   => Value::Signed(x as i64 *y),
-            (Value::Signed(x),   Value::Unsigned(y)) => Value::Signed(x*y as i64),
-            _ => panic!("Unsupported operation: multiplication with mixed types"),
-        }
-    }
-}
-// calculate
-fn calculate(op: &TokenType, left: &Token, right: &Token) -> String {
+// calculate value
+fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
     // set types
-    //println!("calc1: {} -> {}:{}",op.to_string(),left.dataType.to_string(),right.dataType.to_string());
+    //println!("calc1: {} {} {}",left.dataType.to_string(),op.to_string(),right.dataType.to_string());
     let leftValue = match left.dataType {
         TokenType::Int => {
-            left.data.parse::<i64>().map(Value::Signed).unwrap_or(Value::Signed(0))
+            left.data.parse::<i64>().map(Value::Int).unwrap_or(Value::Int(0))
         },
         TokenType::UInt => {
-            left.data.parse::<u64>().map(Value::Unsigned).unwrap_or(Value::Unsigned(0))
+            left.data.parse::<u64>().map(Value::UInt).unwrap_or(Value::UInt(0))
         },
-        _ => Value::Signed(0),
+        TokenType::Float => {
+            left.data.parse::<f64>().map(Value::Float).unwrap_or(Value::Float(0.0))
+        },
+        TokenType::UFloat => {
+            left.data.parse::<f64>().map(uf64::from).map(Value::UFloat).unwrap_or(Value::UFloat(uf64::from(0.0)))
+        },
+        _ => Value::Int(0),
     };
     let rightValue = match right.dataType {
         TokenType::Int => {
-            right.data.parse::<i64>().map(Value::Signed).unwrap_or(Value::Signed(0))
+            right.data.parse::<i64>().map(Value::Int).unwrap_or(Value::Int(0))
         },
         TokenType::UInt => {
-            right.data.parse::<u64>().map(Value::Unsigned).unwrap_or(Value::Unsigned(0))
+            right.data.parse::<u64>().map(Value::UInt).unwrap_or(Value::UInt(0))
         },
-        _ => Value::Signed(0),
+        TokenType::Float => {
+            right.data.parse::<f64>().map(Value::Float).unwrap_or(Value::Float(0.0))
+        },
+        TokenType::UFloat => {
+            right.data.parse::<f64>().map(uf64::from).map(Value::UFloat).unwrap_or(Value::UFloat(uf64::from(0.0)))
+        },
+        _ => Value::Int(0),
     };
-    //println!("calc2: {}:{}",leftValue,rightValue);
-    // calculate
-    return if *op == TokenType::Plus {
-        (leftValue+rightValue).to_string()
-    } else if *op == TokenType::Minus {
-        (leftValue-rightValue).to_string()
-    } else if *op == TokenType::Multiply {
-        (leftValue*rightValue).to_string()
-    } else if *op == TokenType::Divide {
-        (leftValue/rightValue).to_string()
+    //println!("calc2: {} {} {}",leftValue,op.to_string(),rightValue);
+    // next: set type, calculate value, check result type, return
+    // set result type
+    let mut resultType: TokenType;
+    if left.dataType == TokenType::Float || right.dataType == TokenType::Float {
+        resultType = TokenType::Float;
+    } else
+    if left.dataType == TokenType::UFloat || right.dataType == TokenType::UFloat {
+        resultType = TokenType::UFloat;
+    } else
+    if left.dataType == TokenType::Int || right.dataType == TokenType::Int {
+        resultType = TokenType::Int;
     } else {
-        "0".to_string()
+        resultType = TokenType::UInt;
     }
+    // calculate
+    let resultValue: String = 
+        if *op == TokenType::Plus {
+            (leftValue+rightValue).to_string()
+        } else if *op == TokenType::Minus {
+            (leftValue-rightValue).to_string()
+        } else if *op == TokenType::Multiply {
+            (leftValue*rightValue).to_string()
+        } else if *op == TokenType::Divide {
+            (leftValue/rightValue).to_string()
+        } else {
+            "0".to_string()
+        };
+    // type changed ?
+    if resultValue.starts_with('-') {
+        if resultType == TokenType::UInt {
+            resultType = TokenType::Int;
+        } else 
+        if resultType == TokenType::UFloat {
+            resultType = TokenType::Float;
+        }
+    }
+    //
+    return Token::new(resultType, resultValue);
 }
-
-//
+// update value
 fn updateValue(mcl: &MemoryCellList, value: &mut Vec<Token>, index: usize) {
     if let Some(mc) = mcl.getCell(&value[index].data) {
         value[index].data     = mc.value.data.clone();
-        value[index].dataType = TokenType::Int;
+        value[index].dataType = mc.value.dataType.clone();
     } else {
         log("syntax","");
         log("path",&format!(
