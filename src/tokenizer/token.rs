@@ -12,11 +12,11 @@ pub enum TokenType {
     Comma,   // ,
     Dot,     // .
 
-    DoubleComment, // ##
+    Comment, // #
 // quotes
-    BackQuote,   // `
-    DoubleQuote, // "
-    SingleQuote, // '
+    SpecialString, // `
+    String,        // "
+    Char,          // '
 // single math
     Plus,     // +
     Minus,    // -
@@ -71,6 +71,8 @@ pub enum TokenType {
     Rational, // Rational
     Complex,  // Complex
 
+    Array,    // Array
+
     And, // and
     Or,  // or
     
@@ -87,12 +89,12 @@ impl ToString for TokenType {
             TokenType::Comma   => String::from(","),       // ,
             TokenType::Dot     => String::from("."),       // .
 
-            TokenType::DoubleComment => String::from("Double Comment"), // ##
+            TokenType::Comment => String::from("Comment"), // #
             
             // quotes
-            TokenType::BackQuote   => String::from("Back Quote"),   // `
-            TokenType::DoubleQuote => String::from("Double Quote"), // "
-            TokenType::SingleQuote => String::from("Single Quote"), // '
+            TokenType::SpecialString => String::from("Special String"), // `
+            TokenType::String        => String::from("String"),         // "
+            TokenType::Char          => String::from("Char"),           // '
            
             // single math
             TokenType::Plus     => String::from("+"), // +
@@ -153,6 +155,8 @@ impl ToString for TokenType {
             TokenType::UFloat   => String::from("UFloat"),   // Unsigned float
             TokenType::Rational => String::from("Rational"), // Rational
             TokenType::Complex  => String::from("Complex"),  // Complex
+
+            TokenType::Array  => String::from("Array"),      // Array
 
             TokenType::And => String::from("and"), // and
             TokenType::Or  => String::from("or"),  // or

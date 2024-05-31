@@ -12,7 +12,7 @@ unsafe fn deleteComment(buffer: &[u8]) {
     _index += 1;
     _indexCount += 2;
     
-    _lineTokens.push( Token::newEmpty(TokenType::DoubleComment) );
+    _lineTokens.push( Token::newEmpty(TokenType::Comment) );
     while _index < _bufferLength && buffer[_index] != b'\n' {
         _index += 1;
         _indexCount += 1;
@@ -24,7 +24,7 @@ fn getSingleChar(c: u8) -> bool {
         b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
         b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
         b'(' | b')' | b'{' | b'}' | b'[' | b']' | 
-        b':' | b';' | b',' | b'.' | b'~' => true,
+        b':' | b',' | b'.' | b'~' => true,
         _ => false,
     }
 }
@@ -155,6 +155,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             currentChar = buffer[_index];
             // check endline error
             if currentChar == b'\n' {
+                /*
                 log("syntax","");
                 log("path",&format!(
                     "{}:{}:{}", 
@@ -164,6 +165,8 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
                 ));
                 log("note","Quotes were not closed!");
                 logExit();
+                */
+                return Token::newEmpty(TokenType::None);
             }
             // read quote
             if currentChar != quote {
@@ -213,12 +216,12 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             logExit();
             std::process::exit(1)
         } else {
-            Token::new(TokenType::SingleQuote, result.clone())
+            Token::new(TokenType::Char, result.clone())
         }
     } else if quote == b'"' {
-        Token::new(TokenType::DoubleQuote, result.clone())
+        Token::new(TokenType::String, result.clone())
     } else if quote == b'`' {
-        Token::new(TokenType::BackQuote, result.clone())
+        Token::new(TokenType::SpecialString, result.clone())
     } else {
         Token::newEmpty(TokenType::None)
     }
@@ -406,6 +409,11 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
                 _indexCount += 1;
                 Token::newEmpty(TokenType::Modulo)
             },
+            b'^' => {
+                _index += 1;
+                _indexCount += 1;
+                Token::newEmpty(TokenType::Exponent)
+            },
             b'?' => {
                 _index += 1;
                 _indexCount += 1;
@@ -478,7 +486,7 @@ fn lineNesting(lines: &mut Vec<Line>) {
     let mut linesLen: usize = lines.len();
     let mut i: usize = 0;
 
-    let mut ni: usize;
+    let mut ni:       usize;
     let mut nextLine: Line;
     while i < linesLen {
         ni = i+1;
@@ -487,7 +495,7 @@ fn lineNesting(lines: &mut Vec<Line>) {
                 nextLine = lines[ni].clone();     // clone next line
                 lines[i].lines.push(nextLine);    // nesting
                 lines.remove(ni);                 // delete next
-                linesLen = lines.len();           // update vec len
+                linesLen -= 1;                    // update vec len
                 lineNesting(&mut lines[i].lines); // cycle
             } else {
                 i += 1; // next line < current line => skip
@@ -504,7 +512,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
     for token in tokens {
         if !token.data.is_empty() {
             // single quote
-            if token.dataType == TokenType::SingleQuote {
+            if token.dataType == TokenType::Char {
                 log("parserToken",&format!(
                     "{}'{}'  |{}",
                     identStr,
@@ -513,7 +521,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 ));
             // double quote
             } else
-            if token.dataType == TokenType::DoubleQuote {
+            if token.dataType == TokenType::String {
                 log("parserToken",&format!(
                     "{}\"{}\"  |{}",
                     identStr,
@@ -522,7 +530,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 ));
             // back quote
             } else
-            if token.dataType == TokenType::BackQuote {
+            if token.dataType == TokenType::SpecialString {
                 log("parserToken",&format!(
                     "{}`{}`  |{}",
                     identStr,
@@ -539,7 +547,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 ));
             }
         } else {
-            println!("{}{}", identStr, token.dataType.to_string());
+            println!("{}{}",identStr,token.dataType.to_string());
         }
         if (&token.tokens).len() > 0 {
             outputTokens(&token.tokens, lineIdent, ident+1)
@@ -551,14 +559,14 @@ pub fn outputLines(lines: &Vec<Line>, ident: usize) {
     let identStr1: String = " ".repeat((ident)*2);
     let identStr2: String = " ".repeat((ident)*2+2);
     for (i, line) in lines.iter().enumerate() {
-        log("parserBegin", &format!("{}+{}", identStr1, i));
-        log("parserHeader", &format!("{}Tokens", identStr2));
+        log("parserBegin", &format!("{}+{}",identStr1,i));
+        log("parserHeader", &format!("{}Tokens",identStr2));
         outputTokens(&line.tokens, ident+1, 1);
         if (&line.lines).len() > 0 {
-            log("parserHeader", &format!("{}Lines", identStr2));
+            log("parserHeader", &format!("{}Lines",identStr2));
             outputLines(&line.lines, ident+1);
         }
-        log("parserEnd", &format!("{}-{}", identStr1, i));
+        log("parserEnd", &format!("{}-{}",identStr1,i));
     }
 }
 
@@ -584,9 +592,10 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         c = buffer[_index];
 
         // ident
-        if c == b' ' && readLineIdent {
-            _index += 1;
-            _indexCount += 1;
+        if c == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent {
+            _index += 2;
+            _indexCount += 2;
+
             _linesIdent += 1;
         } else {
             readLineIdent = false;
@@ -610,7 +619,6 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
                 );
 
                 // add new line
-                _linesIdent = if _linesIdent%2 == 0 { _linesIdent/2 } else { (_linesIdent-1)/2 };
                 lines.push( Line {
                     tokens:       _lineTokens.clone(),
                     ident:        _linesIdent,
@@ -681,7 +689,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             lineTokens = lines[i].tokens.clone();
             let lastLineToken: usize = lineTokens.len()-1;
 
-            if lineTokens[lastLineToken].dataType == TokenType::DoubleComment {
+            if lineTokens[lastLineToken].dataType == TokenType::Comment {
                 lines[i].lines.clear();
                 lines[i].tokens.remove(lastLineToken);
                 if lines[i].tokens.len() == 0 {

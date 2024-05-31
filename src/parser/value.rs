@@ -6,19 +6,22 @@ use std::fmt;
 use crate::parser::uf64::*;
 
 // Value
+#[derive(PartialEq)]
 pub enum Value {
     Int(i64),
     UInt(u64),
     Float(f64),
     UFloat(uf64),
+    String(String),
 }
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Value::Int(val)    => write!(f, "{}", val),
-            Value::UInt(val)   => write!(f, "{}", val),
-            Value::Float(val)  => write!(f, "{}", val),
-            Value::UFloat(val) => write!(f, "{}", val),
+            Value::Int(val)        => write!(f, "{}", val),
+            Value::UInt(val)       => write!(f, "{}", val),
+            Value::Float(val)      => write!(f, "{}", val),
+            Value::UFloat(val)     => write!(f, "{}", val),
+            Value::String(ref val) => write!(f, "{}", val),
         }
     }
 }
@@ -56,6 +59,9 @@ impl Add for Value {
             // UInt UFloat
             (Value::UInt(x),   Value::UFloat(y)) => Value::UFloat(uf64::from(x) +y),
             (Value::UFloat(x), Value::UInt(y))   => Value::UFloat(x+ uf64::from(y)),
+
+            // String
+            (Value::String(x), Value::String(y)) => Value::String(x+&y),
 
             //
             _ => panic!("Unsupported operation: addition with mixed types"),

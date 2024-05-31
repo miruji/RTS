@@ -4,9 +4,12 @@
 
 use crate::logger::*;
 use crate::filePath;
+use crate::_argc;
+use crate::_argv;
 
 pub mod memoryCell;     use crate::parser::memoryCell::*;
 pub mod memoryCellList; use crate::parser::memoryCellList::*;
+use std::sync::MutexGuard;
 
 pub mod value;
 pub mod uf64;
@@ -19,26 +22,34 @@ use crate::tokenizer::*;
 use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
+use std::process::Command;
+
 // define upper struct [Class / Enum]
 unsafe fn defineUpperStruct(classes: &mut Vec<Class>, enums: &mut Vec<Enum>) {
     let mut i:   usize = 0;
     let mut add: bool = true;
-    while i < lines.len() {
-        let line = lines[i].clone();
+
+    let mut line: Line;
+
+    let mut constr: bool;
+
+    while i < _lines.len() { // todo: add linesLength and -= 1
+        line = _lines[i].clone();
+
         for token in &line.tokens {
         if let Some(firstChar) = token.data.chars().next() {
             // fist char upper
             if firstChar.is_ascii_uppercase() {
                 // Class or Enum ?
                 // => read this line.lines
-                let mut constr: bool = false;
+                constr = false;
                 'outer: {
                     if !constr && line.lines.len() > 0 {
                     for childLine in &line.lines {
                         for searchConstr in &childLine.tokens {
                             if searchConstr.data == "constr" {
                                 classes.push( Class::new(token.data.clone(), i, line.lines.clone()) );
-                                lines.remove(i);
+                                _lines.remove(i);
                                 add = false;
 
                                 constr = true;
@@ -50,7 +61,7 @@ unsafe fn defineUpperStruct(classes: &mut Vec<Class>, enums: &mut Vec<Enum>) {
                 // else type = enum
                 if !constr && !line.lines.is_empty() {
                     enums.push( Enum::new(token.data.clone(), i, line.lines.clone()) );
-                    lines.remove(i);
+                    _lines.remove(i);
                     add = false;
                 }
                 break;
@@ -69,23 +80,32 @@ unsafe fn defineUpperStruct(classes: &mut Vec<Class>, enums: &mut Vec<Enum>) {
 unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
     let mut i:   usize = 0;
     let mut add: bool = true;
-    while i < lines.len() {
-        let line = lines[i].clone();
-        let lineTokensLength = line.tokens.len();
-        for token in &line.tokens {
+
+    let mut line: Line;
+    let mut lineTokensLength: usize;
+
+    let mut list: bool;
+
+    let mut token: &Token;
+
+    while i < _lines.len() { // todo: add linesLength and -= 1
+        line = _lines[i].clone();
+        lineTokensLength = line.tokens.len();
+
+        token = &line.tokens[0];
         if let Some(firstChar) = token.data.chars().next() {
             // fist char upper
             if firstChar.is_ascii_lowercase() {
                 // method or list ?
                 // => read this line.lines
-                let mut list: bool = false;
+                list = false;
                 'outer: {
                     if !list && line.lines.len() > 0 {
                     for childLine in &line.lines {
                         for searchKey in &childLine.tokens {
-                            if searchKey.dataType == TokenType::DoubleQuote {
+                            if searchKey.dataType == TokenType::String {
                                 lists.push( List::new(token.data.clone(), i, line.lines.clone()) );
-                                lines.remove(i);
+                                _lines.remove(i);
                                 add = false;
 
                                 list = true;
@@ -158,13 +178,13 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
                         logExit();
                     }
                     
-                    lines.remove(i);
+                    _lines.remove(i);
                     add = false;
                 }
-                break;
+                //break;
                 //
             }
-        } }
+        }
         if !add {
             add = true;
         } else {
@@ -173,33 +193,164 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
     }
     //
 }
+/* search condition
+   e:
+     ? condition
+       block
+     ? condition
+       block
+*/
+unsafe fn searchCondition(lines: &mut Vec<Line>, lineIndex: usize, linesLength: &mut usize) -> bool {
+    let tokens:    &mut Vec<Token> = &mut lines[lineIndex].tokens;
+    let mut token: &Token = &tokens[0];
 
-/* search methods calls
+    // search first condition
+    if token.dataType == TokenType::Question {
+        let mut conditions = Vec::new();
+        {
+            let mut i: usize = lineIndex+1;
+            {
+                let mut lineBuffer = (&lines[lineIndex]).clone();
+                lineBuffer.tokens.remove(0);
+                conditions.push(lineBuffer);
+            }
+
+            // search bottom lines
+            let mut bottomLineBuffer: &Line;
+            while i < *linesLength {
+                bottomLineBuffer = &lines[i];
+                if bottomLineBuffer.tokens[0].dataType == TokenType::Question {
+                    let mut lineBuffer = bottomLineBuffer.clone();
+                    lineBuffer.tokens.remove(0);
+                    conditions.push(lineBuffer);
+
+                    lines.remove(i);
+                    *linesLength -= 1;
+                    continue;
+                } else {
+                    break;
+                }
+                i += 1;
+            }
+        }
+
+        if conditions.len() == 0 {
+            return false;
+        }
+
+        // read conditions
+        let mut conditionTruth: bool = false;
+        for condition in &mut conditions {
+            // if elif
+            if condition.tokens.len() != 0 {
+                //println!("  !  if elif");
+                {   // todo: move mcl up ?
+                    let mcl: MutexGuard<'static, MemoryCellList> = getMemoryCellList();
+                    conditionTruth = mcl.expression(&mut condition.tokens,0).data == "true";
+                }
+                if conditionTruth {
+                    let mut conditionLinesLength = condition.lines.len();
+                    let mut conditionLineIndex = 0;
+                    //println!("  !! condition true");
+                    readLines(&mut condition.lines, &mut conditionLineIndex, &mut conditionLinesLength);
+                    break;
+                } else {
+                    //println!("  !! condition false");
+                }
+            // else
+            } else
+            if !conditionTruth {
+                //println!("  !  else");
+                let mut conditionLinesLength = condition.lines.len();
+                let mut conditionLineIndex = 0;
+                //println!("  !! condition true");
+                readLines(&mut condition.lines, &mut conditionLineIndex, &mut conditionLinesLength);
+                break;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+/* search methods call
    e:
      methodCall(parameters)
 */
-unsafe fn searchMethodsCalls(line: &mut Line) {
+unsafe fn searchMethodsCall(line: &mut Line) -> bool {
     let tokens:       &mut Vec<Token> = &mut line.tokens;
     let tokensLength: usize           = tokens.len();
     let mut j: usize = 0;
-    while j < tokensLength {
-        let token = &tokens[j];
-        if token.dataType == TokenType::Word {
 
+    let mut expressionValue: Vec<Token>;
+    let mcl: MutexGuard<'static, MemoryCellList>;
+
+    let mut token: &Token;
+    while j < tokensLength {
+        token = &tokens[j];
+
+        if token.dataType == TokenType::Word {
             // add method call
             if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
                 // check lower first char
                 if token.data.starts_with(|c: char| c.is_lowercase()) {
-                    let mut expressionValue: Vec<Token> = tokens[j+1].tokens.clone();
-                    let mut mcl = getMemoryCellList();
-                    println!("{}",
-                        mcl.expression(
-                            &mut expressionValue,
-                            0
-                        ).data
-                    );
-
-                    break;
+                    expressionValue = tokens[j+1].tokens.clone();
+                    mcl = getMemoryCellList();
+                    // println
+                    if token.data == "println" {
+                        println!("{}",
+                            mcl.expression(
+                                &mut expressionValue,
+                                0
+                            ).data
+                        );
+                    // print
+                    } else 
+                    if token.data == "print" {
+                        print!("{}",
+                            mcl.expression(
+                                &mut expressionValue,
+                                0
+                            ).data
+                        );
+                    // exec
+                    } else 
+                    if token.data == "exec" {
+                        /*
+                        let command = Command::new(
+                            mcl.expression(
+                                &mut expressionValue,
+                                0
+                            ).data
+                        ).output().expect("failed to execute process");
+                        let commandOutput = String::from_utf8_lossy(&command.stdout);
+                        if !commandOutput.is_empty() {
+                            println!("{}", commandOutput);
+                        }
+                        */
+// todo: parse exec
+let expression: String = 
+    mcl.expression(
+        &mut expressionValue,
+        0
+    ).data;
+let mut parts = expression.split_whitespace();
+// Извлекаем команду
+let command_str = parts.next().expect("No command found in expression");
+// Остальные части это аргументы
+let args: Vec<&str> = parts.collect();
+// Создаем и запускаем команду
+let command_output = Command::new(command_str)
+                            .args(&args)
+                            .output()
+                            .expect("failed to execute process");
+// Преобразуем и выводим результат
+let output_str = String::from_utf8_lossy(&command_output.stdout);
+if !output_str.is_empty() {
+    print!("{}", output_str);
+}
+                    }
+                    //
+                    return true;
                 } else {
                 // read error
                     log("syntax","");
@@ -217,6 +368,7 @@ unsafe fn searchMethodsCalls(line: &mut Line) {
 
         j += 1;
     }
+    return false;
 }
 // check memory cell type
 fn checkMemoryCellType(dataType: TokenType) -> bool {
@@ -264,13 +416,13 @@ fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
             false
         }
 }
-/* search conditional MemoryCell
+/* search MemoryCell
    e:
      memoryCellName   -> final    locked
      memoryCellName~  -> variable locked
      memoryCellName~~ -> variable unlocked
 */
-unsafe fn searchConditionalMemoryCell(line: &mut Line) {
+unsafe fn searchMemoryCell(line: &mut Line) -> bool {
     let tokens:           &mut Vec<Token> = &mut line.tokens;
     let mut tokensLength: usize           = tokens.len();
     let mut j:            usize           = 0;
@@ -286,9 +438,10 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
     let mut operatorBuffer: TokenType  = TokenType::None;
     let mut valueBuffer:    Vec<Token> = Vec::new();
 
+    let mut token: &Token;
     while j < tokensLength {
+        token = &tokens[j];
 
-        let token = &tokens[j];
         if token.dataType == TokenType::Word || modeReceived == true {
             // check mode
             if !modeReceived {
@@ -370,31 +523,48 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
             // todo: check ~~ mode-type
 
             // new value to MemoryCell
-            if let Some(mc) = mcl.getCell( &nameBuffer ) {
-                let mcName      = mc.name.clone();
-                let mcMode      = mc.mode.to_string();
-                let mcValueType = mc.valueType.to_string();
+            if /*let Some(mc) =*/ !mcl.getCell( &nameBuffer ).is_none() {
+                //let mcName      = mc.name.clone();
+                //let mcMode      = mc.mode.to_string();
+                //let mcValueType = mc.valueType.to_string();
 
                 mcl.op(
                     nameBuffer,
                     operatorBuffer,
-                    Token::newNesting(valueBuffer.clone())
+                    Token::newNesting(valueBuffer)
                 );
+                return true;
 
                 //println!("      Mode: \"{}\"",mcMode);
                 //println!("      Type: \"{}\"",mcValueType);
             // create MemoryCell
             } else {
-                mcl.push(
-                    MemoryCell::new(
-                        nameBuffer.clone(),
-                        modeBuffer,
-                        typeBuffer.clone(),
-                        Token::newNesting( valueBuffer.clone() )
-                    )
-                );
-
-                let mc: &MemoryCell = mcl.last();
+                // array
+                if valueBuffer[0].dataType == TokenType::SquareBracketBegin {
+                    valueBuffer = valueBuffer[0].tokens.clone();
+                    valueBuffer.retain(|token| token.dataType != TokenType::Comma);
+                    mcl.push(
+                        MemoryCell::new(
+                            nameBuffer,
+                            modeBuffer,
+                            TokenType::Array,
+                            Token::newNesting( valueBuffer )
+                        )
+                    );
+                    return true;
+                // basic cell
+                } else {
+                    mcl.push(
+                        MemoryCell::new(
+                            nameBuffer,
+                            modeBuffer,
+                            typeBuffer,
+                            Token::newNesting( valueBuffer )
+                        )
+                    );
+                    return true;
+                }
+                //let mc: &MemoryCell = mcl.last();
                 //println!("      Mode: \"{}\"",mc.mode.to_string());
                 //println!("      Type: \"{}\"",mc.valueType.to_string());
             }
@@ -406,16 +576,20 @@ unsafe fn searchConditionalMemoryCell(line: &mut Line) {
                 operatorBuffer,
                 Token::newNesting( valueBuffer.clone() )
             );
+            return true;
         }
     }
+    return false;
 }
 
 // parse lines
-static mut lines:    Vec<Line> = Vec::new();
+static mut _lines:       Vec<Line> = Vec::new();
+static mut _lineIndex:   usize     = 0;
+static mut _linesLength: usize     = 0;
 
 pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 // preparation
-    lines = tokenizerLines;
+    _lines = tokenizerLines;
 
     // define upper struct [Class / Enum]
     let mut classes: Vec<Class> = Vec::new();
@@ -481,19 +655,52 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     }
     */
 
+    // set argv-argc
+    {
+        let mut mcl = getMemoryCellList();
+        // argc
+        mcl.push(
+            MemoryCell::new(
+                String::from("argc"),
+                MemoryCellMode::LockedFinal,
+                TokenType::UInt,
+                Token::newNesting(
+                    vec![Token::new(TokenType::UInt, _argc.to_string())]
+                )
+            )
+        );
+        // argv
+        let mut argv: Vec<Token> = Vec::new();
+        for a in &_argv {
+            argv.push(
+                Token::new(TokenType::String, String::from(a))
+            );
+        }
+        mcl.push(
+            MemoryCell::new(
+                String::from("argv"),
+                MemoryCellMode::LockedFinal,
+                TokenType::Array,
+                Token::newNesting(argv)
+            )
+        );
+    }
+
 // read lines
     //log("parserInfo", "Lines");
     //let ident_str1: String = " ".repeat(2);
     //let ident_str2: String = " ".repeat(4);
 
-    let mut i:       usize = 0;
-    let linesLength: usize = lines.len();
-    while i < linesLength {
+    _linesLength = _lines.len();
+    readLines(&mut _lines, &mut _lineIndex, &mut _linesLength);
+}
+pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLength: &mut usize) {
+    let mut line: &mut Line;
+    while *lineIndex < *linesLength {
         //log("parserBegin", &format!("{}+{}", ident_str1, i));
-
-        replaceSavedLine( lines[i].clone() ); // save line now for logger
-        let line = &mut lines[i];             // set editable line
-
+        //println!("index: {}, length: {}",*lineIndex,*linesLength);
+        replaceSavedLine( lines[*lineIndex].clone() ); // save line now for logger
+        
         // output
         /*
         if !line.tokens.is_empty() {
@@ -506,13 +713,19 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
             outputLines(&line.lines, 3);
         }
         */
-
         // search methods calls
-        searchMethodsCalls(line);
-        searchConditionalMemoryCell(line);
-
+        if !searchCondition(lines, *lineIndex, linesLength) {
+            line = &mut lines[*lineIndex]; // set editable line
+            if !searchMethodsCall(line) {
+                searchMemoryCell(line);
+            }
+        }
         //
         //log("parserEnd", &format!("{}-{}", ident_str1, i));
-        i += 1;
+        if lines.len() < *linesLength {
+            *linesLength = lines.len();
+        } else {
+            *lineIndex += 1;
+        }
     }
 }
