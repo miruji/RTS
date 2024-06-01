@@ -31,270 +31,202 @@ fn divideWhitespace(input: &str) -> Vec<&str> {
     //
     vec![&input[..firstNonSpaceIndex], &input[firstNonSpaceIndex..]]
 }
-// start log
+// style log
+fn logWithStyle(string: &str) {
+	print!("{}",&formatPrint(string));
+}
+pub fn formatPrint(string: &str) -> String {
+    let mut result = String::new();
+    let mut i = 0;
+    let stringLength = string.len();
+    let string: Vec<char> = string.chars().collect();
+
+    let mut bracketString: String;
+    let mut bracketColor: Option<Rgb>;
+
+    while i < stringLength {
+        // special
+        if string[i] == '\\' && i+1 < stringLength {
+            match string[i+1] {
+                //
+                'b' => {
+                    if i+2 < stringLength && string[i+2] == 'g' {
+                        i += 5;
+                        bracketString = String::new();
+                        for j in i..stringLength {
+                            if string[j] == ')' {
+                                break;
+                            }
+                            bracketString.push(string[j]);
+                        }
+                        bracketColor = hexToTermionColor(&bracketString);
+                        result.push_str(&format!(
+                            "{}",
+                            Bg(bracketColor.unwrap_or_else(|| Rgb(0, 0, 0)))
+                        ));
+                        i += bracketString.len()+1;
+                        continue;
+                    } else {
+                        result.push_str( &format!("{}",style::Bold) );
+                        i += 2;
+                        continue;
+                    }
+                },
+                'c' => {
+                    i += 2;
+                    result.push_str( &format!("{}",style::Reset) );
+                    continue;
+                },
+                'f' => {
+                    if i+2 < stringLength && string[i+2] == 'g' {
+                        i += 5;
+                        bracketString = String::new();
+                        for j in i..stringLength {
+                            if string[j] == ')' {
+                                break;
+                            }
+                            bracketString.push(string[j]);
+                        }
+                        bracketColor = hexToTermionColor(&bracketString);
+                        result.push_str(&format!(
+                            "{}",
+                            Fg(bracketColor.unwrap_or_else(|| Rgb(0, 0, 0)))
+                        ));
+                        i += bracketString.len()+1;
+                        continue;
+                    }
+                },
+                _ => {
+                    i += 2;
+                    continue;
+                }
+            }
+        // basic
+        } else {
+            result.push( string[i] );
+        }
+        i += 1;
+    }
+    return result;
+}
+// separator log
 pub fn logSeparator(text: &str) {
-	if let Some(textColor) = hexToTermionColor("4d8af9") {
-		println!(
-			"{}{}{}{}",
-			style::Bold,
-			Fg(textColor),
-			text,
-			style::Reset,
-		);
-	}
+    logWithStyle(&format!("\\fg(#4d8af9)\\b{}\\c\n",text));
 }
 // exit log
 pub fn logExit() {
-	if let Some(textColor) = hexToTermionColor("f94d4d") {
-		println!(
-			"{}{}Exit 1{} {}:({}",
-			style::Bold,
-			Fg(textColor),
-			style::Reset,
-			style::Bold,
-			style::Reset,
-		);
-	}
-	std::process::exit(1);
+	logWithStyle("\\fg(#f94d4d)\\bExit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
+    std::process::exit(1);
 }
 // basic style log
 pub fn log(textType: &str, text: &str) {
-	if textType == "info" {
-		if let Some(bgColor) = hexToTermionColor("1a1a1a") {
-		if let Some(textColor) = hexToTermionColor("f0f8ff") {
-			let devide = divideWhitespace(text);
-			println!(
-				"{}{}{}{}Info{}: {}{}",
-				devide[0],
-				Bg(bgColor),
-				Fg(textColor),
-				style::Bold,
-				style::Reset,
-				devide[1],
-				style::Reset
-			);
-		} }
-	} else
-	if textType == "fatal" {
-		if let Some(textColor) = hexToTermionColor("e91a34") {
-			println!(
-				"{}{}Fatal{}: {}{}{}",
-				style::Bold,
-				Fg(textColor),
-				style::Reset,
-				style::Bold,
-				text,
-				style::Reset
-			);
-		}
-	} else
-	if textType == "warning" {
-		if let Some(textColor) = hexToTermionColor("ffd589") {
-			println!(
-				"{}{}Warning{}: {}{}{}",
-				style::Bold,
-				Fg(textColor),
-				style::Reset,
-				style::Bold,
-				text,
-				style::Reset
-			);
-		}
-	} else
 	//
 	if textType == "syntax" {
-		if let Some(textColor) = hexToTermionColor("e91a34") {
-			print!(
-				"{}{}Syntax {}",
-				style::Bold,
-				Fg(textColor),
-				style::Reset,
-			);
-		}
+		logWithStyle("\\fg(#e91a34)\\bSyntax \\c");
 	} else
 	if textType == "parserBegin" { // open +
-		if let Some(bgColor) = hexToTermionColor("29352f") {
-		if let Some(textColor) = hexToTermionColor("c6df90") {
-			let devide = divideWhitespace(text);
-			println!(
-				"{}{}{}{}{}{}",
-				devide[0],
-				Bg(bgColor),
-				Fg(textColor),
-				style::Bold,
-				devide[1],
-				style::Reset
-			);
-		} }
+		let divide: Vec<&str> = divideWhitespace(text);
+		logWithStyle(&format!(
+			"{}\\bg(#29352f)\\fg(#c6df90)\\b{}\\c\n",
+			divide[0],
+			divide[1]
+		));
 	} else
 	if textType == "parserHeader" { // header
-		if let Some(textColor) = hexToTermionColor("c6df90") {
-			println!(
-				"{}{}{}{}",
-				Fg(textColor),
-				style::Bold,
-				text,
-				style::Reset
-			);
-		}
+		logWithStyle(&format!(
+			"\\fg(#c6df90)\\b{}\\c\n",
+			text
+		));
 	} else
 	if textType == "parserEnd" { // end -
-		if let Some(bgColor) = hexToTermionColor("29352f") {
-		if let Some(textColor) = hexToTermionColor("fb9950") {
-			let devide = divideWhitespace(text);
-			println!(
-				"{}{}{}{}{}{}",
-				devide[0],
-				Bg(bgColor),
-				Fg(textColor),
-				style::Bold,
-				devide[1],
-				style::Reset
-			);
-		} }
+		let divide: Vec<&str> = divideWhitespace(text);
+		logWithStyle(&format!(
+			"{}\\bg(#29352f)\\fg(#fb9950)\\b{}\\c\n",
+			divide[0],
+			divide[1]
+		));
 	} else
 	if textType == "parserInfo" { // info
-    	if let Some(bgColor) = hexToTermionColor("29352f") {
-		if let Some(textColor) = hexToTermionColor("d9d9d9") {
-			println!(
-				"{}{}{}{}{}",
-				Bg(bgColor),
-				Fg(textColor),
-				style::Bold,
-				text,
-				style::Reset
-			);
-		} }
+		let divide: Vec<&str> = divideWhitespace(text);
+		logWithStyle(&format!(
+			"{}\\bg(#29352f)\\fg(#d9d9d9)\\b{}\\c\n",
+			divide[0],
+			divide[1]
+		));
 	} else
 	if textType == "parserToken" {
-		if let Some(textColor) = hexToTermionColor("d9d9d9") {
-			let parts: Vec<&str> = text.split("|").collect();
-			let mut outputParts: Vec<String> = Vec::new();
-
-			// first word no format
-			if let Some(firstPart) = parts.first() {
-				outputParts.push(firstPart.to_string());
-			}
-			//
-			for part in parts.iter().skip(1) {
-				outputParts.push(format!(
-					"{}{}{}{}",
-					style::Bold,
-					Fg(textColor),
-					part,
-					style::Reset
-				));
-			}
-
-			println!("{}", outputParts.join(""));
+		let parts: Vec<&str> = text.split("|").collect();
+		let mut outputParts: Vec<String> = Vec::new();
+		// first word no format
+		if let Some(firstPart) = parts.first() {
+			outputParts.push(
+				formatPrint(firstPart)
+			);
 		}
+		// last word
+		for part in parts.iter().skip(1) {
+			outputParts.push(
+				formatPrint(&format!(
+					"\\b\\fg(#d9d9d9){}\\c",
+					part
+				))
+			);
+		}
+		println!("{}", outputParts.join(""));
 	} else
 	//
 	if textType == "ok" { // ok
-		if let Some(firstTextColor)  = hexToTermionColor("55af96") {
-		if let Some(secondTextColor) = hexToTermionColor("f0f8ff") {
-			println!(
-				"  {}{}+{} {}{}{}{}",
-				style::Bold,
-				Fg(firstTextColor),
-				style::Reset,
-				style::Bold,
-				Fg(secondTextColor),
-				text,
-				style::Reset
-			);
-		} }
+		logWithStyle(&format!(
+			"  \\fg(#55af96)\\b+\\c \\fg(#f0f8ff)\\b{}\\c\n",
+			text
+		));
 	} else
 	if textType == "err" { // error
-		if let Some(firstTextColor)  = hexToTermionColor("e91a34") {
-		if let Some(secondTextColor) = hexToTermionColor("f0f8ff") {
-			println!(
-				"  {}{}-{} {}{}{}{}",
-				style::Bold,
-				Fg(firstTextColor),
-				style::Reset,
-				style::Bold,
-				Fg(secondTextColor),
-				text,
-				style::Reset
-			);
-		} }
+		logWithStyle(&format!(
+			"  \\fg(#e91a34)\\b-\\c \\fg(#f0f8ff)\\b{}\\c\n",
+			text
+		));
 	} else
 	if textType == "note" {
-		if let Some(textColor) = hexToTermionColor("f0f8ff") {
-			println!(
-				"  {}{}Note:{} {}",
-				style::Bold,
-				Fg(textColor),
-				style::Reset,
-				text,
-			);
-		}
+		logWithStyle(&format!(
+			"  \\fg(#f0f8ff)\\bNote:\\c \\fg(#f0f8ff){}\\c\n",
+			text
+		));
 	} else
 	if textType == "path" {
-		if let Some(textColor) = hexToTermionColor("f0f8ff") {
-		    let parts: Vec<&str> = text.split("->").collect();
-		    let outputParts: String = parts.join(
-		    	&format!(
-		    		"{}{}->{}",
-		    		style::Bold,
-		    		Fg(textColor),
-		    		style::Reset
-	    		)
-	    	);
-		    let outputParts = 
-		    	&format!(
-		    		"{}{}-> {}{}",
-		    		style::Bold,
-		    		Fg(textColor),
-		    		style::Reset,
-		    		outputParts
-    			);
-			println!(
-				"{}",
-				outputParts,
-			);
-		}
+		let parts: Vec<&str> = text.split("->").collect();
+		let outputParts: String = 
+			parts.join(
+				&formatPrint("\\fg(#f0f8ff)\\b->\\c")
+		);
+		logWithStyle(&format!(
+			"\\fg(#f0f8ff)\\b->\\c \\fg(#f0f8ff){}\\c\n",
+			outputParts
+		));
 	} else
 	if textType == "line" {
 		if let Some(textColor) = hexToTermionColor("d9d9d9") {
 			let parts: Vec<&str> = text.split("|").collect();
 			let mut outputParts: Vec<String> = Vec::new();
-			//
+			// left
 			if let Some(firstPart) = parts.first() {
 				outputParts.push(
-					format!(
-						"  {}{}{} | {}",
-						style::Bold,
-						Fg(textColor),
-						firstPart.to_string(),
-						style::Reset
-					)
+					formatPrint(&format!(
+						"  \\fg(#f0f8ff)\\b{} | \\c",
+						firstPart.to_string()
+					))
 				);
 			}
-			//
+			// right
 			for part in parts.iter().skip(1) {
-				outputParts.push(format!(
-					"{}",
-					part
-				));
+				outputParts.push(part.to_string());
 			}
-			println!("{}", 
-				&format!(
-					"{}{}",
-					outputParts.join(""),
-					style::Reset
-				)
-			);
+			println!("{}",outputParts.join(""));
 		}
 	} else {
-		if let Some(textColor) = hexToTermionColor("f0f8ff") {
-			println!(
-				"{}{}{}",
-				Fg(textColor),
-				text,
-				style::Reset
-			);
-		}
+		logWithStyle(&format!(
+			"\\fg(#f0f8ff){}\\c\n",
+			text
+		));
 	}
 }

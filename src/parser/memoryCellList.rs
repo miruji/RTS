@@ -145,6 +145,15 @@ impl MemoryCellList {
                         value.remove(i+1);
                         valueLength -= 1;
                         continue;
+                    } else 
+                    if functionName == "type" {
+                        token = value[i].clone();
+                        value[i].data = self.expression(&mut value[i+1].tokens.clone(),ident+1).dataType.to_string();
+                        value[i].dataType = TokenType::String;
+
+                        value.remove(i+1);
+                        valueLength -= 1;
+                        continue;
                     }
                 // array & basic cell
                 } else {
@@ -300,6 +309,10 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
     // next: set type, calculate value, check result type, return
     // set result type
     let mut resultType: TokenType;
+    if left.dataType == TokenType::String  || right.dataType == TokenType::String {
+        resultType = TokenType::String;
+        // todo: char
+    } else
     if left.dataType == TokenType::Float  || right.dataType == TokenType::Float {
         resultType = TokenType::Float;
     } else

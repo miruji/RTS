@@ -4,6 +4,7 @@
 
 use crate::logger::*;
 use crate::_filePath;
+use crate::_debugMode;
 
 pub mod token; use crate::tokenizer::token::*;
 pub mod line;  use crate::tokenizer::line::*;
@@ -139,6 +140,7 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
     }
 }
 // get quotes token by buffer-index
+// todo: fix quotes
 unsafe fn getQuotes(buffer: &[u8]) -> Token {
     let quote: u8 = buffer[_index];
 
@@ -511,33 +513,33 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
     let identStr: String = " ".repeat((lineIdent+ident)*2);
     for token in tokens {
         if !token.data.is_empty() {
-            // single quote
+        // single quote
             if token.dataType == TokenType::Char {
                 log("parserToken",&format!(
-                    "{}'{}'  |{}",
+                    "{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
                     identStr,
                     token.data,
                     token.dataType.to_string()
                 ));
-            // double quote
+        // double quote
             } else
             if token.dataType == TokenType::String {
                 log("parserToken",&format!(
-                    "{}\"{}\"  |{}",
+                    "{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
                     identStr,
                     token.data,
                     token.dataType.to_string()
                 ));
-            // back quote
+        // back quote
             } else
             if token.dataType == TokenType::SpecialString {
                 log("parserToken",&format!(
-                    "{}`{}`  |{}",
+                    "{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
                     identStr,
                     token.data,
                     token.dataType.to_string()
                 ));
-            // basic
+        // basic
             } else {
                 log("parserToken",&format!(
                     "{}{}  |{}",
@@ -546,6 +548,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                     token.dataType.to_string()
                 ));
             }
+        // type only
         } else {
             println!("{}{}",identStr,token.dataType.to_string());
         }
@@ -704,6 +707,8 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         }
     }
     //
-    outputLines(&lines,0);
+    if _debugMode {
+        outputLines(&lines,0);
+    }
     lines
 }

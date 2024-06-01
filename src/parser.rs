@@ -308,19 +308,23 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     // println
                     if token.data == "println" {
                         println!("{}",
-                            mcl.expression(
-                                &mut expressionValue,
-                                0
-                            ).data
+                            formatPrint(&
+                                mcl.expression(
+                                    &mut expressionValue,
+                                    0
+                                ).data
+                            )
                         );
                     // print
                     } else 
                     if token.data == "print" {
                         print!("{}",
-                            mcl.expression(
-                                &mut expressionValue,
-                                0
-                            ).data
+                            formatPrint(&
+                                mcl.expression(
+                                    &mut expressionValue,
+                                    0
+                                ).data
+                            )
                         );
                     // exec
                     } else 
@@ -409,8 +413,6 @@ fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
            dataType == TokenType::ExponentEquals    // ^=
         {
             true
-            // todo: complex number
-            // and other types
         } else {
             false
         }

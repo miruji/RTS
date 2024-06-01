@@ -16,6 +16,8 @@ mod logger;
 mod tokenizer;
 mod parser;
 
+pub static _version: &str = "0.2.0";
+
 pub static mut _filePath: String = String::new();
 
 pub static mut _argc: usize       = 0;
@@ -58,8 +60,16 @@ fn main() -> io::Result<()> {
 
     // debug mode on ?
     for (key, values) in &argsKeys {
+        // version
+        if key == "-v" {
+            // todo: version save file ?
+            println!("spl v{}",unsafe{_version});
+            std::process::exit(0);
+        }
         // debug mode
         if key == "-d" {
+            // todo: debug sectors
+            // e: ast, structs, interpritation
             unsafe{_debugMode = true;}
             break;
         }
@@ -95,7 +105,9 @@ fn main() -> io::Result<()> {
         logExit();
     }
 
-    //logSeparator("=> Opening a file");
+    if unsafe{_debugMode} {
+        logSeparator("=> Opening a file");
+    }
 
     // open file
     let mut file = match File::open(unsafe{&*_filePath}) {
