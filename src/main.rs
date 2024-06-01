@@ -16,17 +16,19 @@ mod logger;
 mod tokenizer;
 mod parser;
 
-pub static mut filePath: String = String::new();
+pub static mut _filePath: String = String::new();
+
 pub static mut _argc: usize       = 0;
 pub static mut _argv: Vec<String> = Vec::new();
+
+pub static mut _debugMode: bool = false;
+
 fn main() -> io::Result<()> {
     use crate::logger::*;
     use crate::tokenizer::*;
     use crate::parser::*;
 
-    //logSeparator("=> Reading arguments");
-
-    // get args --> key-values
+    // get args -> key-values
     let mut argsKeys: Vec<(String, Vec<String>)> = Vec::new();
     {
         let args: Vec<String> = env::args().collect();
@@ -54,8 +56,22 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let mut noRun:     bool = true;
-    let mut debugMode: bool = false;
+    // debug mode on ?
+    for (key, values) in &argsKeys {
+        // debug mode
+        if key == "-d" {
+            unsafe{_debugMode = true;}
+            break;
+        }
+    }
+    if unsafe{_debugMode} {
+        logSeparator("=> Reading arguments");
+        log("ok","Debug mode");
+    }
+
+    // read args
+    let mut noRun: bool = true;
+
     for (key, values) in &argsKeys {
         let valuesLength: usize = (&values).len();
         // realtime run
@@ -64,16 +80,13 @@ fn main() -> io::Result<()> {
                 _argc = valuesLength-1;
                 _argv = values.clone();
                 _argv.remove(0); // remove file name
-                filePath = values[0].clone();
-            };
+                _filePath = values[0].clone();
+            }
             // todo: check filePath file type
             noRun = false;
-            //log("ok",&format!("Run \"{}\"",unsafe{&*filePath}));
-        } else
-        // debug mode
-        if key == "-d" {
-            debugMode = true;
-            // todo: add debug
+            if unsafe{_debugMode} {
+                log("ok",&format!("Run \"{}\"",unsafe{&*_filePath}));
+            }
         }
     }
 
@@ -82,21 +95,18 @@ fn main() -> io::Result<()> {
         logExit();
     }
 
-    // print all flags
-    if debugMode {
-        //log("ok","Debug mode");
-    }
-
     //logSeparator("=> Opening a file");
 
     // open file
-    let mut file = match File::open(unsafe{&*filePath}) {
+    let mut file = match File::open(unsafe{&*_filePath}) {
         Ok(file) => {
-            //log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*filePath}));
+            if unsafe{_debugMode} {
+                log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*_filePath}));
+            }
             file
         },
         Err(_) => {
-            log("err",&format!("Unable to opening file \"{}\"",unsafe{&*filePath}));
+            log("err",&format!("Unable to opening file \"{}\"",unsafe{&*_filePath}));
             logExit();
             std::process::exit(1)
         }
@@ -109,16 +119,20 @@ fn main() -> io::Result<()> {
             if !buffer.ends_with(&[b'\n']) {
                 buffer.push(b'\n');
             }
-            //log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*filePath}));
+            if unsafe{_debugMode} {
+                log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*_filePath}));
+            }
         }
         Err(_) => {
-            log("err",&format!("Unable to read file \"{}\"",unsafe{&*filePath}));
+            log("err",&format!("Unable to read file \"{}\"",unsafe{&*_filePath}));
             logExit();
             ()
         }
     }
 
-    //logSeparator("=> AST generation");
+    if unsafe{_debugMode} {
+        logSeparator("=> AST generation");
+    }
 
     // read
     unsafe {

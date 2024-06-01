@@ -3,9 +3,10 @@
 */
 
 use crate::logger::*;
-use crate::filePath;
+use crate::_filePath;
 use crate::_argc;
 use crate::_argv;
+use crate::_debugMode;
 
 pub mod memoryCell;     use crate::parser::memoryCell::*;
 pub mod memoryCellList; use crate::parser::memoryCellList::*;
@@ -174,7 +175,7 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
                         log("syntax","");
                         log("path",&format!(
                             "{} -> Method \"{}\"",
-                            unsafe{&*filePath},
+                            unsafe{&*_filePath},
                             line.tokens[0].data
                         ));
                         log("note","Maximum number of instructions when declaring a procedure is 3;");
@@ -354,7 +355,7 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     log("syntax","");
                     log("path",&format!(
                         "{} -> Word \"{}\"",
-                        unsafe{&*filePath},
+                        unsafe{&*_filePath},
                         token.data
                     ));
                     Line::outputTokens( &getSavedLine() );
@@ -587,6 +588,10 @@ static mut _linesLength: usize     = 0;
 
 pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 // preparation
+    if unsafe{_debugMode} {
+        logSeparator("=> AST preparation");
+    }
+
     _lines = tokenizerLines;
 
     // define upper struct [Class / Enum]
@@ -688,6 +693,10 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     //log("parserInfo", "Lines");
     //let ident_str1: String = " ".repeat(2);
     //let ident_str2: String = " ".repeat(4);
+
+    if unsafe{_debugMode} {
+        logSeparator("=> AST interpretation");
+    }
 
     _linesLength = _lines.len();
     readLines(&mut _lines, &mut _lineIndex, &mut _linesLength);

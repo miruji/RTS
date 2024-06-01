@@ -33,7 +33,7 @@ println(1) # next todo
   println(++a) # now +, out 4
   println(a++) # out 4, now 5
   println(a)   # out 5
-println(2)
+println(2>=3)
 
 # todo ++ -- ** // %% ^^
 # todo %= ^=

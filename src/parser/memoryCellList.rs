@@ -3,7 +3,7 @@
 */
 
 use crate::logger::*;
-use crate::filePath;
+use crate::_filePath;
 
 use crate::parser::memoryCell::*;
 use crate::parser::value::*;
@@ -178,7 +178,13 @@ impl MemoryCellList {
             }
 
             token = value[i].clone();
-            if i+1 < valueLength && (token.dataType == TokenType::Equals) {
+            if i+1 < valueLength && 
+                (token.dataType == TokenType::Equals              || 
+                 token.dataType == TokenType::NotEquals           ||
+                 token.dataType == TokenType::GreaterThan         || 
+                 token.dataType == TokenType::LessThan            ||
+                 token.dataType == TokenType::GreaterThanOrEquals || 
+                 token.dataType == TokenType::LessThanOrEquals) {
                 value[i-1] = calculate(&token.dataType, &value[i-1], &value[i+1]);
                 
                 value.remove(i); // remove op
@@ -308,16 +314,35 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
     // calculate
     let resultValue: String = 
         if *op == TokenType::Plus {
-            (leftValue+rightValue).to_string()
-        } else if *op == TokenType::Minus {
-            (leftValue-rightValue).to_string()
-        } else if *op == TokenType::Multiply {
-            (leftValue*rightValue).to_string()
-        } else if *op == TokenType::Divide {
-            (leftValue/rightValue).to_string()
-        } else if *op == TokenType::Equals {
-            (leftValue==rightValue).to_string()
-            // todo % ^ != > <
+            (leftValue + rightValue).to_string()
+        } else
+        if *op == TokenType::Minus {
+            (leftValue - rightValue).to_string()
+        } else
+        if *op == TokenType::Multiply {
+            (leftValue * rightValue).to_string()
+        } else
+        if *op == TokenType::Divide {
+            (leftValue / rightValue).to_string()
+        } else
+        if *op == TokenType::Equals {
+            (leftValue == rightValue).to_string()
+        } else
+        if *op == TokenType::NotEquals {
+            (leftValue != rightValue).to_string()
+        } else
+        if *op == TokenType::GreaterThan {
+            (leftValue > rightValue).to_string()
+        } else
+        if *op == TokenType::LessThan {
+            (leftValue < rightValue).to_string()
+        } else
+        if *op == TokenType::GreaterThanOrEquals {
+            (leftValue >= rightValue).to_string()
+        } else
+        if *op == TokenType::LessThanOrEquals {
+            (leftValue <= rightValue).to_string()
+            // todo % ^
         } else {
             "0".to_string()
         };
@@ -350,7 +375,7 @@ fn updateValue(mcl: &MemoryCellList, value: &mut Vec<Token>, length: &mut usize,
         log("syntax","");
         log("path",&format!(
             "{} -> MemoryCell",
-            unsafe{&*filePath},
+            unsafe{&*_filePath},
         ));
         Line::outputTokens( &getSavedLine() );
         log("note",&format!(

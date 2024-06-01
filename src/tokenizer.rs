@@ -3,7 +3,7 @@
 */
 
 use crate::logger::*;
-use crate::filePath;
+use crate::_filePath;
 
 pub mod token; use crate::tokenizer::token::*;
 pub mod line;  use crate::tokenizer::line::*;
@@ -159,7 +159,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
                 log("syntax","");
                 log("path",&format!(
                     "{}:{}:{}", 
-                    filePath,
+                    _filePath,
                     _linesCount,
                     _indexCount
                 ));
@@ -208,7 +208,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             log("syntax","");
             log("path",&format!(
                 "{}:{}:{}", 
-                filePath,
+                _filePath,
                 _linesCount,
                 _indexCount
             ));
@@ -704,5 +704,6 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         }
     }
     //
+    outputLines(&lines,0);
     lines
 }

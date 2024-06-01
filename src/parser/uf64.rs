@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, PartialOrd, Clone, Copy)]
 pub struct uf64(f64);
 
 impl fmt::Display for uf64 {

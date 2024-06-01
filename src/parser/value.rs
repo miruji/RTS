@@ -6,7 +6,7 @@ use std::fmt;
 use crate::parser::uf64::*;
 
 // Value
-#[derive(PartialEq)]
+#[derive(PartialEq, PartialOrd)]
 pub enum Value {
     Int(i64),
     UInt(u64),
