@@ -317,7 +317,7 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
             (leftValue/rightValue).to_string()
         } else if *op == TokenType::Equals {
             (leftValue==rightValue).to_string()
-            // todo % ^
+            // todo % ^ != > <
         } else {
             "0".to_string()
         };

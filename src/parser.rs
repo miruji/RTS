@@ -91,6 +91,10 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
     while i < _lines.len() { // todo: add linesLength and -= 1
         line = _lines[i].clone();
         lineTokensLength = line.tokens.len();
+        if lineTokensLength == 0 {
+            i += 1;
+            continue;
+        }
 
         token = &line.tokens[0];
         if let Some(firstChar) = token.data.chars().next() {
@@ -219,6 +223,9 @@ unsafe fn searchCondition(lines: &mut Vec<Line>, lineIndex: usize, linesLength: 
             let mut bottomLineBuffer: &Line;
             while i < *linesLength {
                 bottomLineBuffer = &lines[i];
+                if bottomLineBuffer.tokens.len() == 0 {
+                    break;
+                }
                 if bottomLineBuffer.tokens[0].dataType == TokenType::Question {
                     let mut lineBuffer = bottomLineBuffer.clone();
                     lineBuffer.tokens.remove(0);
@@ -294,6 +301,8 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                 // check lower first char
                 if token.data.starts_with(|c: char| c.is_lowercase()) {
                     expressionValue = tokens[j+1].tokens.clone();
+                    // todo: multi-param
+
                     mcl = getMemoryCellList();
                     // println
                     if token.data == "println" {
@@ -315,40 +324,29 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     // exec
                     } else 
                     if token.data == "exec" {
-                        /*
-                        let command = Command::new(
+                        let expression: String = mcl.expression(&mut expressionValue,0).data;
+                        let mut parts = expression.split_whitespace();
+                        let commandStr = parts.next().expect("No command found in expression");
+                        let args: Vec<&str> = parts.collect();
+                        let commandOutput = 
+                            Command::new(commandStr)
+                                .args(&args)
+                                .output()
+                                .expect("failed to execute process");
+                        let outputStr = String::from_utf8_lossy(&commandOutput.stdout);
+                        if !outputStr.is_empty() {
+                            print!("{}", outputStr);
+                        }
+                    // exit
+                    } else 
+                    if token.data == "exit" {
+                        std::process::exit(
                             mcl.expression(
                                 &mut expressionValue,
                                 0
-                            ).data
-                        ).output().expect("failed to execute process");
-                        let commandOutput = String::from_utf8_lossy(&command.stdout);
-                        if !commandOutput.is_empty() {
-                            println!("{}", commandOutput);
-                        }
-                        */
-// todo: parse exec
-let expression: String = 
-    mcl.expression(
-        &mut expressionValue,
-        0
-    ).data;
-let mut parts = expression.split_whitespace();
-// Извлекаем команду
-let command_str = parts.next().expect("No command found in expression");
-// Остальные части это аргументы
-let args: Vec<&str> = parts.collect();
-// Создаем и запускаем команду
-let command_output = Command::new(command_str)
-                            .args(&args)
-                            .output()
-                            .expect("failed to execute process");
-// Преобразуем и выводим результат
-let output_str = String::from_utf8_lossy(&command_output.stdout);
-if !output_str.is_empty() {
-    print!("{}", output_str);
-}
-                    }
+                            ).data.parse::<i32>().unwrap()
+                        );
+                    } 
                     //
                     return true;
                 } else {
@@ -697,6 +695,12 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLength: &mut usize) {
     let mut line: &mut Line;
     while *lineIndex < *linesLength {
+        // no tokens in line ?
+        if lines[*lineIndex].tokens.len() == 0 {
+            *lineIndex += 1;
+            continue;
+        }
+
         //log("parserBegin", &format!("{}+{}", ident_str1, i));
         //println!("index: {}, length: {}",*lineIndex,*linesLength);
         replaceSavedLine( lines[*lineIndex].clone() ); // save line now for logger
@@ -713,6 +717,7 @@ pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLengt
             outputLines(&line.lines, 3);
         }
         */
+
         // search methods calls
         if !searchCondition(lines, *lineIndex, linesLength) {
             line = &mut lines[*lineIndex]; // set editable line
@@ -720,12 +725,13 @@ pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLengt
                 searchMemoryCell(line);
             }
         }
-        //
-        //log("parserEnd", &format!("{}-{}", ident_str1, i));
         if lines.len() < *linesLength {
             *linesLength = lines.len();
         } else {
             *lineIndex += 1;
         }
+
+        //
+        //log("parserEnd", &format!("{}-{}", ident_str1, i));
     }
 }

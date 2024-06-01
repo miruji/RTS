@@ -673,10 +673,6 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             }
         }
     }
-    // delete empty lines
-    lines.retain(|line| {
-        line.tokens.len() >= 1 && line.tokens[0].dataType != TokenType::Endline
-    });
     // line nesting
     lineNesting(&mut lines);
     // delete DoubleComment
@@ -687,7 +683,13 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
 
         while i < linesLen {
             lineTokens = lines[i].tokens.clone();
-            let lastLineToken: usize = lineTokens.len()-1;
+            let mut lastLineToken: usize = lineTokens.len();
+            if lineTokens.len() == 0 {
+                i += 1;
+                continue;
+            } else {
+                lastLineToken -= 1;
+            }
 
             if lineTokens[lastLineToken].dataType == TokenType::Comment {
                 lines[i].lines.clear();

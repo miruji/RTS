@@ -1,4 +1,4 @@
-##
+#
   loop
 
   kinds and declarate:
@@ -14,7 +14,6 @@
     loop a = 10; a < 10; i++
       next lines
     ** to:do: rework "for" syntax
-##
 
 a = [10,20,30] # final Array
 loop l in a    # loop l -> a

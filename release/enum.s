@@ -1,9 +1,8 @@
-##
+#
   enum
 
   to:do:
     itemName or ItemName or item_name ?
-##
 
 HumanType # if upper first char
   None    # 0

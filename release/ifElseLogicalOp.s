@@ -1,4 +1,4 @@
-##
+#
   if-else + logical operators
 
   operators:
@@ -7,7 +7,6 @@
     =   (== not allowed)
     !
     !=
-##
 
 a = 11 # final Unsigned
 b = 11 # final Unsigned

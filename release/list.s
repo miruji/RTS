@@ -1,6 +1,5 @@
-##
+#
   list
-##
 
 obj                   # if lower first char
   "name": "test name" # items "key" -> value

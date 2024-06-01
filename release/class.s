@@ -1,6 +1,5 @@
-##
+#
   class
-##
 
 Human                  # if upper first char + consr procedure
   age: U               # private final locked-Unsigned

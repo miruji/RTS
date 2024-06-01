@@ -1,4 +1,4 @@
-##
+#
   if-else
 
   **
@@ -24,7 +24,6 @@
       next lines
     ?
       next lines
-##
 
 a = 2              # final Unsigned
 ? a = 0            # a equal 0 ?
