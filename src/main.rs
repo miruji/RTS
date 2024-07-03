@@ -71,7 +71,6 @@ fn main() -> io::Result<()> {
             // todo: debug sectors
             // e: ast, structs, interpritation
             unsafe{_debugMode = true;}
-            break;
         }
     }
     if unsafe{_debugMode} {
@@ -80,12 +79,14 @@ fn main() -> io::Result<()> {
     }
 
     // read args
-    let mut noRun: bool = true;
+    let mut noRun:   bool = true;
+    let mut runFile: bool = false;
+    let mut buffer: Vec<u8> = Vec::new();
 
     for (key, values) in &argsKeys {
         let valuesLength: usize = (&values).len();
-        // realtime run
-        if key == "-r" {
+        // run file
+        if key == "-rf" {
             unsafe{
                 _argc = valuesLength-1;
                 _argv = values.clone();
@@ -97,49 +98,72 @@ fn main() -> io::Result<()> {
             if unsafe{_debugMode} {
                 log("ok",&format!("Run \"{}\"",unsafe{&*_filePath}));
             }
+            runFile = true;
+        } else 
+        // run script
+        if key == "-rs" {
+            //unsafe{
+                let combinedString = values.concat().replace("\\n", "\n"); // todo: \\n ?
+                buffer = combinedString.clone().into_bytes();
+                // todo:
+                //_argc = valuesLength-1;
+                //_argv = values.clone();
+                //_argv.remove(0); // remove file name
+                //_filePath = values[0].clone();
+            //}
+            // todo: check filePath file type
+            noRun = false;
+            if unsafe{_debugMode} {
+                log("ok",&format!("Run \"{}\"",combinedString));
+            }
         }
     }
 
     if noRun {
-        log("err","Use the [-r <filename>] flag");
+        log("err","Use the [-rf <filename>] or [-rs \"<script>\"] flag");
         logExit();
     }
 
+    // run file
+    if runFile {
+        if unsafe{_debugMode} {
+            logSeparator("=> Opening a file");
+        }
+        // open file
+        let mut file = match File::open(unsafe{&*_filePath}) {
+            Ok(file) => {
+                if unsafe{_debugMode} {
+                    log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*_filePath}));
+                }
+                file
+            },
+            Err(_) => {
+                log("err",&format!("Unable to opening file \"{}\"",unsafe{&*_filePath}));
+                logExit();
+                std::process::exit(1)
+            }
+        };
+        // read file into buffer
+        match file.read_to_end(&mut buffer) {
+            Ok(_) => {
+                // add endl if it doesn't exist
+                if !buffer.ends_with(&[b'\n']) {
+                    buffer.push(b'\n');
+                }
+                if unsafe{_debugMode} {
+                    log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*_filePath}));
+                }
+            }
+            Err(_) => {
+                log("err",&format!("Unable to read file \"{}\"",unsafe{&*_filePath}));
+                logExit();
+                ()
+            }
+        }
+    // run script
+    } else
     if unsafe{_debugMode} {
-        logSeparator("=> Opening a file");
-    }
-
-    // open file
-    let mut file = match File::open(unsafe{&*_filePath}) {
-        Ok(file) => {
-            if unsafe{_debugMode} {
-                log("ok",&format!("Opening the file \"{}\" was successful",unsafe{&*_filePath}));
-            }
-            file
-        },
-        Err(_) => {
-            log("err",&format!("Unable to opening file \"{}\"",unsafe{&*_filePath}));
-            logExit();
-            std::process::exit(1)
-        }
-    };
-    // read file into buffer
-    let mut buffer = Vec::new();
-    match file.read_to_end(&mut buffer) {
-        Ok(_) => {
-            // add endl if it doesn't exist
-            if !buffer.ends_with(&[b'\n']) {
-                buffer.push(b'\n');
-            }
-            if unsafe{_debugMode} {
-                log("ok",&format!("Reading the file \"{}\" was successful",unsafe{&*_filePath}));
-            }
-        }
-        Err(_) => {
-            log("err",&format!("Unable to read file \"{}\"",unsafe{&*_filePath}));
-            logExit();
-            ()
-        }
+        logSeparator("=> Read script");
     }
 
     if unsafe{_debugMode} {

@@ -305,11 +305,12 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     // todo: multi-param
 
                     mcl = getMemoryCellList();
+
                     // println
                     if token.data == "println" {
                         println!("{}",
-                            formatPrint(&
-                                mcl.expression(
+                            formatPrint(
+                                &mcl.expression(
                                     &mut expressionValue,
                                     0
                                 ).data
@@ -319,8 +320,8 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     } else 
                     if token.data == "print" {
                         print!("{}",
-                            formatPrint(&
-                                mcl.expression(
+                            formatPrint(
+                                &mcl.expression(
                                     &mut expressionValue,
                                     0
                                 ).data
@@ -729,10 +730,12 @@ pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLengt
         }
         */
 
-        // search methods calls
+        // search conditions
         if !searchCondition(lines, *lineIndex, linesLength) {
             line = &mut lines[*lineIndex]; // set editable line
+            // search methods calls
             if !searchMethodsCall(line) {
+                // search memory cell
                 searchMemoryCell(line);
             }
         }

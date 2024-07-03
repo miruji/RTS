@@ -634,7 +634,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         } else {
             readLineIdent = false;
             // get endline
-            if c == b'\n' {
+            if c == b'\n' || c == b';' {
                 // bracket nesting
                 bracketNesting(
                     &mut _lineTokens,
