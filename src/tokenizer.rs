@@ -114,7 +114,7 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
                 b'\0'
             };
 
-        if isLetter(currentChar) || (currentChar == b'_' && !result.is_empty() && isLetter(nextChar)) {
+        if isLetter(currentChar) || (currentChar == b'-' && !result.is_empty() && isLetter(nextChar)) {
             result.push(currentChar as char);
             indexBuffer += 1;
         } else {
@@ -510,14 +510,27 @@ fn lineNesting(lines: &mut Vec<Line>) {
 
 // output token and its tokens
 pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
-    let identStr: String = " ".repeat((lineIdent+ident)*2);
-    for token in tokens {
+    let lineIdentString: String = " ".repeat(lineIdent*2+1);
+    let identString:     String = " ".repeat(ident*2+1);
+
+    let tokenCount = tokens.len();
+    for (i, token) in tokens.iter().enumerate() {
+        let isLast = i == tokenCount - 1;
+        let treeChar = 
+            if isLast {
+                'X'
+            } else {
+                '┃'
+            };
+
         if !token.data.is_empty() {
         // single quote
             if token.dataType == TokenType::Char {
                 log("parserToken",&format!(
-                    "{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
-                    identStr,
+                    "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
+                    lineIdentString,
+                    treeChar,
+                    identString,
                     token.data,
                     token.dataType.to_string()
                 ));
@@ -525,8 +538,10 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
             } else
             if token.dataType == TokenType::String {
                 log("parserToken",&format!(
-                    "{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
-                    identStr,
+                    "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
+                    lineIdentString,
+                    treeChar,
+                    identString,
                     token.data,
                     token.dataType.to_string()
                 ));
@@ -534,23 +549,33 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
             } else
             if token.dataType == TokenType::SpecialString {
                 log("parserToken",&format!(
-                    "{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
-                    identStr,
+                    "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
+                    lineIdentString,
+                    treeChar,
+                    identString,
                     token.data,
                     token.dataType.to_string()
                 ));
         // basic
             } else {
                 log("parserToken",&format!(
-                    "{}{}  |{}",
-                    identStr,
+                    "{}{}{}{}  |{}",
+                    lineIdentString,
+                    treeChar,
+                    identString,
                     token.data,
                     token.dataType.to_string()
                 ));
             }
         // type only
         } else {
-            println!("{}{}",identStr,token.dataType.to_string());
+            println!(
+                "{}{}{}{}",
+                lineIdentString,
+                treeChar,
+                identString,
+                token.dataType.to_string()
+            );
         }
         if (&token.tokens).len() > 0 {
             outputTokens(&token.tokens, lineIdent, ident+1)
@@ -560,16 +585,22 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
 // output line info
 pub fn outputLines(lines: &Vec<Line>, ident: usize) {
     let identStr1: String = " ".repeat((ident)*2);
-    let identStr2: String = " ".repeat((ident)*2+2);
+    let identStr2: String = " ".repeat((ident)*2+1);
     for (i, line) in lines.iter().enumerate() {
         log("parserBegin", &format!("{}+{}",identStr1,i));
-        log("parserHeader", &format!("{}Tokens",identStr2));
-        outputTokens(&line.tokens, ident+1, 1);
+
+        if (&line.tokens).len() == 0 {
+            log("parserHeader", &format!("{}┗ Separator",identStr2));
+        } else {
+            log("parserHeader", &format!("{}┣ Tokens",identStr2));
+        }
+
+        outputTokens(&line.tokens, ident, 1);
         if (&line.lines).len() > 0 {
-            log("parserHeader", &format!("{}Lines",identStr2));
+            log("parserHeader", &format!("{}┗ Lines",identStr2));
             outputLines(&line.lines, ident+1);
         }
-        log("parserEnd", &format!("{}-{}",identStr1,i));
+        //log("parserEnd", &format!("{}-{}",identStr1,i));
     }
 }
 

@@ -284,7 +284,7 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
             left.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
         },
         // todo: char
-        _ => Value::Int(0),
+        _ => Value::UInt(0),
     };
     let rightValue = match right.dataType {
         TokenType::Int => {
@@ -303,7 +303,7 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
             right.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
         },
         // todo: char
-        _ => Value::Int(0),
+        _ => Value::UInt(0),
     };
     //println!("calc2: {} {} {}",leftValue,op.to_string(),rightValue);
     // next: set type, calculate value, check result type, return

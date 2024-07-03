@@ -11,6 +11,7 @@ packitString = "\fg(#ffffff)\bpackit:\c "
 # packit version
 ? argv[0] = "v"
   println(packitString+"Version 0.1.0")
+  exit(0)
 #
 # Synchronize package (update/download)
 ? argv[0] = "s"
@@ -26,6 +27,7 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     exec("sudo pacman --noconfirm -S "+target)
   ?
     println(packitString+"Requires 2nd parameter as target")
+    exit(1)
 # Synchronize all packages
 ? argv[0] = "sa"
   println(packitString+"Synchronize all packages")
@@ -45,6 +47,7 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     exec("sudo pacman --noconfirm -Rdd"+target)
   ?
     println(packitString+"Requires 2nd parameter as target")
+    exit(1)
 # Remove package with dependencies
 ? argv[0] = "rd"
   target
@@ -57,7 +60,8 @@ packitString = "\fg(#ffffff)\bpackit:\c "
   ? argc = 2
     exec("sudo pacman --noconfirm -Rddn "+target)
   ?
-    println("Requires 2nd parameter as target")
+    println(packitString+"Requires 2nd parameter as target")
+    exit(1)
 # Remove package with dependencies, configuration
 ? argv[0] = "rdc"
   target
@@ -70,7 +74,8 @@ packitString = "\fg(#ffffff)\bpackit:\c "
   ? argc = 2
     exec("sudo pacman --noconfirm -Rddns "+target)
   ?
-    println("Requires 2nd parameter as target")
+    println(packitString+"Requires 2nd parameter as target")
+    exit(1)
 #
 # Litter packages
 ? argv[0] = "l"

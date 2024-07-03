@@ -16,4 +16,5 @@ opt-level = 3
 codegen-units = 1
 lto = "fat"
 panic = "abort"
+strip = "symbols"
 overflow-checks = true

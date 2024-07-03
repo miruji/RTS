@@ -9,6 +9,7 @@ use crate::tokenizer::token::*;
 #[derive(Clone)]
 pub enum MemoryCellMode {
     LockedFinal,      // memoryCellName
+//  LockedConst ?
     LockedVariable,   // memoryCellName~
     UnlockedVariable, // memoryCellName~~
 }

@@ -1,5 +1,5 @@
 /*
-    log
+    Logger
 */
 
 use termion::color::{Bg, Fg, Rgb};
@@ -7,29 +7,19 @@ use termion::style;
 
 // hex str -> termion::color::Rgb
 fn hexToTermionColor(hex: &str) -> Option<Rgb> {
-    if hex.len() != 6 {
-        return None;
+    if hex.len() == 6 {
+        let r: u8 = u8::from_str_radix(&hex[0..2], 16).ok()?;
+        let g: u8 = u8::from_str_radix(&hex[2..4], 16).ok()?;
+        let b: u8 = u8::from_str_radix(&hex[4..6], 16).ok()?;
+        Some(Rgb(r, g, b))
+    } else {
+        None
     }
-
-    let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
-    let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
-    let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
-
-    Some(Rgb(r, g, b))
 }
-//
+// devide white space, begin from the left
 fn divideWhitespace(input: &str) -> Vec<&str> {
-    let mut iter = input.chars();
-    let mut firstNonSpaceIndex = 0;
-    // search first no white
-    while let Some(c) = iter.next() {
-        if !c.is_whitespace() {
-            break;
-        }
-        firstNonSpaceIndex += 1;
-    }
-    //
-    vec![&input[..firstNonSpaceIndex], &input[firstNonSpaceIndex..]]
+    let first_non_space_index = input.find(|c: char| !c.is_whitespace()).unwrap_or(input.len());
+    vec![&input[..first_non_space_index], &input[first_non_space_index..]]
 }
 // style log
 fn logWithStyle(string: &str) {
@@ -38,8 +28,8 @@ fn logWithStyle(string: &str) {
 pub fn formatPrint(string: &str) -> String {
     let mut result = String::new();
     let mut i = 0;
-    let stringLength = string.len();
     let string: Vec<char> = string.chars().collect();
+    let stringLength      = string.len();
 
     let mut bracketString: String;
     let mut bracketColor: Option<Rgb>;
@@ -120,33 +110,28 @@ pub fn logExit() {
 }
 // basic style log
 pub fn log(textType: &str, text: &str) {
-	//
+	// syntax error
 	if textType == "syntax" {
 		logWithStyle("\\fg(#e91a34)\\bSyntax \\c");
 	} else
-	if textType == "parserBegin" { // open +
+	// AST open +
+	if textType == "parserBegin" {
 		let divide: Vec<&str> = divideWhitespace(text);
 		logWithStyle(&format!(
-			"{}\\bg(#29352f)\\fg(#c6df90)\\b{}\\c\n",
+			"{}\\bg(#29352f)\\fg(#b5df90)\\b{}\\c\n",
 			divide[0],
 			divide[1]
 		));
 	} else
-	if textType == "parserHeader" { // header
+	// AST header
+	if textType == "parserHeader" {
 		logWithStyle(&format!(
-			"\\fg(#c6df90)\\b{}\\c\n",
+			"\\fg(#90df91)\\b{}\\c\n",
 			text
 		));
 	} else
-	if textType == "parserEnd" { // end -
-		let divide: Vec<&str> = divideWhitespace(text);
-		logWithStyle(&format!(
-			"{}\\bg(#29352f)\\fg(#fb9950)\\b{}\\c\n",
-			divide[0],
-			divide[1]
-		));
-	} else
-	if textType == "parserInfo" { // info
+	// AST info
+	if textType == "parserInfo" {
 		let divide: Vec<&str> = divideWhitespace(text);
 		logWithStyle(&format!(
 			"{}\\bg(#29352f)\\fg(#d9d9d9)\\b{}\\c\n",
@@ -154,6 +139,7 @@ pub fn log(textType: &str, text: &str) {
 			divide[1]
 		));
 	} else
+	// AST token
 	if textType == "parserToken" {
 		let parts: Vec<&str> = text.split("|").collect();
 		let mut outputParts: Vec<String> = Vec::new();
@@ -174,25 +160,28 @@ pub fn log(textType: &str, text: &str) {
 		}
 		println!("{}", outputParts.join(""));
 	} else
-	//
-	if textType == "ok" { // ok
+	// ok
+	if textType == "ok" {
 		logWithStyle(&format!(
 			"  \\fg(#55af96)\\b+\\c \\fg(#f0f8ff)\\b{}\\c\n",
 			text
 		));
 	} else
-	if textType == "err" { // error
+	// error
+	if textType == "err" {
 		logWithStyle(&format!(
 			"  \\fg(#e91a34)\\b-\\c \\fg(#f0f8ff)\\b{}\\c\n",
 			text
 		));
 	} else
+	// note
 	if textType == "note" {
 		logWithStyle(&format!(
 			"  \\fg(#f0f8ff)\\bNote:\\c \\fg(#f0f8ff){}\\c\n",
 			text
 		));
 	} else
+	// path
 	if textType == "path" {
 		let parts: Vec<&str> = text.split("->").collect();
 		let outputParts: String = 
@@ -204,6 +193,7 @@ pub fn log(textType: &str, text: &str) {
 			outputParts
 		));
 	} else
+	// line
 	if textType == "line" {
 		if let Some(textColor) = hexToTermionColor("d9d9d9") {
 			let parts: Vec<&str> = text.split("|").collect();
@@ -223,6 +213,7 @@ pub fn log(textType: &str, text: &str) {
 			}
 			println!("{}",outputParts.join(""));
 		}
+	// basic
 	} else {
 		logWithStyle(&format!(
 			"\\fg(#f0f8ff){}\\c\n",
