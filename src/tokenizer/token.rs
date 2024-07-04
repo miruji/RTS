@@ -2,6 +2,8 @@
     token
 */
 
+use std::fmt;
+
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub enum TokenType {
@@ -73,6 +75,9 @@ pub enum TokenType {
 
     Array,    // Array
 
+    Bool,  // Bool
+    True,  // true  = 1
+    False, // false = 0
     And, // and
     Or,  // or
     
@@ -158,6 +163,9 @@ impl ToString for TokenType {
 
             TokenType::Array  => String::from("Array"),      // Array
 
+            TokenType::Bool  => String::from("Bool"),  // Bool
+            TokenType::True  => String::from("true"),  // true  = 1
+            TokenType::False => String::from("false"), // false = 0
             TokenType::And => String::from("and"), // and
             TokenType::Or  => String::from("or"),  // or
 
@@ -219,5 +227,15 @@ impl Token {
             } else {
                 token.data.clone()
             }
+    }
+}
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+impl fmt::Debug for Token { // todo: remove this ?
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.data)
     }
 }

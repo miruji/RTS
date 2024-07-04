@@ -118,7 +118,7 @@ fn main() -> io::Result<()> {
             }
         }
     }
-
+    
     if noRun {
         log("err","Use the [-rf <filename>] or [-rs \"<script>\"] flag");
         logExit();

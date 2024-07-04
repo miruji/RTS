@@ -280,8 +280,17 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
         TokenType::UFloat => {
             left.data.parse::<f64>().map(uf64::from).map(Value::UFloat).unwrap_or(Value::UFloat(uf64::from(0.0)))
         },
+        TokenType::Char => {
+            left.data.parse::<char>().map(|x| Value::Char(x)).unwrap_or(Value::Char('\0'))
+        },
         TokenType::String => {
             left.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
+        },
+        TokenType::True => {
+            Value::UInt(1)
+        },
+        TokenType::False => {
+            Value::UInt(0)
         },
         // todo: char
         _ => Value::UInt(0),
@@ -299,31 +308,24 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
         TokenType::UFloat => {
             right.data.parse::<f64>().map(uf64::from).map(Value::UFloat).unwrap_or(Value::UFloat(uf64::from(0.0)))
         },
+        TokenType::Char => {
+            right.data.parse::<char>().map(|x| Value::Char(x)).unwrap_or(Value::Char('\0'))
+        },
         TokenType::String => {
             right.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
+        },
+        TokenType::True => {
+            Value::UInt(1)
+        },
+        TokenType::False => {
+            Value::UInt(0)
         },
         // todo: char
         _ => Value::UInt(0),
     };
     //println!("calc2: {} {} {}",leftValue,op.to_string(),rightValue);
     // next: set type, calculate value, check result type, return
-    // set result type
-    let mut resultType: TokenType;
-    if left.dataType == TokenType::String  || right.dataType == TokenType::String {
-        resultType = TokenType::String;
-        // todo: char
-    } else
-    if left.dataType == TokenType::Float  || right.dataType == TokenType::Float {
-        resultType = TokenType::Float;
-    } else
-    if left.dataType == TokenType::UFloat || right.dataType == TokenType::UFloat {
-        resultType = TokenType::UFloat;
-    } else
-    if left.dataType == TokenType::Int    || right.dataType == TokenType::Int {
-        resultType = TokenType::Int;
-    } else {
-        resultType = TokenType::UInt;
-    }
+    let mut resultType: TokenType = TokenType::UInt;
     // calculate
     let resultValue: String = 
         if *op == TokenType::Plus {
@@ -339,36 +341,54 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
             (leftValue / rightValue).to_string()
         } else
         if *op == TokenType::Equals {
+            resultType = TokenType::Bool;
             (leftValue == rightValue).to_string()
         } else
         if *op == TokenType::NotEquals {
+            resultType = TokenType::Bool;
             (leftValue != rightValue).to_string()
         } else
         if *op == TokenType::GreaterThan {
+            resultType = TokenType::Bool;
             (leftValue > rightValue).to_string()
         } else
         if *op == TokenType::LessThan {
+            resultType = TokenType::Bool;
             (leftValue < rightValue).to_string()
         } else
         if *op == TokenType::GreaterThanOrEquals {
+            resultType = TokenType::Bool;
             (leftValue >= rightValue).to_string()
         } else
         if *op == TokenType::LessThanOrEquals {
+            resultType = TokenType::Bool;
             (leftValue <= rightValue).to_string()
-            // todo % ^
+            // todo: % ^
         } else {
             "0".to_string()
         };
-    // type changed ?
-    if resultValue.starts_with('-') {
-        if resultType == TokenType::UInt {
-            resultType = TokenType::Int;
-        } else 
-        if resultType == TokenType::UFloat {
+    // set result type
+    if resultType != TokenType::Bool {
+        // todo: bool
+        if left.dataType == TokenType::String || right.dataType == TokenType::String {
+            resultType = TokenType::String;
+        } else
+        if (left.dataType == TokenType::Int || left.dataType == TokenType::Int) && right.dataType == TokenType::Char {
+            resultType = left.dataType.clone();
+        }
+        if left.dataType == TokenType::Char {
+            resultType = TokenType::Char;
+        } else
+        if left.dataType == TokenType::Float  || right.dataType == TokenType::Float {
             resultType = TokenType::Float;
+        } else
+        if left.dataType == TokenType::UFloat || right.dataType == TokenType::UFloat {
+            resultType = TokenType::UFloat;
+        } else
+        if left.dataType == TokenType::Int    || right.dataType == TokenType::Int {
+            resultType = TokenType::Int;
         }
     }
-    //
     return Token::new(resultType, resultValue);
 }
 // update value

@@ -63,7 +63,7 @@ unsafe fn getNumber(buffer: &[u8]) -> Token {
             indexBuffer += 1;
         } else 
         if currentChar == b'.' && !dotCheck && isDigit(nextChar) {
-            if rationalCheck { // Rational number use only Int/Int
+            if rationalCheck { // Rational number use Int-UInt/Int-UInt
                 break;
             }
             dotCheck = true;
@@ -135,6 +135,8 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
         "Rational" => Token::newEmpty(TokenType::Rational),
         "and"      => Token::newEmpty(TokenType::And),
         "or"       => Token::newEmpty(TokenType::Or),
+        "true"     => Token::newEmpty(TokenType::True),
+        "false"    => Token::newEmpty(TokenType::False),
         "loop"     => Token::newEmpty(TokenType::Loop),
         _          => Token::new(TokenType::Word, result),
     }
@@ -157,6 +159,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             currentChar = buffer[_index];
             // check endline error
             if currentChar == b'\n' {
+                // todo:
                 /*
                 log("syntax","");
                 log("path",&format!(
@@ -434,8 +437,8 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
     }
 }
 
-// bracket nasting [b bracket -> e bracket]
-//             [+ recall in token child tokens]
+// bracket nasting [begin bracket -> end bracket]
+//                [+ recall in token child tokens]
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
@@ -447,64 +450,95 @@ fn bracketNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenT
     }
     blockNesting(tokens, beginType.clone(), endType.clone());
 }
-// block nasting [b token -> e token]
+// block nasting [begin token -> end token]
 fn blockNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenType) {
     let mut brackets = Vec::<usize>::new();
-    let mut i: usize = 0;
+    let mut tokensLength: usize = tokens.len();
+    let mut i:            usize = 0;
 
-    let mut token: Token;
-    while i < tokens.len() {
-        token = tokens[i].clone();
-        // begin
-        if token.dataType == beginType {
+    while i < tokensLength {
+        let tokenDataType: &TokenType = &tokens[i].dataType;
+        if tokenDataType == &beginType {
             brackets.push(i);
-        // end
-        } else if token.dataType == endType {
+        } else if tokenDataType == &endType {
             if let Some(penultBracket) = brackets.pop() {
                 if let Some(&lastBracket) = brackets.last() {
                     let copyToken = tokens[penultBracket].clone();
                     tokens[lastBracket].tokens.push(copyToken);
+
                     tokens.remove(penultBracket);
-                    i -= 1;
+                    tokensLength -= 1;
+
+                    if penultBracket < i {
+                        i -= 1;
+                    }
                 }
             }
+
             tokens.remove(i);
+            tokensLength -= 1;
             continue;
-        // add new childrens to token
         } else if !brackets.is_empty() {
             if let Some(&bracket) = brackets.last() {
-                tokens[bracket].tokens.push(
-                    Token::newFull(token.dataType, token.data, token.tokens)
-                );
+                let token = tokens.remove(i);
+                tokensLength -= 1;
+
+                tokens[bracket].tokens.push(token);
+                continue;
             }
-            tokens.remove(i);
-            continue;
         }
         i += 1;
     }
 }
 // line nesting [line -> line]
+//          [recall for line lines]
 fn lineNesting(lines: &mut Vec<Line>) {
     let mut linesLen: usize = lines.len();
-    let mut i: usize = 0;
-
-    let mut ni:       usize;
+    let mut i:        usize = 0;
     let mut nextLine: Line;
+
     while i < linesLen {
-        ni = i+1;
-        if ni < linesLen {
-            if lines[i].ident < lines[ni].ident {
-                nextLine = lines[ni].clone();     // clone next line
-                lines[i].lines.push(nextLine);    // nesting
-                lines.remove(ni);                 // delete next
-                linesLen -= 1;                    // update vec len
-                lineNesting(&mut lines[i].lines); // cycle
-            } else {
-                i += 1; // next line < current line => skip
-            }
+        if i+1 < linesLen && lines[i].ident < lines[i+1].ident {
+            let nextLine = lines.remove(i+1); // clone and remove next line
+            linesLen -= 1;
+
+            lines[i].lines.push(nextLine);    // nesting
+            lineNesting(&mut lines[i].lines); // cycle
         } else {
-            break; // if no lines
+            i += 1;
         }
+    }
+}
+
+// delete DoubleComment
+fn deleteDoubleComment(lines: &mut Vec<Line>) {
+    let mut i:              usize = 0;
+    let mut lastTokenIndex: usize;
+
+    while i < lines.len() {
+        if !lines[i].lines.is_empty() {
+            deleteDoubleComment(&mut lines[i].lines);
+        }
+
+        if lines[i].tokens.is_empty() {
+            if lines[i].lines.is_empty() {
+                i += 1;
+            } else {
+                lines.remove(i);
+            }
+            continue;
+        }
+
+        lastTokenIndex = lines[i].tokens.len()-1;
+        if lines[i].tokens[lastTokenIndex].dataType == TokenType::Comment {
+            lines[i].tokens.remove(lastTokenIndex);
+            if lines[i].tokens.is_empty() {
+                lines.remove(i);
+                continue;
+            }
+        }
+
+        i += 1;
     }
 }
 
@@ -584,8 +618,8 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
 }
 // output line info
 pub fn outputLines(lines: &Vec<Line>, ident: usize) {
-    let identStr1: String = " ".repeat((ident)*2);
-    let identStr2: String = " ".repeat((ident)*2+1);
+    let identStr1: String = " ".repeat(ident*2);
+    let identStr2: String = " ".repeat(ident*2+1);
     for (i, line) in lines.iter().enumerate() {
         log("parserBegin", &format!("{}+{}",identStr1,i));
 
@@ -707,36 +741,13 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             }
         }
     }
+
     // line nesting
     lineNesting(&mut lines);
+
     // delete DoubleComment
-    {
-        let mut i: usize = 0;
-        let mut linesLen: usize = lines.len();
-        let mut lineTokens: Vec<Token>;
+    deleteDoubleComment(&mut lines);
 
-        while i < linesLen {
-            lineTokens = lines[i].tokens.clone();
-            let mut lastLineToken: usize = lineTokens.len();
-            if lineTokens.len() == 0 {
-                i += 1;
-                continue;
-            } else {
-                lastLineToken -= 1;
-            }
-
-            if lineTokens[lastLineToken].dataType == TokenType::Comment {
-                lines[i].lines.clear();
-                lines[i].tokens.remove(lastLineToken);
-                if lines[i].tokens.len() == 0 {
-                    lines.remove(i);
-                    linesLen -= 1;
-                    continue;
-                }
-            }
-            i += 1;
-        }
-    }
     //
     if _debugMode {
         outputLines(&lines,0);
