@@ -1,10 +1,15 @@
-spl License 17.05.2024
-Copyright (c) miruji
+                           Free Contribution Licence
+                              Version 04.07.2024
+                             Copyright (c) miruji
 
-Hereinafter, simply 'Software' or 'Project' refers to the source code of the current 
-project, the libraries created for it, documentation, and compiled files distributed 
-by the licensor. The licensor grants the right to others to participate in the 
-development and modernization of the project, distribute them, and operate them.
+Hereinafter, hereinafter simply 'Software' or 'Project' refers to the source code 
+of the current project, the libraries created for it, documentation, and compiled 
+files distributed by the licensor.
+
+The Free Contribution License, hereinafter simply simply 'License', is the main 
+document for this software. The licensor grants the right to others to participate 
+in the development and modernization of the project, distribute it and exploit it, 
+subject to the rules of this license.
 
 This License uses the date as its current version. However, only the License that 
 accompanied the distribution applies to this software. Therefore, this software 
@@ -23,10 +28,10 @@ software except the current one.
 In the event that you contribute to the development of this project, changing it,
 adding new code, then a License is applied to it at your discretion, this doesn't
 change the current License in any way and it should still remain with the current
-distribution. This means that you must specify which parts of the code you are using 
-under your License. In other words, you need to explicitly state the division between 
-what is covered by the current License and what is not. If no other licenses are 
-specified, then the current License will apply to all code, where you will be the 
+distribution. This means that you must specify which parts of the code you are 
+using under your License. In other words, you need to explicitly state the division 
+between what is covered by the current License and what is not. If no other licenses 
+are specified, then the current License will apply to all code, where you will be the 
 licensor for your portion of the code.
 
 The software is provided "as is", without warranty of any kind, express or implied,
@@ -49,15 +54,19 @@ Terms of Use:
   2. When distributing this software in either source or binary form, 
      you are obligated to retain the License for distributing the source code.
 
-     This can also be done using comments, headers in the file or other suitable means.
-     You must refer to the text of this License together with the current version of it, 
-     and therefore explicitly provide it.
+     This can also be done using comments, headers in the file or other suitable 
+     means. You must refer to the text of this License together with the current 
+     version of it, and therefore explicitly provide it. It should be clear what this 
+     license is tied to.
 
-  3. You are not allowed to use this software for commercial purposes without prior 
-     written permission from the author of this License. You may disregard this 
-     restriction only if you are willing to publish all your modifications, 
-     subsequent source code, and other files related to the modification 
-     of this project freely under this License.
+  3. If you use this software with modifications for commercial purposes, you need 
+     written permission from the author of this License. You can only ignore this 
+     restriction if you are willing to publish all of your changes, subsequent source 
+     code, and other files related to the modification of this project freely under 
+     this License.
+
+     You may simply use the software without modification for commercial purposes, 
+     subject to the terms of this license.
 
      To request written permission for commercial use, please contact the author 
      via email, and provide a detailed description of your intended use.

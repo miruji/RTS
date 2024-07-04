@@ -26,7 +26,8 @@ b = 20
 c = (a+b)*0.5
 println(c-0.5) # 14.5
 
-println(1) # next todo
+println(1)
+# todo:
   a~ = 5
   println(--a) # now -, out 4
   println(a--) # out 4, now 3
