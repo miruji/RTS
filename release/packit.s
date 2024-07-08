@@ -91,14 +91,38 @@ packitString = "\fg(#ffffff)\bpackit:\c "
 ? argv[0] = "c"
   println(packitString+"Clear cache, leaving latest")
   exec("sudo pacman --noconfirm -Sc")
-# clear cache all
+# Clear cache all
 ? argv[0] = "ca"
   println(packitString+"Clear cache, all")
   exec("sudo pacman --noconfirm -Scc")
 #
+? argv[0] = "h"
+  println(packitString+"All commands:")
+  
+  println("  v     packit version")
+  println("")
+  
+  println("  s     Synchronize package (update/download)")
+  println("  sa    Synchronize all packages")
+  println("")
+  
+  println("  r     Remove package")
+  println("  rd    Remove package with dependencies")
+  println("  rdc   Remove package with dependencies, configuration")
+  println("")
+  
+  println("  l     Litter packages")
+  println("  lc    Clear litter packages")
+  println("")
+  
+  println("  c     Clear cache, leaving latest")
+  println("  ca    Clear cache all")
+  
+  exit(0)
 # Bad command
 ?
-  println(packitString+"bad command, no work")
+  println(packitString+"Bad command, no work")
+  println("        Use h (help) key")
   exit(1)
 
 println(packitString+"Successful completion")

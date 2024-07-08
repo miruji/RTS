@@ -1,4 +1,6 @@
 #!/bin/bash
+# build spl x86-32 or x86-64
+# and optimize (strip + upx)
 
 cd ../
 cargo build --release #--target=i686-unknown-linux-gnu

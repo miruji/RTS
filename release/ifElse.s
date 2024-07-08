@@ -8,6 +8,23 @@
     ? condition
       next lines
 
+    ? condition
+      next lines
+    ? condition
+      enxt lines
+
+    ? condition
+      next lines
+    ?
+      next lines
+
+    ? condition
+      next lines
+    ? condition
+      next lines
+    ?
+      next lines
+
 a = 2              # final Unsigned
 ? a = 0            # a equal 0 ?
   println("false")
