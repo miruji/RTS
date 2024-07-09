@@ -7,6 +7,7 @@ use crate::_filePath;
 use crate::_argc;
 use crate::_argv;
 use crate::_debugMode;
+use crate::_exitCode;
 
 pub mod memoryCell;     use crate::parser::memoryCell::*;
 pub mod memoryCellList; use crate::parser::memoryCellList::*;
@@ -346,12 +347,7 @@ unsafe fn searchMethodsCall(line: &mut Line) -> bool {
                     // exit
                     } else 
                     if token.data == "exit" {
-                        std::process::exit(
-                            mcl.expression(
-                                &mut expressionValue,
-                                0
-                            ).data.parse::<i32>().unwrap()
-                        );
+                        _exitCode = true;
                     } 
                     //
                     return true;
@@ -706,7 +702,7 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
 }
 pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLength: &mut usize) {
     let mut line: &mut Line;
-    while *lineIndex < *linesLength {
+    while _exitCode == false && *lineIndex < *linesLength {
         // no tokens in line ?
         if lines[*lineIndex].tokens.len() == 0 {
             *lineIndex += 1;

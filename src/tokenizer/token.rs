@@ -181,6 +181,13 @@ pub struct Token {
     pub tokens:   Vec<Token>,
 }
 impl Token {
+    pub const fn newStatic() -> Self {
+        Token {
+            data: String::new(),
+            dataType: TokenType:: None,
+            tokens: Vec::new(),
+        }
+    }
     pub fn newEmpty(
         dataType: TokenType
     ) -> Self {

@@ -44,3 +44,6 @@ println("\b\bg(#ffffff)\fg(#ff0000)red bold text in white bg!\c")
 # todo print
 # todo print-println multi-arg
 # todo String in print-println
+
+a = 'a'
+b = 'ab

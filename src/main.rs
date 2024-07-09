@@ -11,6 +11,7 @@ extern crate lazy_static;
 use std::fs::File;
 use std::io::{self, Read};
 use std::env;
+use std::time::{Instant, Duration};
 
 mod logger;
 mod tokenizer;
@@ -25,7 +26,11 @@ pub static mut _argv: Vec<String> = Vec::new();
 
 pub static mut _debugMode: bool = false;
 
+pub static mut _exitCode: bool = false;
+
 fn main() -> io::Result<()> {
+    let startTime: Instant = Instant::now();
+
     use crate::logger::*;
     use crate::tokenizer::*;
     use crate::parser::*;
@@ -63,7 +68,7 @@ fn main() -> io::Result<()> {
         // version
         if key == "-v" {
             // todo: version save file ?
-            println!("spl v{}",unsafe{_version});
+            println!("spl v{}",_version);
             std::process::exit(0);
         }
         // debug mode
@@ -174,6 +179,14 @@ fn main() -> io::Result<()> {
     unsafe {
         parseLines( readTokens(buffer) );
     }
+
+    //
+    if unsafe{_debugMode} {
+        let endTime  = Instant::now();
+        let duration = endTime-startTime;
+        logSeparator( &format!("=> Duration: {:?}",duration) );
+    }
+    // to release test, use hyperfine
 
     //
     Ok(())

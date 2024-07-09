@@ -9,6 +9,25 @@ use crate::_debugMode;
 pub mod token; use crate::tokenizer::token::*;
 pub mod line;  use crate::tokenizer::line::*;
 
+// prevariables
+// in fact, i moved the most used variables here so that reading happens faster, 
+// without re-declaring identical memory areas
+static mut __index:  usize  = 0;                               // index  buffer
+static mut __length: usize  = 0;                               // length buffer
+
+static mut __byte1:  u8     = b'\0';                           // byte 1 buffer
+static mut __byte2:  u8     = b'\0';                           // byte 2 buffer
+static mut __char:   char   = '\0';                            // char   buffer
+static mut __result: String = String::new();                   // result buffer
+static mut __bool1:  bool   = false;                           // bool 1 buffer
+static mut __bool2:  bool   = false;                           // bool 2 buffer
+static mut __bool3:  bool   = false;                           // bool 3 buffer
+
+static mut __token:     Token  = Token::newStatic();           // Token     buffer
+static mut __tokenType: &mut TokenType = &mut TokenType::None; // TokenType buffer
+static mut __brackets:  Vec::<usize> = Vec::new();             // brackets  buffer
+
+// delete comment
 unsafe fn deleteComment(buffer: &[u8]) {
     _index += 1;
     _indexCount += 2;
@@ -34,64 +53,61 @@ fn isDigit(c: u8) -> bool {
     c >= b'0' && c <= b'9'
 }
 unsafe fn getNumber(buffer: &[u8]) -> Token {
-    let mut indexBuffer: usize = _index;
-    let mut result = String::new();
+    __index = _index; // index buffer
+    __result = String::new();
 
-    let mut dotCheck:      bool = false;
-    let mut negativeCheck: bool = false;
-    let mut rationalCheck: bool = false;
+    __bool1 = false; // dot check
+    __bool2 = false; // negative check
+    __bool3 = false; // reational checl
 
-    let mut currentChar: u8;
-    let mut nextChar:    u8;
-
-    while indexBuffer < _bufferLength {
-        currentChar = buffer[indexBuffer];
-        nextChar = 
-            if indexBuffer+1 < _bufferLength {
-                buffer[indexBuffer+1]
+    while __index < _bufferLength {
+        __byte1 = buffer[__index]; // current char
+        __byte2 =               // next char
+            if __index+1 < _bufferLength {
+                buffer[__index+1]
             } else {
                 b'\0'
             };
 
-        if !negativeCheck && buffer[_index] == b'-' {
-            result.push(currentChar as char);
-            negativeCheck = true;
-            indexBuffer += 1;
+        if !__bool2 && buffer[_index] == b'-' {
+            __result.push(__byte1 as char);
+            __bool2 = true;
+            __index += 1;
         } else
-        if isDigit(currentChar) {
-            result.push(currentChar as char);
-            indexBuffer += 1;
+        if isDigit(__byte1) {
+            __result.push(__byte1 as char);
+            __index += 1;
         } else 
-        if currentChar == b'.' && !dotCheck && isDigit(nextChar) {
-            if rationalCheck { // Rational number use Int-UInt/Int-UInt
+        if __byte1 == b'.' && !__bool1 && isDigit(__byte2) {
+            if __bool3 { // Rational number use Int-UInt/Int-UInt
                 break;
             }
-            dotCheck = true;
-            result.push(currentChar as char);
-            indexBuffer += 1;
+            __bool1 = true;
+            __result.push(__byte1 as char);
+            __index += 1;
         } else
-        if currentChar == b'/' && nextChar == b'/' && !dotCheck && 
-           (indexBuffer+2 < _bufferLength && isDigit(buffer[indexBuffer+2])) {
-            rationalCheck = true;
-            result.push('/');
-            result.push('/');
-            indexBuffer += 2;
+        if __byte1 == b'/' && __byte2 == b'/' && !__bool1 && 
+           (__index+2 < _bufferLength && isDigit(buffer[__index+2])) {
+            __bool3 = true;
+            __result.push('/');
+            __result.push('/');
+            __index += 2;
         } else {
             break;
         }
     }
 
-    if !result.is_empty() {
-        _index = indexBuffer;
-        _indexCount += result.len();
+    if !__result.is_empty() {
+        _index = __index;
+        _indexCount += __result.len();
     }
 
-    match (rationalCheck, dotCheck, negativeCheck) {
-        (true, _, _)     => Token::new(TokenType::Rational, result),
-        (_, true, true)  => Token::new(TokenType::Float,    result),
-        (_, true, false) => Token::new(TokenType::UFloat,   result),
-        (_, false, true) => Token::new(TokenType::Int,      result),
-        _                => Token::new(TokenType::UInt,     result),
+    match (__bool3, __bool1, __bool2) { // rational, dot, negative
+        (true, _, _)     => Token::new(TokenType::Rational, __result.clone()),
+        (_, true, true)  => Token::new(TokenType::Float,    __result.clone()),
+        (_, true, false) => Token::new(TokenType::UFloat,   __result.clone()),
+        (_, false, true) => Token::new(TokenType::Int,      __result.clone()),
+        _                => Token::new(TokenType::UInt,     __result.clone()),
     }
 }
 // get word token by buffer-index
@@ -100,34 +116,32 @@ fn isLetter(c: u8) -> bool {
     (c >= b'A' && c <= b'Z')
 }
 unsafe fn getWord(buffer: &[u8]) -> Token {
-    let mut indexBuffer: usize = _index;
-    let mut result = String::new();
+    __index = _index;
+    __result = String::new();
 
-    let mut currentChar: u8;
-    let mut nextChar:    u8;
-    while indexBuffer < _bufferLength {
-        currentChar = buffer[indexBuffer];
-        nextChar = 
-            if indexBuffer+1 < _bufferLength {
-                buffer[indexBuffer+1]
+    while __index < _bufferLength {
+        __byte1 = buffer[__index]; // current char
+        __byte2 =               // next char
+            if __index+1 < _bufferLength {
+                buffer[__index+1]
             } else {
                 b'\0'
             };
 
-        if isLetter(currentChar) || (currentChar == b'-' && !result.is_empty() && isLetter(nextChar)) {
-            result.push(currentChar as char);
-            indexBuffer += 1;
+        if isLetter(__byte1) || (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) {
+            __result.push(__byte1 as char);
+            __index += 1;
         } else {
             break;
         }
     }
 
-    if !result.is_empty() {
-        _index = indexBuffer;
-        _indexCount += result.len();
+    if !__result.is_empty() {
+        _index = __index;
+        _indexCount += __result.len();
     }
 
-    match &result[..] {
+    match &__result[..] {
         "Int"      => Token::newEmpty(TokenType::Int),
         "UInt"     => Token::newEmpty(TokenType::UInt),
         "Float"    => Token::newEmpty(TokenType::Float),
@@ -138,46 +152,36 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
         "true"     => Token::newEmpty(TokenType::True),
         "false"    => Token::newEmpty(TokenType::False),
         "loop"     => Token::newEmpty(TokenType::Loop),
-        _          => Token::new(TokenType::Word, result),
+        _          => Token::new(TokenType::Word, __result.clone()),
     }
 }
 // get quotes token by buffer-index
-// todo: fix quotes
 unsafe fn getQuotes(buffer: &[u8]) -> Token {
-    let quote: u8 = buffer[_index];
+    __byte1 = buffer[_index]; // quote
 
-    let inputLength: usize = buffer.len();
-    let mut result = String::new();
+    __length = buffer.len();
+    __result = String::new();
 
-    if buffer[_index] == quote {
+    if buffer[_index] == __byte1 {
         let mut open:        bool = false;
-        let mut currentChar: u8;
         let mut noSlash:          bool;
         let mut backslashCounter: usize;
 
-        while _index < inputLength {
-            currentChar = buffer[_index];
+        while _index < __length {
+            __byte2 = buffer[_index]; // current char
+
             // check endline error
-            if currentChar == b'\n' {
-                // todo:
-                /*
-                log("syntax","");
-                log("path",&format!(
-                    "{}:{}:{}", 
-                    _filePath,
-                    _linesCount,
-                    _indexCount
-                ));
-                log("note","Quotes were not closed!");
-                logExit();
-                */
+            if __byte2 == b'\n' {
+                // quotes were not closed
+                // skipped it!
                 return Token::newEmpty(TokenType::None);
             }
+
             // read quote
-            if currentChar != quote {
-                result.push(currentChar as char);
+            if __byte2 != __byte1 {
+                __result.push(__byte2 as char);
             } else
-            if currentChar == quote {
+            if __byte2 == __byte1 {
                 noSlash = true;
                 // check back slash of end quote
                 if buffer[_index-1] == b'\\' {
@@ -191,7 +195,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
                     }
                     if backslashCounter % 2 == 1 {
                         // add slash (\' \" \`)
-                        result.push(currentChar as char);
+                        __result.push(__byte2 as char);
                         noSlash = false;
                     }
                 }
@@ -208,32 +212,25 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             _indexCount += 1;
         }
     }
-    return if quote == b'\'' {
-        return if result.len() > 1 {
-            log("syntax","");
-            log("path",&format!(
-                "{}:{}:{}", 
-                _filePath,
-                _linesCount,
-                _indexCount
-            ));
-            log("note","Single quotes can only contain 1 character!");
-            logExit();
-            std::process::exit(1)
+    return if __byte1 == b'\'' {
+        return if __result.len() > 1 {
+            // single quotes can only contain 1 character
+            // skipped it!
+            Token::newEmpty(TokenType::None)
         } else {
-            Token::new(TokenType::Char, result.clone())
+            Token::new(TokenType::Char, __result.clone())
         }
-    } else if quote == b'"' {
-        Token::new(TokenType::String, result.clone())
-    } else if quote == b'`' {
-        Token::new(TokenType::SpecialString, result.clone())
+    } else if __byte1 == b'"' {
+        Token::new(TokenType::String, __result.clone())
+    } else if __byte1 == b'`' {
+        Token::new(TokenType::SpecialString, __result.clone())
     } else {
         Token::newEmpty(TokenType::None)
     }
 }
 // get operator token by buffer-index
 unsafe fn getOperator(buffer: &[u8]) -> Token {
-    let nextChar: u8 = 
+    __byte1 = // next char
         if _index+1 < _bufferLength {
             buffer[_index+1]
         } else {
@@ -241,11 +238,11 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
         };
     return match buffer[_index] {
         // += ++ +
-        b'+' => if nextChar == b'=' {
+        b'+' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::PlusEquals)
-        } else if nextChar == b'+' {
+        } else if __byte1 == b'+' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::UnaryPlus)
@@ -255,15 +252,15 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::Plus)
         },
         // -= -- -
-        b'-' => if nextChar == b'=' {
+        b'-' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::MinusEquals)
-        } else if nextChar == b'-' {
+        } else if __byte1 == b'-' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::UnaryMinus)
-        } else if nextChar == b'>' {
+        } else if __byte1 == b'>' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::Pointer)
@@ -273,11 +270,11 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::Minus)
         },
         // *= *
-        b'*' => if nextChar == b'=' {
+        b'*' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::MultiplyEquals)
-        } else if nextChar == b'*' {
+        } else if __byte1 == b'*' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::UnaryMultiply)
@@ -287,11 +284,11 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::Multiply)
         },
         // /= /
-        b'/' => if nextChar == b'=' {
+        b'/' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::DivideEquals)
-        } else if nextChar == b'/' {
+        } else if __byte1 == b'/' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::UnaryDivide)
@@ -301,7 +298,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::Divide)
         },
         // >= >
-        b'>' => if nextChar == b'=' {
+        b'>' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::GreaterThanOrEquals)
@@ -311,7 +308,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::GreaterThan)
         },
         // <=
-        b'<' => if nextChar == b'=' {
+        b'<' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::LessThanOrEquals)
@@ -321,7 +318,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::LessThan)
         },
         // != !
-        b'!' => if nextChar == b'=' {
+        b'!' => if __byte1 == b'=' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::NotEquals)
@@ -331,7 +328,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::Not)
         },
         // &&
-        b'&' => if nextChar == b'&' {
+        b'&' => if __byte1 == b'&' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::And)
@@ -341,7 +338,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             Token::newEmpty(TokenType::And) // todo: single and
         },
         // ||
-        b'|' => if nextChar == b'|' {
+        b'|' => if __byte1 == b'|' {
             _index += 2;
             _indexCount += 2;
             Token::newEmpty(TokenType::Or)
@@ -442,116 +439,116 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
-fn bracketNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenType) {
+unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) {
     for token in tokens.iter_mut() {
         if token.tokens.len() > 0 {
-            bracketNesting(&mut token.tokens, beginType.clone(), endType.clone());
+            bracketNesting(&mut token.tokens, beginType, endType);
         }
     }
-    blockNesting(tokens, beginType.clone(), endType.clone());
+    blockNesting(tokens, beginType, endType);
 }
 // block nasting [begin token -> end token]
-fn blockNesting(tokens: &mut Vec<Token>, beginType: TokenType, endType: TokenType) {
-    let mut brackets = Vec::<usize>::new();
-    let mut tokensLength: usize = tokens.len();
-    let mut i:            usize = 0;
+unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) {
+    __brackets = Vec::new();
+    __length = tokens.len();
 
-    while i < tokensLength {
-        let tokenDataType: &TokenType = &tokens[i].dataType;
-        if tokenDataType == &beginType {
-            brackets.push(i);
-        } else if tokenDataType == &endType {
-            if let Some(penultBracket) = brackets.pop() {
-                if let Some(&lastBracket) = brackets.last() {
-                    let copyToken = tokens[penultBracket].clone();
-                    tokens[lastBracket].tokens.push(copyToken);
+    __index = 0; // index buffer
+    while __index < __length {
+        *__tokenType = tokens[__index].dataType.clone();
+        if __tokenType == beginType {
+            __brackets.push(__index);
+        } else if __tokenType == endType {
+            if let Some(penultBracket) = __brackets.pop() {
+                if !__brackets.is_empty() {
+                    __token = tokens[penultBracket].clone();
+                    tokens[ __brackets[__brackets.len()-1] ]
+                        .tokens.push( __token.clone() );
 
                     tokens.remove(penultBracket);
-                    tokensLength -= 1;
+                    __length -= 1;
 
-                    if penultBracket < i {
-                        i -= 1;
+                    if penultBracket < __index {
+                        __index -= 1;
                     }
                 }
             }
 
-            tokens.remove(i);
-            tokensLength -= 1;
+            tokens.remove(__index);
+            __length -= 1;
             continue;
-        } else if !brackets.is_empty() {
-            if let Some(&bracket) = brackets.last() {
-                let token = tokens.remove(i);
-                tokensLength -= 1;
+        } else if !__brackets.is_empty() {
+            __token = tokens.remove(__index);
+            __length -= 1;
 
-                tokens[bracket].tokens.push(token);
-                continue;
-            }
+            tokens[ __brackets[__brackets.len()-1] ]
+                .tokens.push( __token.clone() );
+            continue;
         }
-        i += 1;
+        __index += 1;
     }
 }
 // line nesting [line -> line]
 //          [recall for line lines]
-fn lineNesting(lines: &mut Vec<Line>) {
-    let mut linesLen: usize = lines.len();
-    let mut i:        usize = 0;
+unsafe fn lineNesting(lines: &mut Vec<Line>, mut k: usize) -> usize {
     let mut nextLine: Line;
 
-    while i < linesLen {
-        if i+1 < linesLen && lines[i].ident < lines[i+1].ident {
-            let nextLine = lines.remove(i+1); // clone and remove next line
-            linesLen -= 1;
+    __index = 0;           // index buffer
+    __length = lines.len(); // lines length
+    while __index < __length {
+        if __index+1 < __length && lines[__index].ident < lines[__index+1].ident {
+            nextLine = lines.remove(__index+1);                // clone and remove next line
+            __length -= 1;
 
-            lines[i].lines.push(nextLine);    // nesting
-            lineNesting(&mut lines[i].lines); // cycle
+            lines[__index].lines.push(nextLine);               // nesting
+            __length = lineNesting(&mut lines[__index].lines, __length); // cycle
         } else {
-            i += 1;
+            __index += 1;
         }
     }
+
+    return k;
 }
 
 // delete DoubleComment
-fn deleteDoubleComment(lines: &mut Vec<Line>) {
-    let mut i:              usize = 0;
+unsafe fn deleteDoubleComment(lines: &mut Vec<Line>, mut ib: usize) {
     let mut lastTokenIndex: usize;
 
-    while i < lines.len() {
-        if !lines[i].lines.is_empty() {
-            deleteDoubleComment(&mut lines[i].lines);
+    while ib < lines.len() {
+        if !lines[ib].lines.is_empty() {
+            deleteDoubleComment(&mut lines[ib].lines, ib);
         }
 
-        if lines[i].tokens.is_empty() {
-            if lines[i].lines.is_empty() {
-                i += 1;
+        if lines[ib].tokens.is_empty() {
+            if lines[ib].lines.is_empty() {
+                ib += 1;
             } else {
-                lines.remove(i);
+                lines.remove(ib);
             }
             continue;
         }
 
-        lastTokenIndex = lines[i].tokens.len()-1;
-        if lines[i].tokens[lastTokenIndex].dataType == TokenType::Comment {
-            lines[i].tokens.remove(lastTokenIndex);
-            if lines[i].tokens.is_empty() {
-                lines.remove(i);
+        lastTokenIndex = lines[ib].tokens.len()-1;
+        if lines[ib].tokens[lastTokenIndex].dataType == TokenType::Comment {
+            lines[ib].tokens.remove(lastTokenIndex);
+            if lines[ib].tokens.is_empty() {
+                lines.remove(ib);
                 continue;
             }
         }
 
-        i += 1;
+        ib += 1;
     }
 }
 
 // output token and its tokens
-pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
     let lineIdentString: String = " ".repeat(lineIdent*2+1);
     let identString:     String = " ".repeat(ident*2+1);
 
-    let tokenCount = tokens.len();
+    let tokenCount: usize = tokens.len();
     for (i, token) in tokens.iter().enumerate() {
-        let isLast = i == tokenCount - 1;
-        let treeChar = 
-            if isLast {
+        __char = 
+            if i == tokenCount-1 {
                 'X'
             } else {
                 '┃'
@@ -563,7 +560,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
                     lineIdentString,
-                    treeChar,
+                    __char,
                     identString,
                     token.data,
                     token.dataType.to_string()
@@ -574,7 +571,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
                     lineIdentString,
-                    treeChar,
+                    __char,
                     identString,
                     token.data,
                     token.dataType.to_string()
@@ -585,7 +582,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
                     lineIdentString,
-                    treeChar,
+                    __char,
                     identString,
                     token.data,
                     token.dataType.to_string()
@@ -595,7 +592,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
                 log("parserToken",&format!(
                     "{}{}{}{}  |{}",
                     lineIdentString,
-                    treeChar,
+                    __char,
                     identString,
                     token.data,
                     token.dataType.to_string()
@@ -606,7 +603,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
             println!(
                 "{}{}{}{}",
                 lineIdentString,
-                treeChar,
+                __char,
                 identString,
                 token.dataType.to_string()
             );
@@ -617,7 +614,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
     }
 }
 // output line info
-pub fn outputLines(lines: &Vec<Line>, ident: usize) {
+pub unsafe fn outputLines(lines: &Vec<Line>, ident: usize) {
     let identStr1: String = " ".repeat(ident*2);
     let identStr2: String = " ".repeat(ident*2+1);
     for (i, line) in lines.iter().enumerate() {
@@ -634,7 +631,6 @@ pub fn outputLines(lines: &Vec<Line>, ident: usize) {
             log("parserHeader", &format!("{}┗ Lines",identStr2));
             outputLines(&line.lines, ident+1);
         }
-        //log("parserEnd", &format!("{}-{}",identStr1,i));
     }
 }
 
@@ -655,12 +651,11 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     let mut readLineIdent: bool      = true;
 
     _bufferLength = buffer.len();
-    let mut c: u8;
     while _index < _bufferLength {
-        c = buffer[_index];
+        __byte1 = buffer[_index]; // current char
 
         // ident
-        if c == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent {
+        if __byte1 == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent {
             _index += 2;
             _indexCount += 2;
 
@@ -668,22 +663,22 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
         } else {
             readLineIdent = false;
             // get endline
-            if c == b'\n' || c == b';' {
+            if __byte1 == b'\n' || __byte1 == b';' {
                 // bracket nesting
                 bracketNesting(
                     &mut _lineTokens,
-                    TokenType::CircleBracketBegin, 
-                    TokenType::CircleBracketEnd
+                    &TokenType::CircleBracketBegin, 
+                    &TokenType::CircleBracketEnd
                 );
                 bracketNesting(
                     &mut _lineTokens,
-                    TokenType::SquareBracketBegin, 
-                    TokenType::SquareBracketEnd
+                    &TokenType::SquareBracketBegin, 
+                    &TokenType::SquareBracketEnd
                 );
                 bracketNesting(
                     &mut _lineTokens,
-                    TokenType::FigureBracketBegin, 
-                    TokenType::FigureBracketEnd
+                    &TokenType::FigureBracketBegin, 
+                    &TokenType::FigureBracketEnd
                 );
 
                 // add new line
@@ -704,32 +699,32 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
                 _indexCount = 0;
             } else
             // delete comment
-            if c == b'#' {
+            if __byte1 == b'#' {
                 deleteComment(&buffer);
             } else
             // get int-float
-            if isDigit(c) || (c == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) {
+            if isDigit(__byte1) || (__byte1 == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) {
                 _lineTokens.push( getNumber(&buffer) );
             } else
             // get word
-            if isLetter(c) {
+            if isLetter(__byte1) {
                 _lineTokens.push( getWord(&buffer) );
             } else
             // get quotes ' " `
-            if c == b'\'' || c == b'"' || c == b'`' {
-                let token: Token = getQuotes(&buffer);
-                if token.dataType != TokenType::None {
-                    _lineTokens.push(token);
+            if __byte1 == b'\'' || __byte1 == b'"' || __byte1 == b'`' {
+                __token = getQuotes(&buffer);
+                if __token.dataType != TokenType::None {
+                    _lineTokens.push(__token.clone()); // todo: remove copy
                 } else {
                     _index += 1;
                     _indexCount += 1;
                 }
             } else
             // get single and double chars
-            if getSingleChar(c) {
-                let token: Token = getOperator(&buffer);
-                if token.dataType != TokenType::None {
-                    _lineTokens.push(token);
+            if getSingleChar(__byte1) {
+                __token = getOperator(&buffer);
+                if __token.dataType != TokenType::None {
+                    _lineTokens.push(__token.clone()); // todo: remove copy
                 } else {
                     _index += 1;
                     _indexCount += 1;
@@ -743,10 +738,11 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     }
 
     // line nesting
-    lineNesting(&mut lines);
+    lineNesting(&mut lines, 0);
 
     // delete DoubleComment
-    deleteDoubleComment(&mut lines);
+    __index = 0;
+    deleteDoubleComment(&mut lines, __index);
 
     //
     if _debugMode {
