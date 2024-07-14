@@ -495,7 +495,7 @@ unsafe fn lineNesting(lines: &mut Vec<Line>, mut k: usize) -> usize {
     __index = 0;           // index buffer
     __length = lines.len(); // lines length
     while __index < __length {
-        if __index+1 < __length && lines[__index].ident < lines[__index+1].ident {
+        if __index+1 < __length && lines[__index].indent < lines[__index+1].indent {
             nextLine = lines.remove(__index+1);                // clone and remove next line
             __length -= 1;
 
@@ -541,9 +541,9 @@ unsafe fn deleteDoubleComment(lines: &mut Vec<Line>, mut ib: usize) {
 }
 
 // output token and its tokens
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) {
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) {
     let lineIdentString: String = " ".repeat(lineIdent*2+1);
-    let identString:     String = " ".repeat(ident*2+1);
+    let identString:     String = " ".repeat(indent*2+1);
 
     let tokenCount: usize = tokens.len();
     for (i, token) in tokens.iter().enumerate() {
@@ -609,14 +609,14 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, ident: usize) 
             );
         }
         if (&token.tokens).len() > 0 {
-            outputTokens(&token.tokens, lineIdent, ident+1)
+            outputTokens(&token.tokens, lineIdent, indent+1)
         }
     }
 }
 // output line info
-pub unsafe fn outputLines(lines: &Vec<Line>, ident: usize) {
-    let identStr1: String = " ".repeat(ident*2);
-    let identStr2: String = " ".repeat(ident*2+1);
+pub unsafe fn outputLines(lines: &Vec<Line>, indent: usize) {
+    let identStr1: String = " ".repeat(indent*2);
+    let identStr2: String = " ".repeat(indent*2+1);
     for (i, line) in lines.iter().enumerate() {
         log("parserBegin", &format!("{}+{}",identStr1,i));
 
@@ -626,10 +626,10 @@ pub unsafe fn outputLines(lines: &Vec<Line>, ident: usize) {
             log("parserHeader", &format!("{}┣ Tokens",identStr2));
         }
 
-        outputTokens(&line.tokens, ident, 1);
+        outputTokens(&line.tokens, indent, 1);
         if (&line.lines).len() > 0 {
             log("parserHeader", &format!("{}┗ Lines",identStr2));
-            outputLines(&line.lines, ident+1);
+            outputLines(&line.lines, indent+1);
         }
     }
 }
@@ -654,7 +654,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     while _index < _bufferLength {
         __byte1 = buffer[_index]; // current char
 
-        // ident
+        // indent
         if __byte1 == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent {
             _index += 2;
             _indexCount += 2;
@@ -684,7 +684,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
                 // add new line
                 lines.push( Line {
                     tokens:       _lineTokens.clone(),
-                    ident:        _linesIdent,
+                    indent:        _linesIdent,
                     lines:        Vec::new(),
                     linesDeleted: _linesDeleted+_linesCount
                 } );

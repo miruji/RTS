@@ -23,7 +23,7 @@ pub fn replaceSavedLine(newLine: Line) {
 #[derive(Clone)]
 pub struct Line {
     pub tokens:       Vec<Token>, // list
-    pub ident:        usize,      // identation
+    pub indent:        usize,     // indentation
     pub lines:        Vec<Line>,  // child lines
     pub linesDeleted: usize,      // deleted lines
 }
@@ -31,7 +31,7 @@ impl Line {
     pub fn newEmpty() -> Self {
         Line {
             tokens:       Vec::new(),
-            ident:        0,
+            indent:        0,
             lines:        Vec::new(),
             linesDeleted: 0
         }

@@ -11,7 +11,7 @@ extern crate lazy_static;
 use std::fs::File;
 use std::io::{self, Read};
 use std::env;
-use std::time::{Instant, Duration};
+use std::time::{Instant};
 
 mod logger;
 mod tokenizer;
