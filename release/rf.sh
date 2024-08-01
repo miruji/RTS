@@ -1,10 +1,13 @@
 #!/bin/bash
-
+# RTS run file script for tests
+#
+#       name  x86  file
+# e:  ./rf.sh  64 test.rt
 clear
 
 # remove back
-if [ -e "spl" ]; then
-  rm -rm ./spl
+if [ -e "rts" ]; then
+  rm -rm ./rts
 fi
 
 # debug mode
@@ -27,7 +30,7 @@ fi
 
 # run file
 if [ "$debug" == "true" ]; then
-  ./spl -rf "${@:$argcBegin}" -d
+  ./rts -rf "${@:$argcBegin}" -d
 else
-  ./spl -rf "${@:$argcBegin}"
+  ./rts -rf "${@:$argcBegin}"
 fi

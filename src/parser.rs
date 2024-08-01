@@ -212,24 +212,25 @@ unsafe fn searchCondition(lines: &mut Vec<Line>, lineIndex: usize, linesLength: 
 
     // search first condition
     if token.dataType == TokenType::Question {
-        let mut conditions = Vec::new();
+        let mut conditions: Vec<Line> = Vec::new();
         {
-            let mut i: usize = lineIndex+1;
-            {
-                let mut lineBuffer = (&lines[lineIndex]).clone();
-                lineBuffer.tokens.remove(0);
+            { // clone first condition line
+                let mut lineBuffer: Line = (&lines[lineIndex]).clone();
+                lineBuffer.tokens.remove(0); // remove ? token
                 conditions.push(lineBuffer);
             }
 
             // search bottom lines
+            let mut i: usize = lineIndex+1;
             let mut bottomLineBuffer: &Line;
+            let mut lineBuffer:        Line;
             while i < *linesLength {
                 bottomLineBuffer = &lines[i];
                 if bottomLineBuffer.tokens.len() == 0 {
                     break;
                 }
                 if bottomLineBuffer.tokens[0].dataType == TokenType::Question {
-                    let mut lineBuffer = bottomLineBuffer.clone();
+                    lineBuffer = bottomLineBuffer.clone();
                     lineBuffer.tokens.remove(0);
                     conditions.push(lineBuffer);
 
@@ -252,27 +253,21 @@ unsafe fn searchCondition(lines: &mut Vec<Line>, lineIndex: usize, linesLength: 
         for condition in &mut conditions {
             // if elif
             if condition.tokens.len() != 0 {
-                //println!("  !  if elif");
-                {   // todo: move mcl up ?
+                { // check condition truth and unlock mcl
                     let mcl: MutexGuard<'static, MemoryCellList> = getMemoryCellList();
                     conditionTruth = mcl.expression(&mut condition.tokens,0).data == "true";
                 }
                 if conditionTruth {
                     let mut conditionLinesLength = condition.lines.len();
                     let mut conditionLineIndex = 0;
-                    //println!("  !! condition true");
                     readLines(&mut condition.lines, &mut conditionLineIndex, &mut conditionLinesLength);
                     break;
-                } else {
-                    //println!("  !! condition false");
                 }
             // else
             } else
             if !conditionTruth {
-                //println!("  !  else");
                 let mut conditionLinesLength = condition.lines.len();
-                let mut conditionLineIndex = 0;
-                //println!("  !! condition true");
+                let mut conditionLineIndex   = 0;
                 readLines(&mut condition.lines, &mut conditionLineIndex, &mut conditionLinesLength);
                 break;
             }
@@ -388,31 +383,30 @@ fn checkMemoryCellType(dataType: TokenType) -> bool {
 }
 // check operator
 fn checkMemoryCellMathOperator(dataType: TokenType) -> bool {
-    return 
-        if dataType == TokenType::Equals         || // =
+    if dataType == TokenType::Equals         || // =
 
-           dataType == TokenType::UnaryPlus      || // ++
-           dataType == TokenType::PlusEquals     || // +=
+       dataType == TokenType::UnaryPlus      || // ++
+       dataType == TokenType::PlusEquals     || // +=
 
-           dataType == TokenType::UnaryMinus     || // --
-           dataType == TokenType::MinusEquals    || // -=
+       dataType == TokenType::UnaryMinus     || // --
+       dataType == TokenType::MinusEquals    || // -=
 
-           dataType == TokenType::UnaryMultiply  || // **
-           dataType == TokenType::MultiplyEquals || // *=
+       dataType == TokenType::UnaryMultiply  || // **
+       dataType == TokenType::MultiplyEquals || // *=
 
-           dataType == TokenType::UnaryDivide    || // //
-           dataType == TokenType::DivideEquals   || // /=
+       dataType == TokenType::UnaryDivide    || // //
+       dataType == TokenType::DivideEquals   || // /=
 
-           dataType == TokenType::UnaryModulo    || // %%
-           dataType == TokenType::ModuloEquals   || // %=
+       dataType == TokenType::UnaryModulo    || // %%
+       dataType == TokenType::ModuloEquals   || // %=
 
-           dataType == TokenType::UnaryExponent  || // ^^
-           dataType == TokenType::ExponentEquals    // ^=
-        {
-            true
-        } else {
-            false
-        }
+       dataType == TokenType::UnaryExponent  || // ^^
+       dataType == TokenType::ExponentEquals    // ^=
+    {
+        true
+    } else {
+        false
+    }
 }
 /* search MemoryCell
    e:
@@ -493,7 +487,7 @@ unsafe fn searchMemoryCell(line: &mut Line) -> bool {
                     valueBuffer = tokens[j+1..(tokensLength)].to_vec();
                     tokens.clear();
                 }
-                // todo:
+                // todo: made?
                 //   if + or - or * or / and more ...
                 //   -> skip this line
                 //   e: a + 10
@@ -507,34 +501,21 @@ unsafe fn searchMemoryCell(line: &mut Line) -> bool {
             goNext = true;
         }
     }
-
+    //
     if !nameBuffer.is_empty() {
-        //println!("    Name:\"{}\"",nameBuffer);
-        //println!("      Operator: \"{}\"",operatorBuffer.to_string());
-        //if !valueBuffer.is_empty() {
-        //    println!("      Value");
-        //    outputTokens(&valueBuffer, 0, 4);
-        //}
         // memoryCellName - op - value
         let mut mcl = getMemoryCellList();
+        // equals
         if operatorBuffer == TokenType::Equals {
             // todo: check ~~ mode-type
-
             // new value to MemoryCell
-            if /*let Some(mc) =*/ !mcl.getCell( &nameBuffer ).is_none() {
-                //let mcName      = mc.name.clone();
-                //let mcMode      = mc.mode.to_string();
-                //let mcValueType = mc.valueType.to_string();
-
+            if !mcl.getCell( &nameBuffer ).is_none() {
                 mcl.op(
                     nameBuffer,
                     operatorBuffer,
                     Token::newNesting(valueBuffer)
                 );
                 return true;
-
-                //println!("      Mode: \"{}\"",mcMode);
-                //println!("      Type: \"{}\"",mcValueType);
             // create MemoryCell
             } else {
                 // array
@@ -562,9 +543,6 @@ unsafe fn searchMemoryCell(line: &mut Line) -> bool {
                     );
                     return true;
                 }
-                //let mc: &MemoryCell = mcl.last();
-                //println!("      Mode: \"{}\"",mc.mode.to_string());
-                //println!("      Type: \"{}\"",mc.valueType.to_string());
             }
         // op
         } else
@@ -594,9 +572,9 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     _lines = tokenizerLines;
 
     // define upper struct [Class / Enum]
-    let mut classes: Vec<Class> = Vec::new();
-    let mut enums:   Vec<Enum>  = Vec::new();
-    defineUpperStruct(&mut classes, &mut enums);
+//    let mut classes: Vec<Class> = Vec::new();
+//    let mut enums:   Vec<Enum>  = Vec::new();
+//    defineUpperStruct(&mut classes, &mut enums);
     /*
     // output classes
     if !classes.is_empty() {
@@ -623,9 +601,9 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     */
 
     // define lower struct [function / procedure / list]
-    let mut methods: Vec<Method> = Vec::new();
-    let mut lists:   Vec<List>   = Vec::new();
-    defineLowerStruct(&mut methods, &mut lists);
+//    let mut methods: Vec<Method> = Vec::new();
+//    let mut lists:   Vec<List>   = Vec::new();
+//    defineLowerStruct(&mut methods, &mut lists);
     /*
     // output methods
     if !methods.is_empty() {
@@ -688,15 +666,10 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         );
     }
 
-// read lines
-    //log("parserInfo", "Lines");
-    //let ident_str1: String = " ".repeat(2);
-    //let ident_str2: String = " ".repeat(4);
-
+    // read lines
     if unsafe{_debugMode} {
         logSeparator("=> AST interpretation");
     }
-
     _linesLength = _lines.len();
     readLines(&mut _lines, &mut _lineIndex, &mut _linesLength);
 }
@@ -709,22 +682,9 @@ pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLengt
             continue;
         }
 
-        //log("parserBegin", &format!("{}+{}", ident_str1, i));
-        //println!("index: {}, length: {}",*lineIndex,*linesLength);
-        replaceSavedLine( lines[*lineIndex].clone() ); // save line now for logger
-        
-        // output
-        /*
-        if !line.tokens.is_empty() {
-            log("parserHeader", &format!("{}Tokens", ident_str2));
-            outputTokens(&line.tokens, 0, 3);
-        }
-
-        if !line.lines.is_empty() {
-            log("parserHeader", &format!("{}Lines", ident_str2));
-            outputLines(&line.lines, 3);
-        }
-        */
+        // save line now for logger
+        // todo: delete its pls
+        replaceSavedLine( lines[*lineIndex].clone() );
 
         // search conditions
         if !searchCondition(lines, *lineIndex, linesLength) {
@@ -740,8 +700,5 @@ pub unsafe fn readLines(lines: &mut Vec<Line>, lineIndex: &mut usize, linesLengt
         } else {
             *lineIndex += 1;
         }
-
-        //
-        //log("parserEnd", &format!("{}-{}", ident_str1, i));
     }
 }

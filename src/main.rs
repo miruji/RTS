@@ -1,5 +1,5 @@
 /*
-    spl init file
+    RTS init file
 */
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -16,18 +16,38 @@ use std::time::{Instant};
 mod logger;
 mod tokenizer;
 mod parser;
-
-pub static _version: &str = "0.2.0";
-
+// other globals
 pub static mut _filePath: String = String::new();
-
+pub static mut _debugMode: bool = false;
+// input & output
 pub static mut _argc: usize       = 0;
 pub static mut _argv: Vec<String> = Vec::new();
 
-pub static mut _debugMode: bool = false;
-
 pub static mut _exitCode: bool = false;
+// version
+lazy_static! {
+    pub static ref _version: String = getVersion(env!("CARGO_PKG_VERSION"));
+}
+fn getVersion(version: &str) -> String {
+    let mut result: String     = String::new();
 
+    let digits:     Vec<&str>  = version.split('.').collect();
+    let digitsSize: usize      = digits.len()-1;
+    let mut i:      usize      = 0;
+
+    while i < digitsSize {
+        let digit = digits[i];
+        if digit != "0" {
+            result.push_str(digit);
+        }
+        if i < digitsSize {
+            result.push('.');
+        }
+        i += 1;
+    }
+    result
+}
+// main
 fn main() -> io::Result<()> {
     let startTime: Instant = Instant::now();
 
@@ -68,7 +88,7 @@ fn main() -> io::Result<()> {
         // version
         if key == "-v" {
             // todo: version save file ?
-            println!("spl v{}",_version);
+            println!("RTS v{}",*_version);
             std::process::exit(0);
         }
         // debug mode

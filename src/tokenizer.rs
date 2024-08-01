@@ -39,7 +39,7 @@ unsafe fn deleteComment(buffer: &[u8]) {
     }
 }
 // get single char token
-fn getSingleChar(c: u8) -> bool {
+fn isSingleChar(c: u8) -> bool {
     match c {
         b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
         b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
@@ -62,7 +62,7 @@ unsafe fn getNumber(buffer: &[u8]) -> Token {
 
     while __index < _bufferLength {
         __byte1 = buffer[__index]; // current char
-        __byte2 =               // next char
+        __byte2 =                  // next char
             if __index+1 < _bufferLength {
                 buffer[__index+1]
             } else {
@@ -121,7 +121,7 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
 
     while __index < _bufferLength {
         __byte1 = buffer[__index]; // current char
-        __byte2 =               // next char
+        __byte2 =                  // next char
             if __index+1 < _bufferLength {
                 buffer[__index+1]
             } else {
@@ -141,6 +141,7 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
         _indexCount += __result.len();
     }
 
+    // next return
     match &__result[..] {
         "Int"      => Token::newEmpty(TokenType::Int),
         "UInt"     => Token::newEmpty(TokenType::UInt),
@@ -163,7 +164,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
     __result = String::new();
 
     if buffer[_index] == __byte1 {
-        let mut open:        bool = false;
+        let mut open:             bool = false;
         let mut noSlash:          bool;
         let mut backslashCounter: usize;
 
@@ -212,7 +213,8 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
             _indexCount += 1;
         }
     }
-    return if __byte1 == b'\'' {
+    // next return
+    if __byte1 == b'\'' {
         return if __result.len() > 1 {
             // single quotes can only contain 1 character
             // skipped it!
@@ -230,207 +232,93 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
 }
 // get operator token by buffer-index
 unsafe fn getOperator(buffer: &[u8]) -> Token {
-    __byte1 = // next char
+    __byte2 = buffer[_index]; // current char
+    __byte1 =                 // next char
         if _index+1 < _bufferLength {
             buffer[_index+1]
         } else {
             b'\0'
         };
-    return match buffer[_index] {
+    // index
+    if isSingleChar(__byte1) {
+        _index += 2;
+        _indexCount += 2;
+    } else {
+        _index += 1;
+        _indexCount += 1;
+    }
+    // return
+    return match __byte2 {
         // += ++ +
-        b'+' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::PlusEquals)
-        } else if __byte1 == b'+' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::UnaryPlus)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Plus)
+        b'+' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::PlusEquals),
+            b'+' => Token::newEmpty(TokenType::UnaryPlus),
+            _ => Token::newEmpty(TokenType::Plus),
         },
         // -= -- -
-        b'-' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::MinusEquals)
-        } else if __byte1 == b'-' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::UnaryMinus)
-        } else if __byte1 == b'>' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::Pointer)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Minus)
+        b'-' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::MinusEquals),
+            b'-' => Token::newEmpty(TokenType::UnaryMinus),
+            b'>' => Token::newEmpty(TokenType::Pointer),
+            _ => Token::newEmpty(TokenType::Minus),
         },
         // *= *
-        b'*' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::MultiplyEquals)
-        } else if __byte1 == b'*' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::UnaryMultiply)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Multiply)
+        b'*' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::MultiplyEquals),
+            b'*' => Token::newEmpty(TokenType::UnaryMultiply),
+            _ => Token::newEmpty(TokenType::Multiply),
         },
         // /= /
-        b'/' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::DivideEquals)
-        } else if __byte1 == b'/' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::UnaryDivide)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Divide)
+        b'/' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::DivideEquals),
+            b'/' => Token::newEmpty(TokenType::UnaryDivide),
+            _ => Token::newEmpty(TokenType::Divide),
         },
         // >= >
-        b'>' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::GreaterThanOrEquals)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::GreaterThan)
+        b'>' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::GreaterThanOrEquals),
+            _ => Token::newEmpty(TokenType::GreaterThan),
         },
         // <=
-        b'<' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::LessThanOrEquals)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::LessThan)
+        b'<' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::LessThanOrEquals),
+            _ => Token::newEmpty(TokenType::LessThan),
         },
         // != !
-        b'!' => if __byte1 == b'=' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::NotEquals)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Not)
+        b'!' => match __byte1 {
+            b'=' => Token::newEmpty(TokenType::NotEquals),
+            _ => Token::newEmpty(TokenType::Not),
         },
         // &&
-        b'&' => if __byte1 == b'&' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::And)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::And) // todo: single and
+        b'&' => match __byte1 {
+            b'&' => Token::newEmpty(TokenType::And),
+            _ => Token::newEmpty(TokenType::And), // todo: single and
         },
         // ||
-        b'|' => if __byte1 == b'|' {
-            _index += 2;
-            _indexCount += 2;
-            Token::newEmpty(TokenType::Or)
-        } else {
-            _index += 1;
-            _indexCount += 1;
-            Token::newEmpty(TokenType::Or) // todo: single or
+        b'|' => match __byte1 {
+            b'|' => Token::newEmpty(TokenType::Or),
+            _ => Token::newEmpty(TokenType::Or), // todo: single or
         },
         // single chars
             // =
-            b'=' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Equals)
-            },
+            b'=' => Token::newEmpty(TokenType::Equals),
             // block
-            b'(' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::CircleBracketBegin)
-            },
-            b')' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::CircleBracketEnd)
-            },
-            b'{' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::FigureBracketBegin)
-            },
-            b'}' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::FigureBracketEnd)
-            },
-            b'[' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::SquareBracketBegin)
-            },
-            b']' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::SquareBracketEnd)
-            },
+            b'(' => Token::newEmpty(TokenType::CircleBracketBegin),
+            b')' => Token::newEmpty(TokenType::CircleBracketEnd),
+            b'{' => Token::newEmpty(TokenType::FigureBracketBegin),
+            b'}' => Token::newEmpty(TokenType::FigureBracketEnd),
+            b'[' => Token::newEmpty(TokenType::SquareBracketBegin),
+            b']' => Token::newEmpty(TokenType::SquareBracketEnd),
             // other
-            b';' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Endline)
-            },
-            b':' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Colon)
-            },
-            b',' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Comma)
-            },
-            b'.' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Dot)
-            },
-            b'%' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Modulo)
-            },
-            b'^' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Exponent)
-            },
-            b'?' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Question)
-            },
-            b'~' => {
-                _index += 1;
-                _indexCount += 1;
-                Token::newEmpty(TokenType::Tilde)
-            },
-            _ => {
-                _index += 1;
-                _indexCount += 1;
-                Token::new(TokenType::None, String::new())
-            }
+            b';' => Token::newEmpty(TokenType::Endline),
+            b':' => Token::newEmpty(TokenType::Colon),
+            b',' => Token::newEmpty(TokenType::Comma),
+            b'.' => Token::newEmpty(TokenType::Dot),
+            b'%' => Token::newEmpty(TokenType::Modulo),
+            b'^' => Token::newEmpty(TokenType::Exponent),
+            b'?' => Token::newEmpty(TokenType::Question),
+            b'~' => Token::newEmpty(TokenType::Tilde),
+            _ => Token::new(TokenType::None, String::new())
     }
 }
 
@@ -492,7 +380,7 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
 unsafe fn lineNesting(lines: &mut Vec<Line>, mut k: usize) -> usize {
     let mut nextLine: Line;
 
-    __index = 0;           // index buffer
+    __index = 0;            // index buffer
     __length = lines.len(); // lines length
     while __index < __length {
         if __index+1 < __length && lines[__index].indent < lines[__index+1].indent {
@@ -505,8 +393,7 @@ unsafe fn lineNesting(lines: &mut Vec<Line>, mut k: usize) -> usize {
             __index += 1;
         }
     }
-
-    return k;
+    k
 }
 
 // delete DoubleComment
@@ -721,7 +608,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
                 }
             } else
             // get single and double chars
-            if getSingleChar(__byte1) {
+            if isSingleChar(__byte1) {
                 __token = getOperator(&buffer);
                 if __token.dataType != TokenType::None {
                     _lineTokens.push(__token.clone()); // todo: remove copy
@@ -744,7 +631,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     __index = 0;
     deleteDoubleComment(&mut lines, __index);
 
-    //
+    // output and return
     if _debugMode {
         outputLines(&lines,0);
     }

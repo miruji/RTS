@@ -12,7 +12,7 @@ use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
 // mcl
-// repeated use in the same line of sight should be avoided
+// ** repeated use in the same line of sight should be avoided
 use std::sync::{Mutex, MutexGuard};
 lazy_static! {
     static ref _mcl: Mutex<MemoryCellList> = Mutex::new(MemoryCellList::new());

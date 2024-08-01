@@ -52,8 +52,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20145670ba436b55d91fc92d25e71160fbfbdd57831631c8d7d36377a476f1cb"
 
 [[package]]
-name = "spl"
-version = "0.1.0"
+name = "rts"
+version = "0.2.0"
 dependencies = [
  "colored",
  "lazy_static",

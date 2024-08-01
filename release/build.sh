@@ -1,7 +1,9 @@
 #!/bin/bash
-# build spl x86-32 or x86-64
+# RTS build script for x86-32 or x86-64
 # and optimize (strip + upx)
-
+#
+#        name    x86  all debug
+# e:  ./build.sh  64    false
 clear
 
 # build file
@@ -65,17 +67,16 @@ elif [ "$1" == "32" ]; then
 	rm -f  ./log  # remove log
 fi
 echo "Everything is fine linux-x86-$1"
-
-splPath="target/release/spl"
+#
+outputPath="target/release/rts"
 if [ "$1" == "32" ]; then
-	splPath="target/i686-unknown-linux-gnu/release/spl"
+	outputPath="target/i686-unknown-linux-gnu/release/rts"
 fi
-
-if [ -e "$splPath" ]; then
+if [ -e "$outputPath" ]; then
 	# optimize
-	strip $splPath
-	upx --best -q -q -q $splPath
+	strip $outputPath
+	upx --best -q -q -q $outputPath
 
 	# move here
-	mv $splPath release
+	mv $outputPath release
 fi
