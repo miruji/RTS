@@ -11,7 +11,7 @@ extern crate lazy_static;
 use std::fs::File;
 use std::io::{self, Read};
 use std::env;
-use std::time::{Instant};
+use std::time::Instant;
 
 mod logger;
 mod tokenizer;
@@ -99,7 +99,7 @@ fn main() -> io::Result<()> {
         }
     }
     if unsafe{_debugMode} {
-        logSeparator("=> Reading arguments");
+        logSeparator(" > Reading arguments");
         log("ok","Debug mode");
     }
 
@@ -152,7 +152,7 @@ fn main() -> io::Result<()> {
     // run file
     if runFile {
         if unsafe{_debugMode} {
-            logSeparator("=> Opening a file");
+            logSeparator(" > Opening a file");
         }
         // open file
         let mut file = match File::open(unsafe{&*_filePath}) {
@@ -188,11 +188,7 @@ fn main() -> io::Result<()> {
     // run script
     } else
     if unsafe{_debugMode} {
-        logSeparator("=> Read script");
-    }
-
-    if unsafe{_debugMode} {
-        logSeparator("=> AST generation");
+        logSeparator(" > Read script");
     }
 
     // read
@@ -200,13 +196,13 @@ fn main() -> io::Result<()> {
         parseLines( readTokens(buffer) );
     }
 
-    //
+    // duration
     if unsafe{_debugMode} {
         let endTime  = Instant::now();
         let duration = endTime-startTime;
-        logSeparator( &format!("=> Duration: {:?}",duration) );
+        logSeparator( &format!("?> All duration: {:?}",duration) );
     }
-    // to release test, use hyperfine
+    // ** to release test, use hyperfine
 
     //
     Ok(())

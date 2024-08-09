@@ -9,6 +9,8 @@ use crate::_debugMode;
 pub mod token; use crate::tokenizer::token::*;
 pub mod line;  use crate::tokenizer::line::*;
 
+use std::time::Instant;
+
 // prevariables
 // in fact, i moved the most used variables here so that reading happens faster, 
 // without re-declaring identical memory areas
@@ -534,6 +536,11 @@ static mut _linesIdent: usize = 0;
 static mut _lineTokens: Vec<Token> = Vec::new();
 
 pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
+    let startTime: Instant = Instant::now();
+    if unsafe{_debugMode} {
+        logSeparator(" > AST generation");
+    }
+
     let mut lines:         Vec<Line> = Vec::new();
     let mut readLineIdent: bool      = true;
 
@@ -631,9 +638,15 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     __index = 0;
     deleteDoubleComment(&mut lines, __index);
 
-    // output and return
+    // debug output and return
     if _debugMode {
+        // duration
+        let endTime  = Instant::now();
+        let duration = endTime-startTime;
+        // lines
         outputLines(&lines,0);
+        //
+        logSeparator( &format!("?> Tokenizer duration: {:?}",duration) );
     }
     lines
 }

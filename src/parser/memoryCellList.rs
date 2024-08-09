@@ -11,20 +11,27 @@ use crate::parser::uf64::*;
 use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
-// mcl
-// ** repeated use in the same line of sight should be avoided
-use std::sync::{Mutex, MutexGuard};
-lazy_static! {
-    static ref _mcl: Mutex<MemoryCellList> = Mutex::new(MemoryCellList::new());
-}
-pub fn getMemoryCellList() -> MutexGuard<'static, MemoryCellList> {
-    _mcl.lock().unwrap()
+use std::sync::{Arc, RwLock, RwLockReadGuard};
+
+pub fn getMemoryCellByName(
+    mcl: Arc<RwLock<MemoryCellList>>,
+    name: &str
+) -> Option<Arc<RwLock<MemoryCell>>> {
+    let mcl2 = mcl.read().unwrap();
+    for memoryCell in &mcl2.value {
+        let mc = memoryCell.read().unwrap();
+        if name == mc.name {
+            println!("    ! searched: {}", name);
+            return Some(Arc::clone(memoryCell));
+        }
+    }
+    None
 }
 
 // MemoryCellList
 #[derive(Clone)]
 pub struct MemoryCellList {
-    pub value: Vec<MemoryCell>,
+    pub value: Vec< Arc<RwLock<MemoryCell>> >,
 }
 impl MemoryCellList {
     pub fn new() -> Self {
@@ -33,24 +40,25 @@ impl MemoryCellList {
 
     pub fn push(&mut self, mut mc: MemoryCell) {
         let mcl = self.clone();
-        // set expression value
         if mc.valueType != TokenType::Array {
             mc.value = mcl.expression(&mut mc.value.tokens.clone(), 0);
         }
-        self.value.push(mc);
+        self.value.push(Arc::new(RwLock::new(mc)));
     }
 
-    pub fn last(&self) -> &MemoryCell {
-        self.value.last().unwrap()
-    }
+    //pub fn last(&self) -> Option<&MemoryCell> {
+    //    self.value.last()
+    //}
 
-    pub fn getCell(&self, name: &str) -> Option<&MemoryCell> {
-        for mc in &self.value {
-            if mc.name == name {
-                return Some(mc);
+    pub fn getByName(&self, name: &str) -> Option<Arc<RwLock<MemoryCell>>> {
+        self.value.iter().find_map(|mc| {
+            let mcGuard = mc.read().unwrap();
+            if mcGuard.name == name {
+                Some(Arc::clone(mc))
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 
     pub fn op(&mut self, name: String, op: TokenType, opValue: Token) {
@@ -61,24 +69,22 @@ impl MemoryCellList {
             return;
         }
 
-        let mcl_length: &usize = &self.value.len();
+        let mclLength: &usize = &self.value.len();
         let mut i = 0;
 
         let mut mcl:     MemoryCellList;
-        let mut mcConst: MemoryCell;
-        let mut mc:      &mut MemoryCell;
 
         let mut leftValue:  Token;
         let mut rightValue: Token;
 
-        while i < *mcl_length {
-            mcl     = self.clone();
-            mcConst = self.value[i].clone();
+        while i < *mclLength {
+            mcl       = self.clone();
+            let mcArc = self.value[i].clone();   // todo: move to up please
+            let mut mc = mcArc.write().unwrap(); // todo: ...
 
-            if mcConst.name == name {
+            if mc.name == name {
                 //println!("{}", mcConst.name);
                 rightValue = mcl.expression(&mut opValue.tokens.clone(), 0);
-                mc = &mut self.value[i];
                 // =
                 if op == TokenType::Equals {
                     mc.value = rightValue;
@@ -100,6 +106,24 @@ impl MemoryCellList {
                 //println!("  = {}", mc.value.data);
             }
             i += 1;
+        }
+    }
+
+    pub fn op2(&mut self, mc: Arc<RwLock<MemoryCellList>>, op: TokenType, opValue: Token) {
+        if op != TokenType::Equals &&
+           op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
+           op != TokenType::MultiplyEquals && op != TokenType::DivideEquals {
+            return;
+        }
+
+        //
+        let mut mc2 = mc.write().unwrap();
+        let rightValue = self.expression(&mut opValue.tokens.clone(), 0);
+        if op == TokenType::Equals {
+            //mc2.value = rightValue;
+        // += -= *= /=
+        } else {
+            //
         }
     }
 
@@ -393,16 +417,17 @@ fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
 }
 // update value
 fn updateValue(mcl: &MemoryCellList, value: &mut Vec<Token>, length: &mut usize, index: usize) {
-    if let Some(mc) = mcl.getCell(&value[index].data) {
+    if let Some(mc) = mcl.getByName(&value[index].data) {
+        let mc2 = mc.read().unwrap();
         if index+1 < *length && value[index+1].dataType == TokenType::SquareBracketBegin {
             let arrayIndex: usize = value[index+1].tokens[0].data.parse::<usize>().unwrap();
             value.remove(index+1);
             *length -= 1;
-            value[index].data     = mc.value.tokens[arrayIndex].data.clone();
-            value[index].dataType = mc.value.tokens[arrayIndex].dataType.clone();
+            value[index].data     = mc2.value.tokens[arrayIndex].data.clone();
+            value[index].dataType = mc2.value.tokens[arrayIndex].dataType.clone();
         } else {
-            value[index].data     = mc.value.data.clone();
-            value[index].dataType = mc.value.dataType.clone();
+            value[index].data     = mc2.value.data.clone();
+            value[index].dataType = mc2.value.dataType.clone();
         }
     } else {
         log("syntax","");
