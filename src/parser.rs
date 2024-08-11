@@ -311,10 +311,8 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
         // if elif
         if condition.tokens.len() != 0 {
             { // check condition truth and unlock mcl
-                //let mut mcl = getMemoryCellList(mcl);
-                let mcl = &methodLink.read().unwrap().mcl;
-                let mcl2 = mcl.read().unwrap();
-                conditionTruth = mcl2.expression(&mut condition.tokens,0).data == "true";
+                let method = methodLink.read().unwrap();
+                conditionTruth = method.memoryCellExpression(&mut condition.tokens,0).data == "true";
             }
             if conditionTruth {
                 let mut conditionLinesLength: usize = condition.lines.len();

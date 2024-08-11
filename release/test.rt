@@ -1,7 +1,9 @@
-a = 10
 
-? "true"
-  b += 10+a
-  println(b)
+a = input("Write a: ")
+println( "  ["+a+"] ["+type(a)+"]" )
 
-println(a)
+b = input("Write b: ")
+println( "  ["+b+"] ["+type(b)+"]" )
+
+c = int(a)+int(b)
+println( "a:"+a+" + b:"+b+" = c:"+str(c)+":"+type(c) )

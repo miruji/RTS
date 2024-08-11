@@ -8,24 +8,23 @@ use crate::_filePath;
 use crate::tokenizer::line::*;
 use crate::tokenizer::token::*;
 
-use crate::parser::MemoryCellList;
-use crate::parser::MemoryCell;
-use crate::parser::getMemoryCellByName;
-use crate::parser::calculate;
+use crate::parser::memoryCellList::*;
+use crate::parser::memoryCell::*;
+
+use std::{io, io::Write};
 
 use std::sync::{Arc, RwLock};
 
 pub struct Method {
-    pub name:       String,     // unique name
-    pub lines:      Vec<Line>,  // nesting lines
-    pub parameters: Vec<Token>, // parameters
-    pub resultType: String,     // result type
-    pub mcl:        Arc<RwLock<MemoryCellList>>, // todo: option< Arc<RwLock<MemoryCellList>> > ?
-
-    pub methods:    Vec<    Arc<RwLock<Method>> >,
-    pub parent:     Option< Arc<RwLock<Method>> >,
+    pub name:           String,     // unique name
+    pub lines:          Vec<Line>,  // nesting lines
+    pub parameters:     Vec<Token>, // parameters
+    pub resultType:     String,     // result type
         // if result type = None, => procedure
         // else => function
+    pub memoryCellList: Arc<RwLock<MemoryCellList>>, // todo: option< Arc<RwLock<MemoryCellList>> > ?
+    pub methods:        Vec<    Arc<RwLock<Method>> >,
+    pub parent:         Option< Arc<RwLock<Method>> >,
 }
 impl Method {
     pub fn new(
@@ -36,33 +35,34 @@ impl Method {
         Method {
             name,
             lines,
-            parameters: Vec::new(),
-            resultType: String::from("None"),
-            mcl:        Arc::new(RwLock::new(MemoryCellList::new())),
-            methods:    Vec::new(),
+            parameters:     Vec::new(),
+            resultType:     String::from("None"),
+            memoryCellList: Arc::new(RwLock::new(MemoryCellList::new())),
+            methods:        Vec::new(),
             parent
         }
     }
 
-    pub fn pushMemoryCell(&self, mut mc: MemoryCell) {
-        if mc.valueType != TokenType::Array {
-            mc.value = self.memoryCellExpression(&mut mc.value.tokens.clone(), 0);
+    // push memoryCell to self memoryCellList
+    pub fn pushMemoryCell(&self, mut memoryCell: MemoryCell) {
+        // basic
+        if memoryCell.valueType != TokenType::Array {
+            memoryCell.value = self.memoryCellExpression(&mut memoryCell.value.tokens.clone(), 0);
         }
-        let mut memoryCellList = self.mcl.write().unwrap();
-        memoryCellList.value.push(Arc::new(RwLock::new(mc)));
+        // array
+        let mut memoryCellList = self.memoryCellList.write().unwrap();
+        memoryCellList.value.push( Arc::new(RwLock::new(memoryCell)) );
     }
 
     // get memory cell by name
     pub fn getMemoryCellByName(&self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> {
         // search in self
-        if let Some(mc) = getMemoryCellByName(self.mcl.clone(), memoryCellName) {
-//            println!("  > mc searched in [{}]",self.name);
-            return Some(mc);
+        if let Some(memoryCell) = getMemoryCellByName(self.memoryCellList.clone(), memoryCellName) {
+            return Some(memoryCell);
         }
         // search in parent
-        if let Some(parentBuffer) = &self.parent {
-            let parent = parentBuffer.read().unwrap();
-//            println!("  > next search mc in [{}]",parent.name);
+        if let Some(parentLink) = &self.parent {
+            let parent = parentLink.read().unwrap();
             return parent.getMemoryCellByName(memoryCellName);
         }
         //
@@ -71,7 +71,6 @@ impl Method {
 
     // memory cell op
     pub fn memoryCellOp(&self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) {
-//        println!("  next memoryCellOp()");
         if op != TokenType::Equals         &&
            op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
            op != TokenType::MultiplyEquals && op != TokenType::DivideEquals {
@@ -79,35 +78,23 @@ impl Method {
         }
 
         // calculate new values
-        //let memoryCellList = self.mcl.read().unwrap();
-//        println!("    next rightValue expression()");
-        let rightValue = self.memoryCellExpression(&mut opValue.tokens.clone(), 0);
-//        println!("    rightValue [{}]",rightValue.data);
-//        println!("    op [{}]",op.to_string());
-        let mut mc = memoryCellLink.write().unwrap();
+        let rightValue: Token = self.memoryCellExpression(&mut opValue.tokens.clone(), 0);
+        let mut memoryCell = memoryCellLink.write().unwrap();
         // =
         if op == TokenType::Equals {
-            mc.value = rightValue;
+            memoryCell.value = rightValue;
         // += -= *= /=
         } else {
-            let leftValue = mc.value.clone();
-            //println!("{}:{}", leftValue.data, rightValue.data);
-            //println!("{}:{}", leftValue.dataType.to_string(), rightValue.dataType.to_string());
-            if op == TokenType::PlusEquals {
-                mc.value = calculate(&TokenType::Plus, &leftValue, &rightValue);
-            } else if op == TokenType::MinusEquals {
-                mc.value = calculate(&TokenType::Minus, &leftValue, &rightValue);
-            } else if op == TokenType::MultiplyEquals {
-                mc.value = calculate(&TokenType::Multiply, &leftValue, &rightValue);
-            } else if op == TokenType::DivideEquals {
-                mc.value = calculate(&TokenType::Divide, &leftValue, &rightValue);
-            }
+            let leftValue: Token = memoryCell.value.clone();
+            if op == TokenType::PlusEquals     { memoryCell.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
+            if op == TokenType::MinusEquals    { memoryCell.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
+            if op == TokenType::MultiplyEquals { memoryCell.value = calculate(&TokenType::Multiply, &leftValue, &rightValue); } else 
+            if op == TokenType::DivideEquals   { memoryCell.value = calculate(&TokenType::Divide,   &leftValue, &rightValue); }
         }
     }
 
     // update value
     fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
-//        println!("  replaceMemoryCellByName [{}] in method [{}]",value[index].data,self.name);
         if let Some(memoryCellLink) = self.getMemoryCellByName(&value[index].data) {
             let memoryCell = memoryCellLink.read().unwrap();
             if index+1 < *length && value[index+1].dataType == TokenType::SquareBracketBegin {
@@ -140,8 +127,6 @@ impl Method {
         let identStr: String = " ".repeat(indent*2);
         let mut valueLength: usize = value.len();
 
-        let memoryCellList = self.mcl.read().unwrap();
-
         // 1 number
         if valueLength == 1 {
             if value[0].dataType != TokenType::CircleBracketBegin {
@@ -163,26 +148,59 @@ impl Method {
                     let functionName: String = value[i].data.clone();
                     // todo: uint float ufloat
                     if functionName == "int" {
-                        token = value[i].clone();
-                        value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
-                        value[i].dataType = TokenType::Int;
+                        if value[i+1].tokens.len() > 0 {
+                            value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
+                            value[i].dataType = TokenType::Int;
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
 
                         value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
                     if functionName == "str" {
-                        token = value[i].clone();
-                        value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
-                        value[i].dataType = TokenType::String;
+                        if value[i+1].tokens.len() > 0 {
+                            value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
+                            value[i].dataType = TokenType::String;
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
 
                         value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
                     if functionName == "type" {
-                        token = value[i].clone();
-                        value[i].data = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1).dataType.to_string();
+                        if value[i+1].tokens.len() > 0 {
+                            value[i].data = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1).dataType.to_string();
+                            value[i].dataType = TokenType::String;
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
+
+                        value.remove(i+1);
+                        valueLength -= 1;
+                        continue;
+                    } else
+                    if functionName == "input" {
+                        if value[i+1].tokens.len() > 0 {
+                            let inputTextToken: Token = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
+                            if inputTextToken.dataType != TokenType::None {
+                                print!("{}",inputTextToken.data);
+                                io::stdout().flush().unwrap();
+                            }
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
+
+                        value[i].data = String::new();
+                        io::stdin().read_line(&mut value[i].data).expect("Input error"); // todo: delete error
+                        value[i].data = value[i].data.trim_end().to_string();
                         value[i].dataType = TokenType::String;
 
                         value.remove(i+1);
@@ -238,7 +256,7 @@ impl Method {
 
             i += 1;
         }
-        // * /
+        // * and /
         i = 0;
         while i < valueLength {
             if valueLength == 1 {
@@ -261,7 +279,7 @@ impl Method {
 
             i += 1;
         }
-        // + -
+        // + and -
         i = 0;
         while i < valueLength {
             if valueLength == 1 {
@@ -273,7 +291,7 @@ impl Method {
             }
 
             token = value[i].clone();
-            // + -
+            // + and -
             if i+1 < valueLength && (token.dataType == TokenType::Plus || token.dataType == TokenType::Minus) {
                 value[i-1] = calculate(&token.dataType, &value[i-1], &value[i+1]);
 

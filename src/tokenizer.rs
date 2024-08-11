@@ -234,93 +234,100 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
 }
 // get operator token by buffer-index
 unsafe fn getOperator(buffer: &[u8]) -> Token {
-    __byte2 = buffer[_index]; // current char
-    __byte1 =                 // next char
-        if _index+1 < _bufferLength {
+    let currentChar = buffer[_index];
+    let nextChar = 
+        if _index+1<_bufferLength { 
             buffer[_index+1]
-        } else {
+        } else { 
             b'\0'
         };
-    // index
-    if isSingleChar(__byte1) {
-        _index += 2;
-        _indexCount += 2;
-    } else {
-        _index += 1;
-        _indexCount += 1;
-    }
-    // return
-    return match __byte2 {
-        // += ++ +
-        b'+' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::PlusEquals),
-            b'+' => Token::newEmpty(TokenType::UnaryPlus),
-            _ => Token::newEmpty(TokenType::Plus),
-        },
-        // -= -- -
-        b'-' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::MinusEquals),
-            b'-' => Token::newEmpty(TokenType::UnaryMinus),
-            b'>' => Token::newEmpty(TokenType::Pointer),
-            _ => Token::newEmpty(TokenType::Minus),
-        },
-        // *= *
-        b'*' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::MultiplyEquals),
-            b'*' => Token::newEmpty(TokenType::UnaryMultiply),
-            _ => Token::newEmpty(TokenType::Multiply),
-        },
-        // /= /
-        b'/' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::DivideEquals),
-            b'/' => Token::newEmpty(TokenType::UnaryDivide),
-            _ => Token::newEmpty(TokenType::Divide),
-        },
-        // >= >
-        b'>' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::GreaterThanOrEquals),
-            _ => Token::newEmpty(TokenType::GreaterThan),
-        },
-        // <=
-        b'<' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::LessThanOrEquals),
-            _ => Token::newEmpty(TokenType::LessThan),
-        },
-        // != !
-        b'!' => match __byte1 {
-            b'=' => Token::newEmpty(TokenType::NotEquals),
-            _ => Token::newEmpty(TokenType::Not),
-        },
-        // &&
-        b'&' => match __byte1 {
-            b'&' => Token::newEmpty(TokenType::And),
-            _ => Token::newEmpty(TokenType::And), // todo: single and
-        },
-        // ||
-        b'|' => match __byte1 {
-            b'|' => Token::newEmpty(TokenType::Or),
-            _ => Token::newEmpty(TokenType::Or), // todo: single or
-        },
-        // single chars
-            // =
-            b'=' => Token::newEmpty(TokenType::Equals),
-            // block
-            b'(' => Token::newEmpty(TokenType::CircleBracketBegin),
-            b')' => Token::newEmpty(TokenType::CircleBracketEnd),
-            b'{' => Token::newEmpty(TokenType::FigureBracketBegin),
-            b'}' => Token::newEmpty(TokenType::FigureBracketEnd),
-            b'[' => Token::newEmpty(TokenType::SquareBracketBegin),
-            b']' => Token::newEmpty(TokenType::SquareBracketEnd),
-            // other
-            b';' => Token::newEmpty(TokenType::Endline),
-            b':' => Token::newEmpty(TokenType::Colon),
-            b',' => Token::newEmpty(TokenType::Comma),
-            b'.' => Token::newEmpty(TokenType::Dot),
-            b'%' => Token::newEmpty(TokenType::Modulo),
-            b'^' => Token::newEmpty(TokenType::Exponent),
-            b'?' => Token::newEmpty(TokenType::Question),
-            b'~' => Token::newEmpty(TokenType::Tilde),
-            _ => Token::new(TokenType::None, String::new())
+
+    let increment = |count: usize| {
+        _index      += count;
+        _indexCount += count;
+    };
+
+    match currentChar {
+        b'+' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::PlusEquals) } 
+            else if nextChar == b'+' 
+                { increment(2); Token::newEmpty(TokenType::UnaryPlus) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Plus) }
+        }
+        b'-' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::MinusEquals) } 
+            else if nextChar == b'-' 
+                { increment(2); Token::newEmpty(TokenType::UnaryMinus) } 
+            else if nextChar == b'>' 
+                { increment(2); Token::newEmpty(TokenType::Pointer) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Minus) }
+        }
+        b'*' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::MultiplyEquals) } 
+            else if nextChar == b'*' 
+                { increment(2); Token::newEmpty(TokenType::UnaryMultiply) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Multiply) }
+        }
+        b'/' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::DivideEquals) } 
+            else if nextChar == b'/' 
+                { increment(2); Token::newEmpty(TokenType::UnaryDivide) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Divide) }
+        }
+        b'>' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::GreaterThanOrEquals) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::GreaterThan) }
+        }
+        b'<' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::LessThanOrEquals) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::LessThan) }
+        }
+        b'!' => {
+            if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::NotEquals) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Not) }
+        }
+        b'&' => {
+            if nextChar == b'&' 
+                { increment(2); Token::newEmpty(TokenType::And) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::And) } // todo: single and
+        }
+        b'|' => {
+            if nextChar == b'|' 
+                { increment(2); Token::newEmpty(TokenType::Or) } 
+            else 
+                { increment(1); Token::newEmpty(TokenType::Or) } // todo: single or
+        }
+        b'=' => { increment(1); Token::newEmpty(TokenType::Equals) }
+        b'(' => { increment(1); Token::newEmpty(TokenType::CircleBracketBegin) }
+        b')' => { increment(1); Token::newEmpty(TokenType::CircleBracketEnd) }
+        b'{' => { increment(1); Token::newEmpty(TokenType::FigureBracketBegin) }
+        b'}' => { increment(1); Token::newEmpty(TokenType::FigureBracketEnd) }
+        b'[' => { increment(1); Token::newEmpty(TokenType::SquareBracketBegin) }
+        b']' => { increment(1); Token::newEmpty(TokenType::SquareBracketEnd) }
+        b';' => { increment(1); Token::newEmpty(TokenType::Endline) }
+        b':' => { increment(1); Token::newEmpty(TokenType::Colon) }
+        b',' => { increment(1); Token::newEmpty(TokenType::Comma) }
+        b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
+        b'%' => { increment(1); Token::newEmpty(TokenType::Modulo) }
+        b'^' => { increment(1); Token::newEmpty(TokenType::Exponent) }
+        b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
+        b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
+        _ => Token::new(TokenType::None, String::new()),
     }
 }
 

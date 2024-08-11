@@ -176,9 +176,9 @@ impl ToString for TokenType {
 
 #[derive(Clone)]
 pub struct Token {
-    pub data:     String,
+    pub data:     String,     // todo: option !!!
     pub dataType: TokenType,
-    pub tokens:   Vec<Token>,
+    pub tokens:   Vec<Token>, // todo: option ?
 }
 impl Token {
     pub const fn newStatic() -> Self {
