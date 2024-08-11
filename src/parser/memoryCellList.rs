@@ -13,15 +13,12 @@ use crate::tokenizer::line::*;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
-pub fn getMemoryCellByName(
-    mcl: Arc<RwLock<MemoryCellList>>,
-    name: &str
-) -> Option<Arc<RwLock<MemoryCell>>> {
+pub fn getMemoryCellByName(mcl: Arc<RwLock<MemoryCellList>>, name: &str) -> Option<Arc<RwLock<MemoryCell>>> {
     let mcl2 = mcl.read().unwrap();
     for memoryCell in &mcl2.value {
         let mc = memoryCell.read().unwrap();
         if name == mc.name {
-            println!("    ! searched: {}", name);
+//            println!("    ! searched [{}]", name);
             return Some(Arc::clone(memoryCell));
         }
     }
@@ -109,27 +106,9 @@ impl MemoryCellList {
         }
     }
 
-    pub fn op2(&mut self, mc: Arc<RwLock<MemoryCellList>>, op: TokenType, opValue: Token) {
-        if op != TokenType::Equals &&
-           op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
-           op != TokenType::MultiplyEquals && op != TokenType::DivideEquals {
-            return;
-        }
-
-        //
-        let mut mc2 = mc.write().unwrap();
-        let rightValue = self.expression(&mut opValue.tokens.clone(), 0);
-        if op == TokenType::Equals {
-            //mc2.value = rightValue;
-        // += -= *= /=
-        } else {
-            //
-        }
-    }
-
     // expression
-    pub fn expression(&self, value: &mut Vec<Token>, ident: usize) -> Token {
-        let identStr: String = " ".repeat(ident*2);
+    pub fn expression(&self, value: &mut Vec<Token>, indent: usize) -> Token {
+        let identStr: String = " ".repeat(indent*2);
         let mut valueLength: usize = value.len();
 
         // 1 number
@@ -154,7 +133,7 @@ impl MemoryCellList {
                     // todo: uint float ufloat
                     if functionName == "int" {
                         token = value[i].clone();
-                        value[i] = self.expression(&mut value[i+1].tokens.clone(),ident+1);
+                        value[i] = self.expression(&mut value[i+1].tokens.clone(),indent+1);
                         value[i].dataType = TokenType::Int;
 
                         value.remove(i+1);
@@ -163,7 +142,7 @@ impl MemoryCellList {
                     } else 
                     if functionName == "str" {
                         token = value[i].clone();
-                        value[i] = self.expression(&mut value[i+1].tokens.clone(),ident+1);
+                        value[i] = self.expression(&mut value[i+1].tokens.clone(),indent+1);
                         value[i].dataType = TokenType::String;
 
                         value.remove(i+1);
@@ -172,7 +151,7 @@ impl MemoryCellList {
                     } else 
                     if functionName == "type" {
                         token = value[i].clone();
-                        value[i].data = self.expression(&mut value[i+1].tokens.clone(),ident+1).dataType.to_string();
+                        value[i].data = self.expression(&mut value[i+1].tokens.clone(),indent+1).dataType.to_string();
                         value[i].dataType = TokenType::String;
 
                         value.remove(i+1);
@@ -195,7 +174,7 @@ impl MemoryCellList {
         while i < valueLength {
             token = value[i].clone();
             if token.dataType == TokenType::CircleBracketBegin {
-                value[i] = self.expression(&mut token.tokens.clone(),ident+1);
+                value[i] = self.expression(&mut token.tokens.clone(),indent+1);
             }
             i += 1;
         }
@@ -288,7 +267,7 @@ impl MemoryCellList {
     }
 }
 // calculate value
-fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
+pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
     // set types
     //println!("calc1: {} {} {}",left.dataType.to_string(),op.to_string(),right.dataType.to_string());
     let leftValue = match left.dataType {

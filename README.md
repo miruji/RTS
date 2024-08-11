@@ -1,6 +1,6 @@
 # RTS (Real-Time Script)
 A reactive, free-form, high-level scripting language that runs in interpreter mode and ~~converts scripts directly into machine code~~.
-> Now RTS is ~2 times faster than python. Ideally, it should run on GASS, not Rust, which will give a ~20x performance increase, reduce memory leaks and instruction consumption. But if GASS uses DAS instead of GAS, then it is difficult to talk about the amount of output power, most likely it will be incredibly fast.
+> Currently RTS is ~2 times faster than python and still generates machine code by calling Rust functions. Ideally, it should run on GASS, not Rust, which will give a ~20x performance increase, reduce memory leaks and instruction consumption. But if GASS uses DAS instead of GAS, then it is difficult to talk about the amount of output power, most likely it will be incredibly fast and safe.
 
 The language uses the Latin alphabet as a technical one and any other language as explanatory-accompanying, more understandable to the developer.
 > This is associated with the widespread use of the Latin alphabet in exact sciences and global distribution. In one English word, there can be many meanings, and the generalizing meaning is clearly visible. However, this does not exclude porting the syntax to other world languages. The original form should be taken as an international standard.

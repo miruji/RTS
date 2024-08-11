@@ -378,24 +378,28 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
     }
 }
 // line nesting [line -> line]
-//          [recall for line lines]
-unsafe fn lineNesting(lines: &mut Vec<Line>, mut k: usize) -> usize {
+fn lineNesting(lines: &mut Vec<Line>) {
+    let mut index:     usize = 0;
+    let mut nextIndex: usize = 1;
+    let mut length:    usize = lines.len();
+
     let mut nextLine: Line;
 
-    __index = 0;            // index buffer
-    __length = lines.len(); // lines length
-    while __index < __length {
-        if __index+1 < __length && lines[__index].indent < lines[__index+1].indent {
-            nextLine = lines.remove(__index+1);                // clone and remove next line
-            __length -= 1;
-
-            lines[__index].lines.push(nextLine);               // nesting
-            __length = lineNesting(&mut lines[__index].lines, __length); // cycle
+    while index < length {
+        if nextIndex < length {
+            if lines[index].indent < lines[nextIndex].indent {
+                nextLine = lines.remove(nextIndex);   // move next line
+                length -= 1;
+                lines[index].lines.push(nextLine);    // nesting
+                lineNesting(&mut lines[index].lines); // cycle
+            } else {
+                index += 1;                           // next line < current line => skip
+                nextIndex = index+1;
+            }
         } else {
-            __index += 1;
+            break; // if no lines
         }
     }
-    k
 }
 
 // delete DoubleComment
@@ -632,7 +636,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     }
 
     // line nesting
-    lineNesting(&mut lines, 0);
+    lineNesting(&mut lines);
 
     // delete DoubleComment
     __index = 0;

@@ -319,7 +319,7 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
             if conditionTruth {
                 let mut conditionLinesLength: usize = condition.lines.len();
                 let mut conditionLineIndex:   usize = 0;
-                println!("  Next read block [if-el]");
+//                println!("\n>>> Next read block [if-el]");
                 _methods.push(
                     Arc::new(
                     RwLock::new(
@@ -340,7 +340,7 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
         if !conditionTruth {
             let mut conditionLinesLength: usize = condition.lines.len();
             let mut conditionLineIndex:   usize = 0;
-            println!("  Next read block [else]");
+//            println!("  Next read block [else]");
             _methods.push(
                 Arc::new(
                 RwLock::new(
@@ -388,14 +388,13 @@ unsafe fn searchMethodCall(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
                     result = true;
                     {
                         let mut method = methodLink.write().unwrap();
-                        println!("  2: Method: {:?}",method.name);
-                        let mut mcl = &mut method.mcl.write().unwrap();
-                        println!("  2: Next mcl");
+//                        println!("searchMethodCall() in [{}]",method.name);
+                        //let mut mcl = &mut method.mcl.write().unwrap();
                         // println
                         if token.data == "println" {
                             println!("{}",
                                 formatPrint(
-                                    &mcl.expression(
+                                    &method.memoryCellExpression(
                                         &mut expressionValue,
                                         0
                                     ).data
@@ -406,7 +405,7 @@ unsafe fn searchMethodCall(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
                         if token.data == "print" {
                             print!("{}",
                                 formatPrint(
-                                    &mcl.expression(
+                                    &method.memoryCellExpression(
                                         &mut expressionValue,
                                         0
                                     ).data
@@ -415,7 +414,7 @@ unsafe fn searchMethodCall(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
                         // exec
                         } else 
                         if token.data == "exec" {
-                            let expression: String = mcl.expression(&mut expressionValue,0).data;
+                            let expression: String = method.memoryCellExpression(&mut expressionValue,0).data;
                             let mut parts = expression.split_whitespace();
                             let commandStr = parts.next().expect("No command found in expression");
                             let args: Vec<&str> = parts.collect();
@@ -703,25 +702,39 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
     }
     //
     if !nameBuffer.is_empty() {
-        println!("MemoryCell: {}",nameBuffer);
-        if let Some(mc) = test1(methodLink.clone(),&nameBuffer) {
-            let mut mc = mc.write().unwrap();
-            mc.op( // todo: 2 repeats to search one name, rewrite this func
-                nameBuffer,
-                operatorBuffer,
+//        println!("MemoryCell: {}",nameBuffer);
+        //if let Some(mclLink) = getMemoryCellListByMemoryCellName(methodLink.clone(),&nameBuffer) {
+        //    memoryCellOp(mclLink);
+
+            //let mut mcl = mclLink.write().unwrap();
+            //mcl.op( // todo: 2 repeats to search one name, rewrite this func
+            //    nameBuffer,
+            //    operatorBuffer,
+            //    Token::newNesting(valueBuffer)
+            //);
+        //} else 
+        let mut method = methodLink.write().unwrap();
+//        println!("  Method: {:?}",method.name);
+        if let Some(memoryCellLink) = method.getMemoryCellByName(&nameBuffer) {
+            {
+                let memoryCell = memoryCellLink.read().unwrap();
+//                println!("  OK! searched memoryCell [{}]",memoryCell.name);
+            }
+            method.memoryCellOp(
+                memoryCellLink, 
+                operatorBuffer, 
                 Token::newNesting(valueBuffer)
             );
         } else {
-            let mut method = methodLink.write().unwrap();
-            println!("  Method: {:?}",method.name);
             let mut mcl = &mut method.mcl.write().unwrap();
-            println!("  Next mcl");
+//            println!("  NO searched! op [{}]",operatorBuffer.to_string());
 
             // memoryCellName - op - value
             // equals
             if operatorBuffer == TokenType::Equals {
                 // todo: check ~~ mode-type
                 // new value to MemoryCell
+                /*
                 if !mcl.getByName( &nameBuffer ).is_none() {
                     mcl.op(
                         nameBuffer,
@@ -730,9 +743,10 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
                     );
                     return true;
                 // create MemoryCell
-                } else {
+                } else*/ {
                     // array
                     if valueBuffer[0].dataType == TokenType::SquareBracketBegin {
+//                        println!("    Array in method [{}]",method.name);
                         valueBuffer = valueBuffer[0].tokens.clone();
                         valueBuffer.retain(|token| token.dataType != TokenType::Comma);
                         mcl.push(
@@ -746,6 +760,7 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
                         return true;
                     // basic cell
                     } else {
+//                        println!("    Basic in method [{}]",method.name);
                         mcl.push(
                             MemoryCell::new(
                                 nameBuffer,
