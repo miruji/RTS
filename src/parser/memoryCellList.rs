@@ -35,14 +35,6 @@ impl MemoryCellList {
         MemoryCellList { value: Vec::new() }
     }
 
-    pub fn push(&mut self, mut mc: MemoryCell) {
-        let mcl = self.clone();
-        if mc.valueType != TokenType::Array {
-            mc.value = mcl.expression(&mut mc.value.tokens.clone(), 0);
-        }
-        self.value.push(Arc::new(RwLock::new(mc)));
-    }
-
     //pub fn last(&self) -> Option<&MemoryCell> {
     //    self.value.last()
     //}

@@ -1,13 +1,7 @@
 a = 10
-println(a) # 10
 
 ? "true"
-  a = a+5
-  b = 10
-  println(a) # 15
-  a -= 5
-  ? "true"
-    a *= 5
-    println(b*2) # 20
+  b += 10+a
+  println(b)
 
-println(a) # 50
+println(a)

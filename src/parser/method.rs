@@ -44,6 +44,14 @@ impl Method {
         }
     }
 
+    pub fn pushMemoryCell(&self, mut mc: MemoryCell) {
+        if mc.valueType != TokenType::Array {
+            mc.value = self.memoryCellExpression(&mut mc.value.tokens.clone(), 0);
+        }
+        let mut memoryCellList = self.mcl.write().unwrap();
+        memoryCellList.value.push(Arc::new(RwLock::new(mc)));
+    }
+
     // get memory cell by name
     pub fn getMemoryCellByName(&self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> {
         // search in self

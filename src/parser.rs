@@ -715,73 +715,49 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
         //} else 
         let mut method = methodLink.write().unwrap();
 //        println!("  Method: {:?}",method.name);
+        // if searched in methods
         if let Some(memoryCellLink) = method.getMemoryCellByName(&nameBuffer) {
-            {
-                let memoryCell = memoryCellLink.read().unwrap();
+//            {
+//                let memoryCell = memoryCellLink.read().unwrap();
 //                println!("  OK! searched memoryCell [{}]",memoryCell.name);
-            }
+//            }
             method.memoryCellOp(
                 memoryCellLink, 
                 operatorBuffer, 
                 Token::newNesting(valueBuffer)
             );
+        // if no searched, then create new MemoryCell and equal right value
         } else {
-            let mut mcl = &mut method.mcl.write().unwrap();
 //            println!("  NO searched! op [{}]",operatorBuffer.to_string());
-
             // memoryCellName - op - value
-            // equals
-            if operatorBuffer == TokenType::Equals {
-                // todo: check ~~ mode-type
-                // new value to MemoryCell
-                /*
-                if !mcl.getByName( &nameBuffer ).is_none() {
-                    mcl.op(
+            // array
+            if valueBuffer[0].dataType == TokenType::SquareBracketBegin {
+                println!("    Array in method [{}]",method.name);
+                valueBuffer = valueBuffer[0].tokens.clone();
+                valueBuffer.retain(|token| token.dataType != TokenType::Comma);
+                method.pushMemoryCell(
+                    MemoryCell::new(
                         nameBuffer,
-                        operatorBuffer,
-                        Token::newNesting(valueBuffer)
-                    );
-                    return true;
-                // create MemoryCell
-                } else*/ {
-                    // array
-                    if valueBuffer[0].dataType == TokenType::SquareBracketBegin {
-//                        println!("    Array in method [{}]",method.name);
-                        valueBuffer = valueBuffer[0].tokens.clone();
-                        valueBuffer.retain(|token| token.dataType != TokenType::Comma);
-                        mcl.push(
-                            MemoryCell::new(
-                                nameBuffer,
-                                modeBuffer,
-                                TokenType::Array,
-                                Token::newNesting( valueBuffer )
-                            )
-                        );
-                        return true;
-                    // basic cell
-                    } else {
-//                        println!("    Basic in method [{}]",method.name);
-                        mcl.push(
-                            MemoryCell::new(
-                                nameBuffer,
-                                modeBuffer,
-                                typeBuffer,
-                                Token::newNesting( valueBuffer )
-                            )
-                        );
-                        return true;
-                    }
-                }
-            // op
-            } else
-            if operatorBuffer != TokenType::None {
-                mcl.op(
-                    nameBuffer,
-                    operatorBuffer,
-                    Token::newNesting( valueBuffer.clone() )
+                        modeBuffer,
+                        TokenType::Array,
+                        Token::newNesting( valueBuffer )
+                    )
+                );
+                return true;
+            // basic cell
+            } else {
+//                println!("    Basic in method [{}]",method.name);
+                method.pushMemoryCell(
+                    MemoryCell::new(
+                        nameBuffer,
+                        modeBuffer,
+                        typeBuffer,
+                        Token::newNesting( valueBuffer )
+                    )
                 );
                 return true;
             }
+            //
         }
     }
     return false;
@@ -906,7 +882,7 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
         logSeparator(" > AST interpretation");
     }
     // create main method, without name
-    _methods.push(
+    let mainMethodLink = 
         Arc::new(
         RwLock::new(
             Method::new(
@@ -914,8 +890,38 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
                 _lines.clone(),
                 None,
             )
-        ))
-    );
+        ));
+    {
+        let mut mainMethod = mainMethodLink.write().unwrap();
+        // argc
+        mainMethod.pushMemoryCell(
+            MemoryCell::new(
+                String::from("argc"),
+                MemoryCellMode::LockedFinal,
+                TokenType::UInt,
+                Token::newNesting(
+                    vec![Token::new(TokenType::UInt, _argc.to_string())]
+                )
+            )
+        );
+        // argv
+        let mut argv: Vec<Token> = Vec::new();
+        for a in &_argv {
+            argv.push(
+                Token::new(TokenType::String, String::from(a))
+            );
+        }
+        mainMethod.pushMemoryCell(
+            MemoryCell::new(
+                String::from("argv"),
+                MemoryCellMode::LockedFinal,
+                TokenType::Array,
+                Token::newNesting(argv)
+            )
+        );
+    }
+    _methods.push(mainMethodLink);
+
     _linesLength = _lines.len();
     readLines(_methods[0].clone(), &mut _lineIndex, &mut _linesLength);
     // duration
