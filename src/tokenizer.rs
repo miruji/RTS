@@ -546,16 +546,26 @@ static mut _linesDeleted: usize = 0; // <- save deleted lines num for logger
 static mut _linesIdent: usize = 0;
 static mut _lineTokens: Vec<Token> = Vec::new();
 
-pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
-    let startTime: Instant = Instant::now();
-    if unsafe{_debugMode} {
+pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
+    if unsafe{debugMode} {
         logSeparator(" > AST generation");
     }
+    // hmm...
+    _index        = 0;
+    _bufferLength = buffer.len();
+    _linesCount   = 0;
+    _indexCount   = 0;
+    _linesDeleted = 0;
+    _linesIdent   = 0;
+    _lineTokens   = Vec::new();
+    // mmm...
+    // maybe, maybe
+
+    let startTime: Instant = Instant::now();
 
     let mut lines:         Vec<Line> = Vec::new();
     let mut readLineIdent: bool      = true;
 
-    _bufferLength = buffer.len();
     while _index < _bufferLength {
         __byte1 = buffer[_index]; // current char
 
@@ -660,7 +670,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
     deleteDoubleComment(&mut lines, __index);
 
     // debug output and return
-    if _debugMode {
+    if debugMode {
         // duration
         let endTime  = Instant::now();
         let duration = endTime-startTime;

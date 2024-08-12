@@ -11,6 +11,8 @@ use crate::tokenizer::token::*;
 use crate::parser::memoryCellList::*;
 use crate::parser::memoryCell::*;
 
+use crate::parser::readTokens;
+
 use std::{io, io::Write};
 
 use std::sync::{Arc, RwLock};
@@ -122,6 +124,43 @@ impl Method {
         }
     }
 
+    // format quote
+    fn formatQuote(&self, quote: String) -> String {
+        let mut result:           String    = String::new();
+        let mut expressionBuffer: String    = String::new();
+        let mut expressionRead:   bool      = false;
+        let     chars:            Vec<char> = quote.chars().collect();
+
+        let mut i:      usize = 0;
+        let     length: usize = chars.len();
+        let mut c:      char;
+
+        while i < length {
+            c = chars[i];
+            if c == '{' {
+                expressionRead = true;
+            } else
+            if c == '}' {
+                expressionRead = false;
+                expressionBuffer += "\n";
+                unsafe{ 
+                    let mut expressionBufferTokens: Vec<Token> = 
+                        readTokens( expressionBuffer.as_bytes().to_vec(), false )[0].tokens.clone();
+                    result += &self.memoryCellExpression(&mut expressionBufferTokens,0).data;
+                }
+                expressionBuffer = String::new();
+            } else {
+                if expressionRead {
+                    expressionBuffer.push(c);
+                } else {
+                    result.push(c);
+                }
+            }
+            i += 1;
+        }
+        result
+    }
+
     // expression
     pub fn memoryCellExpression(&self, value: &mut Vec<Token>, indent: usize) -> Token {
         let identStr: String = " ".repeat(indent*2);
@@ -132,6 +171,12 @@ impl Method {
             if value[0].dataType != TokenType::CircleBracketBegin {
                 if value[0].dataType == TokenType::Word {
                     self.replaceMemoryCellByName(value, &mut valueLength, 0);
+                } else 
+                if value[0].dataType == TokenType::FormattedRawString ||
+                   value[0].dataType == TokenType::FormattedString    ||
+                   value[0].dataType == TokenType::FormattedChar {
+                    //
+                    value[0].data = self.formatQuote(value[0].data.clone());
                 }
                 return value[0].clone();
             }
@@ -146,7 +191,7 @@ impl Method {
                 // function
                 if i+1 < valueLength && value[i+1].dataType == TokenType::CircleBracketBegin {
                     let functionName: String = value[i].data.clone();
-                    // todo: uint float ufloat
+                    // todo: uint float ufloat ...
                     if functionName == "int" {
                         if value[i+1].tokens.len() > 0 {
                             value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
@@ -312,7 +357,11 @@ impl Method {
             i += 1;
         }
         //
-        value[0].clone()
+        if value.len() > 0 {
+            value[0].clone()
+        } else {
+            Token::newEmpty(TokenType::None)
+        }
     }
 }
 /*

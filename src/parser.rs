@@ -729,7 +729,7 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
 //            println!("  NO searched! op [{}]",operatorBuffer.to_string());
             // memoryCellName - op - value
             // array
-            if valueBuffer[0].dataType == TokenType::SquareBracketBegin {
+            if valueBuffer.len() > 0 && valueBuffer[0].dataType == TokenType::SquareBracketBegin {
                 println!("    Array in method [{}]",method.name);
                 valueBuffer = valueBuffer[0].tokens.clone();
                 valueBuffer.retain(|token| token.dataType != TokenType::Comma);

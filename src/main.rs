@@ -60,7 +60,7 @@ fn main() -> io::Result<()> {
     {
         let args: Vec<String> = env::args().collect();
         let mut keyValues: Vec<String> = Vec::new();
-        let mut readKey: String = String::new();
+        let mut readKey:   String      = String::new();
         for arg in args.iter().skip(1) {
             //if (arg.len() >= 2 && &arg[0..2] == "--") ||
             if arg.len() >= 1 && &arg[0..1] == "-" {
@@ -193,7 +193,7 @@ fn main() -> io::Result<()> {
 
     // read
     unsafe {
-        parseLines( readTokens(buffer) );
+        parseLines( readTokens(buffer, _debugMode) );
     }
 
     // duration

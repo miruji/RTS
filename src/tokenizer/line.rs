@@ -23,7 +23,7 @@ pub fn replaceSavedLine(newLine: Line) {
 #[derive(Clone)]
 pub struct Line {
     pub tokens:       Vec<Token>, // list
-    pub indent:        usize,     // indentation
+    pub indent:       usize,      // indentation
     pub lines:        Vec<Line>,  // child lines
     pub linesDeleted: usize,      // deleted lines
 }
