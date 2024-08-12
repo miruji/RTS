@@ -1,12 +1,21 @@
 
 d = true = 1
 println( "true = 1 = d:"+str(d)+":"+type(d) )
+println( f"true = 1 = d:{str(d)}:{type(d)}" )
 
-a = input("Write a: ")
-println( "  ["+a+"] ["+type(a)+"]" )
+println( `aaa` )
+println( f`bbb` )
+println( "aa" )
+println( f"bb" )
+println( 'a' )
+println( f'b' )
 
-b = input("Write b: ")
-println( "  ["+b+"] ["+type(b)+"]" )
+#
+  a = input("Write a: ")
+  println( "  ["+a+"] ["+type(a)+"]" )
 
-c = int(a)+int(b)
-println( "a:"+a+" + b:"+b+" = c:"+str(c)+":"+type(c) )
+  b = input("Write b: ")
+  println( "  ["+b+"] ["+type(b)+"]" )
+
+  c = int(a)+int(b)
+  println( "a:"+a+" + b:"+b+" = c:"+str(c)+":"+type(c) )

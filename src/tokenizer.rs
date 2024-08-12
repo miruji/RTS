@@ -227,7 +227,7 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token {
     } else if __byte1 == b'"' {
         Token::new(TokenType::String, __result.clone())
     } else if __byte1 == b'`' {
-        Token::new(TokenType::SpecialString, __result.clone())
+        Token::new(TokenType::RawString, __result.clone())
     } else {
         Token::newEmpty(TokenType::None)
     }
@@ -456,7 +456,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
 
         if !token.data.is_empty() {
         // single quote
-            if token.dataType == TokenType::Char {
+            if token.dataType == TokenType::Char || token.dataType == TokenType::FormattedChar {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
                     lineIdentString,
@@ -467,7 +467,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
                 ));
         // double quote
             } else
-            if token.dataType == TokenType::String {
+            if token.dataType == TokenType::String || token.dataType == TokenType::FormattedString {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
                     lineIdentString,
@@ -478,7 +478,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
                 ));
         // back quote
             } else
-            if token.dataType == TokenType::SpecialString {
+            if token.dataType == TokenType::RawString || token.dataType == TokenType::FormattedRawString {
                 log("parserToken",&format!(
                     "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
                     lineIdentString,
@@ -619,7 +619,17 @@ pub unsafe fn readTokens(buffer: Vec<u8>) -> Vec<Line> {
             if __byte1 == b'\'' || __byte1 == b'"' || __byte1 == b'`' {
                 __token = getQuotes(&buffer);
                 if __token.dataType != TokenType::None {
-                    _lineTokens.push(__token.clone()); // todo: remove copy
+                    let backTokenIndex = _lineTokens.len()-1;
+                    // if formatted quotes
+                    if _lineTokens[backTokenIndex].dataType == TokenType::Word && _lineTokens[backTokenIndex].data == "f" {
+                        if __token.dataType == TokenType::RawString { __token.dataType = TokenType::FormattedRawString; } else
+                        if __token.dataType == TokenType::String    { __token.dataType = TokenType::FormattedString;    } else
+                        if __token.dataType == TokenType::Char      { __token.dataType = TokenType::FormattedChar;      }
+                        _lineTokens[backTokenIndex] = __token.clone(); // todo: remove copy please
+                    // basic quotes
+                    } else {
+                        _lineTokens.push(__token.clone()); // todo: remove copy please
+                    }
                 } else {
                     _index += 1;
                     _indexCount += 1;

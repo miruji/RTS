@@ -16,9 +16,12 @@ pub enum TokenType {
 
     Comment, // #
 // quotes
-    SpecialString, // `
-    String,        // "
-    Char,          // '
+    RawString,          // `
+    String,             // "
+    Char,               // '
+    FormattedRawString, // f``
+    FormattedString,    // f""
+    FormattedChar,      // f''
 // single math
     Plus,     // +
     Minus,    // -
@@ -97,9 +100,12 @@ impl ToString for TokenType {
             TokenType::Comment => String::from("Comment"), // #
             
             // quotes
-            TokenType::SpecialString => String::from("Special String"), // `
-            TokenType::String        => String::from("String"),         // "
-            TokenType::Char          => String::from("Char"),           // '
+            TokenType::RawString          => String::from("Raw String"),           // `
+            TokenType::String             => String::from("String"),               // "
+            TokenType::Char               => String::from("Char"),                 // '
+            TokenType::FormattedRawString => String::from("Formatted Raw String"), // f``
+            TokenType::FormattedString    => String::from("Formatted String"),     // f""
+            TokenType::FormattedChar      => String::from("Formatted Char"),       // f''
            
             // single math
             TokenType::Plus     => String::from("+"), // +
