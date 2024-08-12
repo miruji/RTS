@@ -1,4 +1,7 @@
 
+d = true = 1
+println( "true = 1 = d:"+str(d)+":"+type(d) )
+
 a = input("Write a: ")
 println( "  ["+a+"] ["+type(a)+"]" )
 

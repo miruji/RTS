@@ -152,8 +152,8 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
         "Rational" => Token::newEmpty(TokenType::Rational),
         "and"      => Token::newEmpty(TokenType::And),
         "or"       => Token::newEmpty(TokenType::Or),
-        "true"     => Token::newEmpty(TokenType::True),
-        "false"    => Token::newEmpty(TokenType::False),
+        "true"     => Token::new(TokenType::Bool, String::from("1")),
+        "false"    => Token::new(TokenType::Bool, String::from("0")),
         "loop"     => Token::newEmpty(TokenType::Loop),
         _          => Token::new(TokenType::Word, __result.clone()),
     }

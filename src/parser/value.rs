@@ -15,7 +15,6 @@ pub enum Value {
     UFloat(uf64),
     Char(char),
     String(String), // todo: String max size?
-    // todo: bool
 }
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

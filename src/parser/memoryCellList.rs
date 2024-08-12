@@ -60,11 +60,12 @@ pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
         TokenType::String => {
             left.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
         },
-        TokenType::True => {
-            Value::UInt(1)
-        },
-        TokenType::False => {
-            Value::UInt(0)
+        TokenType::Bool => {
+            if left.data == "1" {
+                Value::UInt(1)
+            } else {
+                Value::UInt(0)
+            }
         },
         // todo: char
         _ => Value::UInt(0),
@@ -88,11 +89,12 @@ pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
         TokenType::String => {
             right.data.parse::<String>().map(|x| Value::String(x)).unwrap_or(Value::String("".to_string()))
         },
-        TokenType::True => {
-            Value::UInt(1)
-        },
-        TokenType::False => {
-            Value::UInt(0)
+        TokenType::Bool => {
+            if right.data == "1" {
+                Value::UInt(1)
+            } else {
+                Value::UInt(0)
+            }
         },
         // todo: char
         _ => Value::UInt(0),
