@@ -18,20 +18,24 @@ use std::{io, io::Write};
 use std::sync::{Arc, RwLock};
 
 pub struct Method {
-    pub name:           String,     // unique name
-    pub lines:          Vec<Line>,  // nesting lines
-    pub parameters:     Vec<Token>, // parameters
-    pub resultType:     String,     // result type
+    pub name:           String,                        // unique name
+                                                       // todo: Option
+    pub lines:          Vec< Arc<RwLock<Line>> >,      // nesting lines
+                                                       // todo: Option
+    pub parameters:     Vec<Token>,                    // parameters
+                                                       // todo: Option< Arc<RwLock<Token>> >
+    pub resultType:     String,                        // result type
+                                                       // todo: Option
         // if result type = None, => procedure
         // else => function
-    pub memoryCellList: Arc<RwLock<MemoryCellList>>, // todo: option< Arc<RwLock<MemoryCellList>> > ?
+    pub memoryCellList: Arc<RwLock<MemoryCellList>>,   // todo: option< Arc<RwLock<MemoryCellList>> > ?
     pub methods:        Vec<    Arc<RwLock<Method>> >,
     pub parent:         Option< Arc<RwLock<Method>> >,
 }
 impl Method {
     pub fn new(
         name:   String,
-        lines:  Vec<Line>,
+        lines:  Vec< Arc<RwLock<Line>> >,
         parent: Option< Arc<RwLock<Method>> >,
     ) -> Self {
         Method {
@@ -144,8 +148,9 @@ impl Method {
                 expressionRead = false;
                 expressionBuffer += "\n";
                 unsafe{ 
-                    let mut expressionBufferTokens: Vec<Token> = 
-                        readTokens( expressionBuffer.as_bytes().to_vec(), false )[0].tokens.clone();
+                    let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
+                    let expressionLine     = expressionLineLink.read().unwrap();
+                    let mut expressionBufferTokens: Vec<Token> = expressionLine.tokens.clone();
                     result += &self.memoryCellExpression(&mut expressionBufferTokens,0).data;
                 }
                 expressionBuffer = String::new();
@@ -285,7 +290,9 @@ impl Method {
 
             token = value[i].clone();
             if i+1 < valueLength && 
-                (token.dataType == TokenType::Equals              || 
+                (token.dataType == TokenType::Inclusion           || 
+                 token.dataType == TokenType::Joint               || 
+                 token.dataType == TokenType::Equals              || 
                  token.dataType == TokenType::NotEquals           ||
                  token.dataType == TokenType::GreaterThan         || 
                  token.dataType == TokenType::LessThan            ||

@@ -1,21 +1,26 @@
-
-d = true = 1
-println( "true = 1 = d:"+str(d)+":"+type(d) )
-println( f"true = 1 = d:{str(d)}:{type(d)}" )
-
-println( `aaa` )
-println( f`bbb` )
-println( "aa" )
-println( f"bb" )
-println( 'a' )
-println( f'b' )
+i = 0
+? i < 10
+  println(f"\bg(#ffffff)\fg(#ff0000){i}\c")
+  i += 1
+  :1
 
 #
-  a = input("Write a: ")
-  println( "  ["+a+"] ["+type(a)+"]" )
+  d = true = 1
+  println( "true = 1 = d:"+str(d)+":"+type(d) )
+  println( f"true = 1 = d:{str(d)}:{type(d)}" )
+  
+  a = true
+  b = false
+  println(a | b)
 
-  b = input("Write b: ")
-  println( "  ["+b+"] ["+type(b)+"]" )
+#
+  println( `aaa` )
+  println( f`bbb` )
+  println( "aa" )
+  println( f"bb" )
+  println( 'a' )
+  println( f'b' )
 
+#
   c = int(a)+int(b)
   println( "a:"+a+" + b:"+b+" = c:"+str(c)+":"+type(c) )

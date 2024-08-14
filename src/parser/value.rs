@@ -16,6 +16,20 @@ pub enum Value {
     Char(char),
     String(String), // todo: String max size?
 }
+impl Value {
+    // to bool
+    pub fn toBool(&self) -> bool {
+        match self {
+            Value::Int(v)    => *v!=0,
+            Value::UInt(v)   => *v!=0,
+            Value::Float(v)  => *v!=0.0,
+            Value::UFloat(v) => *v!=uf64::from(0.0),
+            Value::Char(c)   => *c!='\0',
+            Value::String(s) => !s.is_empty(),
+            _ => false,
+        }
+    }
+}
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

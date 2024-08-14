@@ -116,6 +116,14 @@ pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token {
         if *op == TokenType::Divide {
             (leftValue / rightValue).to_string()
         } else
+        if *op == TokenType::Inclusion {
+            resultType = TokenType::Bool;
+            (leftValue.toBool() || rightValue.toBool()).to_string()
+        } else
+        if *op == TokenType::Joint {
+            resultType = TokenType::Bool;
+            (leftValue.toBool() && rightValue.toBool()).to_string()
+        } else
         if *op == TokenType::Equals {
             resultType = TokenType::Bool;
             (leftValue == rightValue).to_string()

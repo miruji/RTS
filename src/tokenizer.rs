@@ -11,6 +11,8 @@ pub mod line;  use crate::tokenizer::line::*;
 
 use std::time::Instant;
 
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
 // prevariables
 // in fact, i moved the most used variables here so that reading happens faster, 
 // without re-declaring identical memory areas
@@ -150,8 +152,6 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
         "Float"    => Token::newEmpty(TokenType::Float),
         "UFloat"   => Token::newEmpty(TokenType::UFloat),
         "Rational" => Token::newEmpty(TokenType::Rational),
-        "and"      => Token::newEmpty(TokenType::And),
-        "or"       => Token::newEmpty(TokenType::Or),
         "true"     => Token::new(TokenType::Bool, String::from("1")),
         "false"    => Token::new(TokenType::Bool, String::from("0")),
         "loop"     => Token::newEmpty(TokenType::Loop),
@@ -249,7 +249,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
 
     match currentChar {
         b'+' => {
-            if nextChar == b'=' 
+                 if nextChar == b'=' 
                 { increment(2); Token::newEmpty(TokenType::PlusEquals) } 
             else if nextChar == b'+' 
                 { increment(2); Token::newEmpty(TokenType::UnaryPlus) } 
@@ -257,7 +257,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
                 { increment(1); Token::newEmpty(TokenType::Plus) }
         }
         b'-' => {
-            if nextChar == b'=' 
+                 if nextChar == b'=' 
                 { increment(2); Token::newEmpty(TokenType::MinusEquals) } 
             else if nextChar == b'-' 
                 { increment(2); Token::newEmpty(TokenType::UnaryMinus) } 
@@ -267,7 +267,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
                 { increment(1); Token::newEmpty(TokenType::Minus) }
         }
         b'*' => {
-            if nextChar == b'=' 
+                 if nextChar == b'=' 
                 { increment(2); Token::newEmpty(TokenType::MultiplyEquals) } 
             else if nextChar == b'*' 
                 { increment(2); Token::newEmpty(TokenType::UnaryMultiply) } 
@@ -275,12 +275,28 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
                 { increment(1); Token::newEmpty(TokenType::Multiply) }
         }
         b'/' => {
-            if nextChar == b'=' 
+                 if nextChar == b'=' 
                 { increment(2); Token::newEmpty(TokenType::DivideEquals) } 
             else if nextChar == b'/' 
                 { increment(2); Token::newEmpty(TokenType::UnaryDivide) } 
             else 
                 { increment(1); Token::newEmpty(TokenType::Divide) }
+        }
+        b'%' => {
+                 if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+            else if nextChar == b'%' 
+                { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+            else 
+                { increment(1); Token::newEmpty(TokenType::Modulo) }
+        }
+        b'^' => {
+                 if nextChar == b'=' 
+                { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+            else if nextChar == b'^' 
+                { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+            else 
+                { increment(1); Token::newEmpty(TokenType::Disjoint) }
         }
         b'>' => {
             if nextChar == b'=' 
@@ -298,33 +314,23 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
             if nextChar == b'=' 
                 { increment(2); Token::newEmpty(TokenType::NotEquals) } 
             else 
-                { increment(1); Token::newEmpty(TokenType::Not) }
+                { increment(1); Token::newEmpty(TokenType::Exclusion) }
         }
-        b'&' => {
-            if nextChar == b'&' 
-                { increment(2); Token::newEmpty(TokenType::And) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::And) } // todo: single and
-        }
-        b'|' => {
-            if nextChar == b'|' 
-                { increment(2); Token::newEmpty(TokenType::Or) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Or) } // todo: single or
-        }
+        b'&' => { increment(1); Token::newEmpty(TokenType::Joint) }
+        b'|' => { increment(1); Token::newEmpty(TokenType::Inclusion) }
         b'=' => { increment(1); Token::newEmpty(TokenType::Equals) }
+        // brackets
         b'(' => { increment(1); Token::newEmpty(TokenType::CircleBracketBegin) }
         b')' => { increment(1); Token::newEmpty(TokenType::CircleBracketEnd) }
         b'{' => { increment(1); Token::newEmpty(TokenType::FigureBracketBegin) }
         b'}' => { increment(1); Token::newEmpty(TokenType::FigureBracketEnd) }
         b'[' => { increment(1); Token::newEmpty(TokenType::SquareBracketBegin) }
         b']' => { increment(1); Token::newEmpty(TokenType::SquareBracketEnd) }
+        // other
         b';' => { increment(1); Token::newEmpty(TokenType::Endline) }
         b':' => { increment(1); Token::newEmpty(TokenType::Colon) }
         b',' => { increment(1); Token::newEmpty(TokenType::Comma) }
         b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
-        b'%' => { increment(1); Token::newEmpty(TokenType::Modulo) }
-        b'^' => { increment(1); Token::newEmpty(TokenType::Exponent) }
         b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
         b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
         _ => Token::new(TokenType::None, String::new()),
@@ -385,22 +391,33 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
     }
 }
 // line nesting [line -> line]
-fn lineNesting(lines: &mut Vec<Line>) {
+fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
     let mut index:     usize = 0;
     let mut nextIndex: usize = 1;
-    let mut length:    usize = lines.len();
-
-    let mut nextLine: Line;
+    let mut length:    usize = linesLinks.len();
 
     while index < length {
         if nextIndex < length {
-            if lines[index].indent < lines[nextIndex].indent {
-                nextLine = lines.remove(nextIndex);   // move next line
+            let isNesting: bool = 
+                { // check current indent < next indent
+                    let currentLine: RwLockReadGuard<'_, Line> = linesLinks    [index].read().unwrap();
+                    let nextLine:    RwLockReadGuard<'_, Line> = linesLinks[nextIndex].read().unwrap();
+                    currentLine.indent < nextLine.indent
+                };
+            if isNesting {
+                // get next line and remove
+                let nestingLineLink = linesLinks.remove(nextIndex);
                 length -= 1;
-                lines[index].lines.push(nextLine);    // nesting
-                lineNesting(&mut lines[index].lines); // cycle
+                { // set parent line link
+                    let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
+                    nestingLine.parent = Some( linesLinks[index].clone() );
+                }
+                // push nesting
+                let mut currentLine = linesLinks[index].write().unwrap();
+                currentLine.lines.push(nestingLineLink); // nesting
+                lineNesting(&mut currentLine.lines);     // cycle
             } else {
-                index += 1;                           // next line < current line => skip
+                index += 1; // next line < current line => skip
                 nextIndex = index+1;
             }
         } else {
@@ -410,33 +427,41 @@ fn lineNesting(lines: &mut Vec<Line>) {
 }
 
 // delete DoubleComment
-unsafe fn deleteDoubleComment(lines: &mut Vec<Line>, mut ib: usize) {
-    let mut lastTokenIndex: usize;
+unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) {
+    let mut linesLinksLength: usize = linesLinks.len();
+    let mut lastTokenIndex:   usize;
 
-    while ib < lines.len() {
-        if !lines[ib].lines.is_empty() {
-            deleteDoubleComment(&mut lines[ib].lines, ib);
-        }
-
-        if lines[ib].tokens.is_empty() {
-            if lines[ib].lines.is_empty() {
-                ib += 1;
-            } else {
-                lines.remove(ib);
+    while index < linesLinksLength {
+        let mut deleteLine: bool  = false;
+        'exit: { // interrupt
+            // get line and check lines len
+            let mut line: RwLockWriteGuard<'_, Line> = 
+                linesLinks[index].write().unwrap();
+            if !line.lines.is_empty() {
+                deleteDoubleComment(&mut line.lines, index);
             }
+            // skip separator
+            if line.tokens.is_empty() {
+                break 'exit;
+            }
+            // ? delete comment
+            lastTokenIndex = line.tokens.len()-1;
+            if line.tokens[lastTokenIndex].dataType == TokenType::Comment {
+                line.tokens.remove(lastTokenIndex);
+                if line.tokens.is_empty() { // go to delete empty line
+                    deleteLine = true;      //
+                    break 'exit;            //
+                }
+            }
+        }
+        // after interrupt -> delete line
+        if deleteLine {
+            linesLinks.remove(index);
+            linesLinksLength -= 1;
             continue;
         }
-
-        lastTokenIndex = lines[ib].tokens.len()-1;
-        if lines[ib].tokens[lastTokenIndex].dataType == TokenType::Comment {
-            lines[ib].tokens.remove(lastTokenIndex);
-            if lines[ib].tokens.is_empty() {
-                lines.remove(ib);
-                continue;
-            }
-        }
-
-        ib += 1;
+        // next
+        index += 1;
     }
 }
 
@@ -514,10 +539,12 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
     }
 }
 // output line info
-pub unsafe fn outputLines(lines: &Vec<Line>, indent: usize) {
+pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) {
     let identStr1: String = " ".repeat(indent*2);
     let identStr2: String = " ".repeat(indent*2+1);
-    for (i, line) in lines.iter().enumerate() {
+
+    for (i, line) in linesLinks.iter().enumerate() {
+        let line = line.read().unwrap();
         log("parserBegin", &format!("{}+{}",identStr1,i));
 
         if (&line.tokens).len() == 0 {
@@ -546,7 +573,7 @@ static mut _linesDeleted: usize = 0; // <- save deleted lines num for logger
 static mut _linesIdent: usize = 0;
 static mut _lineTokens: Vec<Token> = Vec::new();
 
-pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
+pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > {
     if unsafe{debugMode} {
         logSeparator(" > AST generation");
     }
@@ -563,8 +590,8 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
 
     let startTime: Instant = Instant::now();
 
-    let mut lines:         Vec<Line> = Vec::new();
-    let mut readLineIdent: bool      = true;
+    let mut linesLinks:    Vec< Arc<RwLock<Line>> > = Vec::new();
+    let mut readLineIdent: bool                     = true;
 
     while _index < _bufferLength {
         __byte1 = buffer[_index]; // current char
@@ -597,12 +624,17 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
                 );
 
                 // add new line
-                lines.push( Line {
-                    tokens:       _lineTokens.clone(),
-                    indent:        _linesIdent,
-                    lines:        Vec::new(),
-                    linesDeleted: _linesDeleted+_linesCount
-                } );
+                linesLinks.push( 
+                    Arc::new(RwLock::new( 
+                        Line {
+                            tokens:       _lineTokens.clone(),
+                            indent:       _linesIdent,
+                            lines:        Vec::new(),
+                            linesDeleted: _linesDeleted+_linesCount,
+                            parent:       None
+                        }
+                    ))
+                );
                 _linesDeleted = 0;
                 _linesIdent = 0;
 
@@ -663,11 +695,11 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
     }
 
     // line nesting
-    lineNesting(&mut lines);
+    lineNesting(&mut linesLinks);
 
     // delete DoubleComment
     __index = 0;
-    deleteDoubleComment(&mut lines, __index);
+    deleteDoubleComment(&mut linesLinks, __index);
 
     // debug output and return
     if debugMode {
@@ -675,9 +707,9 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec<Line> {
         let endTime  = Instant::now();
         let duration = endTime-startTime;
         // lines
-        outputLines(&lines,0);
+        outputLines(&linesLinks,0);
         //
         logSeparator( &format!("?> Tokenizer duration: {:?}",duration) );
     }
-    lines
+    linesLinks
 }

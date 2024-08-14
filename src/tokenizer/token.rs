@@ -78,11 +78,13 @@ pub enum TokenType {
 
     Array,    // Array
 
-    Bool,  // Bool
-    True,  // true  = 1
-    False, // false = 0
-    And, // and
-    Or,  // or
+    Bool,      // Bool
+    True,      // true  = 1
+    False,     // false = 0
+    Joint,     // & (and)
+    Disjoint,  // ^
+    Inclusion, // | (or)
+    Exclusion, // ! (not)
     
     Loop, // loop
 }
@@ -167,13 +169,15 @@ impl ToString for TokenType {
             TokenType::Rational => String::from("Rational"), // Rational
             TokenType::Complex  => String::from("Complex"),  // Complex
 
-            TokenType::Array  => String::from("Array"),      // Array
+            TokenType::Array    => String::from("Array"),    // Array
 
-            TokenType::Bool  => String::from("Bool"),  // Bool
-            TokenType::True  => String::from("true"),  // true  = 1
-            TokenType::False => String::from("false"), // false = 0
-            TokenType::And => String::from("and"), // and
-            TokenType::Or  => String::from("or"),  // or
+            TokenType::Bool      => String::from("Bool"),      // Bool
+            TokenType::True      => String::from("true"),      // true  = 1
+            TokenType::False     => String::from("false"),     // false = 0
+            TokenType::Joint     => String::from("Joint"),     // & (and)
+            TokenType::Disjoint  => String::from("Disjoint"),  // ^
+            TokenType::Inclusion => String::from("Inclusion"), // | (or)
+            TokenType::Exclusion => String::from("Exclusion"), // ! (not)
 
             TokenType::Loop => String::from("loop"), // while
         }

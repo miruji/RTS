@@ -19,14 +19,13 @@ if [ "$1" == "64" ]; then
 
 	sed -i -e '1d;$d' -e '/^$/d' ./log  # remove begin-end, end space line
 
-	#
+	# if build error
 	if [ "$builded" == "false" ]; then
-		echo ""
-		cat ./log  # output log
+		cat   ./log  # output log
+		rm -f ./log  # remove log
 		exit 1
 	fi
 	if [[ "$2" == "true" ]]; then
-		echo ""
 		cat ./log  # output log
 	fi
 	ls &>> ./log
@@ -60,7 +59,6 @@ elif [ "$1" == "32" ]; then
 	fi
 	#
 	if [ "$2" == "true" ]; then
-		echo ""
 		cat ./log  # output log
 	fi
 	ls &>> ./log

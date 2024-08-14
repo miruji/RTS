@@ -28,7 +28,7 @@ use std::process::Command;
 
 use std::time::Instant;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 // check memory cell type
 fn checkMemoryCellType(dataType: TokenType) -> bool {
@@ -256,58 +256,55 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
        block
 */
 unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink: Arc<RwLock<Method>>) -> bool {
-    let mut conditions: Vec<Line> = Vec::new();
-    {
-        let mut method = methodLink.write().unwrap();
-        let lines: &mut Vec<Line> = &mut method.lines;
-
-        let tokens:    &mut Vec<Token> = &mut lines[lineIndex].tokens;
-        let mut token: &Token = &tokens[0];
-        // check first condition begin
-        if token.dataType != TokenType::Question {
-            return false;
-        }
-
-        // get first condition
-        {
-            { // clone first condition line
-                let mut lineBuffer: Line = (&lines[lineIndex]).clone();
-                lineBuffer.tokens.remove(0); // remove ? token
-                conditions.push(lineBuffer);
+    // todo: delete lineIndex and use methodLink.lines ?
+    let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
+    { // get conditions
+        let mut method: RwLockWriteGuard<'_, Method>  = methodLink.write().unwrap();
+        let      lines: &mut Vec< Arc<RwLock<Line>> > = &mut method.lines;
+        { // clone first condition line
+            let mut lineLink: &Arc<RwLock<Line>> = &lines[lineIndex];
+            { // check question token
+                let mut line: RwLockWriteGuard<'_, Line> = lineLink.write().unwrap();
+                // skip empty line
+                if line.tokens.len() == 0 { return false; } else
+                // check question
+                if line.tokens[0].dataType != TokenType::Question { return false; }
+                // remove question token
+                line.tokens.remove(0);
             }
-
-            // search bottom lines
-            let mut i: usize = lineIndex+1;
-            let mut bottomLineBuffer: &Line;
-            let mut lineBuffer:        Line;
+            conditions.push( lineLink.clone() );
+            lines.remove(lineIndex);
+            *linesLength -= 1;
+        }
+        { // search bottom lines
+            let mut i: usize = lineIndex;
+            // if line index < lines length
             while i < *linesLength {
-                bottomLineBuffer = &lines[i];
-                if bottomLineBuffer.tokens.len() == 0 {
-                    break;
+                // check question
+                let mut lineBottomLink: Arc<RwLock<Line>> = lines[i].clone();
+                { // check question token
+                    let mut bottomLine: RwLockWriteGuard<'_, Line> = lineBottomLink.write().unwrap();
+                    // skip empty line
+                    if bottomLine.tokens.len() == 0 { break; } else
+                    // check question
+                    if bottomLine.tokens[0].dataType != TokenType::Question { break; }
+                    // remove question token
+                    bottomLine.tokens.remove(0);
                 }
-                if bottomLineBuffer.tokens[0].dataType == TokenType::Question {
-                    lineBuffer = bottomLineBuffer.clone();
-                    lineBuffer.tokens.remove(0);
-                    conditions.push(lineBuffer);
-
-                    lines.remove(i);
-                    *linesLength -= 1;
-                    continue;
-                } else {
-                    break;
-                }
-                i += 1;
+                conditions.push(lineBottomLink);
+                lines.remove(i);
+                *linesLength -= 1;
+                continue;
             }
         }
-
-        if conditions.len() == 0 {
-            return false;
-        }
+        // if no conditions
+        if conditions.len() == 0 { return false; }
     }
 
     // read conditions
     let mut conditionTruth: bool = false;
     for condition in &mut conditions {
+        let mut condition = condition.write().unwrap();
         // if elif
         if condition.tokens.len() != 0 {
             { // check condition truth and unlock mcl
@@ -356,13 +353,14 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
         }
     }
     return true;
-    return false;
 }
 /* search methods call
    e:
      methodCall(parameters)
 */
-unsafe fn searchMethodCall(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> bool {
+unsafe fn searchMethodCall(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+    let mut line = line.write().unwrap();
+
     let tokens:       &mut Vec<Token> = &mut line.tokens;
     let tokensLength: usize           = tokens.len();
     let mut j: usize = 0;
@@ -611,7 +609,9 @@ unsafe fn searchMethod(line: &mut Line) -> bool {
      memoryCellName~  -> variable locked
      memoryCellName~~ -> variable unlocked
 */
-unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> bool {
+unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+    let mut line = line.write().unwrap();
+
     let tokens:           &mut Vec<Token> = &mut line.tokens;
     let mut tokensLength: usize           = tokens.len();
     let mut j:            usize           = 0;
@@ -764,17 +764,17 @@ unsafe fn searchMemoryCell(line: &mut Line, methodLink: Arc<RwLock<Method>>) -> 
 static mut _methods: Vec< Arc<RwLock<Method>> > = Vec::new();
 
 // parse lines
-static mut _lines:       Vec<Line> = Vec::new();
-static mut _lineIndex:   usize     = 0;
-static mut _linesLength: usize     = 0;
+static mut _lines:       Vec< Arc<RwLock<Line>> > = Vec::new();
+static mut _lineIndex:   usize                    = 0;
+static mut _linesLength: usize                    = 0;
 
-pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
+pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
 // preparation
     if unsafe{_debugMode} {
         logSeparator(" > AST preparation");
     }
 
-    _lines = tokenizerLines;
+    _lines = tokenizerLinesLinks;
 
     // define upper struct [Class / Enum]
 //    let mut classes: Vec<Class> = Vec::new();
@@ -930,13 +930,14 @@ pub unsafe fn parseLines(tokenizerLines: Vec<Line>) {
     }
 }
 pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: &mut usize, linesLength: &mut usize) {
-    let mut line: Option<Line>;
+    let mut line: Option< Arc<RwLock<Line>> >;
     while _exitCode == false && *lineIndex < *linesLength {
         line = None;
         {
             let method = methodLink.read().unwrap();
             // no tokens in line ?
-            if method.lines[*lineIndex].tokens.len() == 0 {
+            let methodLine = method.lines[*lineIndex].read().unwrap();
+            if methodLine.tokens.len() == 0 {
                 *lineIndex += 1;
                 continue;
             }
@@ -948,9 +949,9 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: &mut usize, 
             if !searchCondition(*lineIndex, linesLength, methodLink.clone()) {
             // search methods calls
                 if let Some(mut l) = line {
-                    if !searchMethodCall(&mut l, methodLink.clone()) {
+                    if !searchMethodCall(l.clone(), methodLink.clone()) {
             // search memory cells
-                        searchMemoryCell(&mut l, methodLink.clone());
+                        searchMemoryCell(l, methodLink.clone());
                     }
                 }
             }
