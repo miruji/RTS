@@ -1,36 +1,36 @@
 
-i = 0
-c = 0
+i = 0 # 0-9 counter
+c = 0 # main cycles counter
 ? i < 10
   exec("sleep 0.001")
-  print(f"\bg(#ffffff)\fg(#ff0000){i}\c")
+  
+  s = "" # hex color
+  l = 0  # color cycle
+  ? l < 6
+    a = randUInt(0,15)
+    ? a = 10
+      a = 'a'
+    ? a = 11
+      a = 'b'
+    ? a = 12
+      a = 'c'
+    ? a = 13
+      a = 'd'
+    ? a = 14
+      a = 'e'
+    ? a = 15
+      a = 'f'
+    s += a
+    l += 1
+    go(1)
+  # print and go next char
+  print(f"\bg(#{s}) \c ")
   i += 1
   ? i >= 10
-    ? c < 300
+    ? c < 256
       i = 0
       c += 1
-    ?
-      println("\c")
-  go(1)
-println()
-
-#
-  d = true = 1
-  println( "true = 1 = d:"+str(d)+":"+type(d) )
-  println( f"true = 1 = d:{str(d)}:{type(d)}" )
   
-  a = true
-  b = false
-  println(a | b)
+  go(1)
 
-#
-  println( `aaa` )
-  println( f`bbb` )
-  println( "aa" )
-  println( f"bb" )
-  println( 'a' )
-  println( f'b' )
-
-#
-  c = int(a)+int(b)
-  println( "a:"+a+" + b:"+b+" = c:"+str(c)+":"+type(c) )
+println()

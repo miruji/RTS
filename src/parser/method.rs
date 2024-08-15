@@ -17,6 +17,8 @@ use std::{io, io::Write};
 
 use std::sync::{Arc, RwLock};
 
+use rand::Rng;
+
 pub struct Method {
     pub name:           String,                        // unique name
                                                        // todo: Option
@@ -210,6 +212,20 @@ impl Method {
                         valueLength -= 1;
                         continue;
                     } else 
+                    if functionName == "char" {
+                        if value[i+1].tokens.len() > 0 {
+                            value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
+                            value[i].data = (value[i].data.parse::<u8>().unwrap() as char).to_string();
+                            value[i].dataType = TokenType::Char;
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
+
+                        value.remove(i+1);
+                        valueLength -= 1;
+                        continue;
+                    } else 
                     if functionName == "str" {
                         if value[i+1].tokens.len() > 0 {
                             value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
@@ -253,6 +269,54 @@ impl Method {
                         value[i].data = value[i].data.trim_end().to_string();
                         value[i].dataType = TokenType::String;
 
+                        value.remove(i+1);
+                        valueLength -= 1;
+                        continue;
+                    } else 
+                    if functionName == "randUInt" {
+                        // get expressions
+                        let mut expressions: Vec<Token> = Vec::new();
+                        {
+                            let mut expressionsBuffer: Vec<Vec<Token>> = Vec::new();
+                            {
+                                let mut l = 0;
+                                let tokens = &value[i+1].tokens;
+                                let tokensLength = tokens.len();
+                                let mut token;
+                                let mut expressionBuffer = Vec::new();
+                                while l < tokensLength {
+                                    token = tokens[l].clone();
+                                    if token.dataType == TokenType::Comma || l+1 == tokensLength {
+                                        if l+1 == tokensLength {
+                                            expressionBuffer.push( token );
+                                        }
+                                        expressionsBuffer.push( expressionBuffer.clone() );
+                                        expressionBuffer.clear();
+                                    } else {
+                                        expressionBuffer.push( token );
+                                    }
+                                    l += 1;
+                                }
+                            }
+                            for mut expression in expressionsBuffer {
+                                expressions.push(
+                                    self.memoryCellExpression(&mut expression,indent+1)
+                                );
+                            }
+                        }
+                        // todo: check errors
+                        if expressions.len() == 2 {
+                            let mut rng = rand::thread_rng();
+                            let min: usize = expressions[0].data.parse::<usize>().unwrap_or(0);
+                            let max: usize = expressions[1].data.parse::<usize>().unwrap_or(0);
+                            let randomNumber: usize = rng.gen_range(min..=max);
+
+                            value[i].data = randomNumber.to_string();
+                            value[i].dataType = TokenType::UInt;
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
                         value.remove(i+1);
                         valueLength -= 1;
                         continue;
