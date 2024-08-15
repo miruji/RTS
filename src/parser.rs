@@ -255,67 +255,55 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
      ? condition
        block
 */
-unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink: Arc<RwLock<Method>>) -> bool {
+unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
     // todo: delete lineIndex and use methodLink.lines ?
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
-        let mut method: RwLockWriteGuard<'_, Method>  = methodLink.write().unwrap();
-        let      lines: &mut Vec< Arc<RwLock<Line>> > = &mut method.lines;
-        { // clone first condition line
-            let mut lineLink: &Arc<RwLock<Line>> = &lines[lineIndex];
-            { // check question token
-                let mut line: RwLockWriteGuard<'_, Line> = lineLink.write().unwrap();
-                // skip empty line
-                if line.tokens.len() == 0 { return false; } else
-                // check question
-                if line.tokens[0].dataType != TokenType::Question { return false; }
-                // remove question token
-                line.tokens.remove(0);
-            }
-            conditions.push( lineLink.clone() );
-            lines.remove(lineIndex);
-            *linesLength -= 1;
-        }
+        let method: RwLockReadGuard<'_, Method>  = methodLink.read().unwrap();
+        let lines:  &Vec< Arc<RwLock<Line>> >    = &method.lines;
+        let mut linesLength: usize = lines.len();
         { // search bottom lines
-            let mut i: usize = lineIndex;
+            let mut i: usize = 0;
+            {
+                let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
+                i = line.index;
+            }
             // if line index < lines length
-            while i < *linesLength {
+            while i < linesLength {
                 // check question
                 let mut lineBottomLink: Arc<RwLock<Line>> = lines[i].clone();
                 { // check question token
-                    let mut bottomLine: RwLockWriteGuard<'_, Line> = lineBottomLink.write().unwrap();
+                    let bottomLine: RwLockReadGuard<'_, Line> = lineBottomLink.read().unwrap();
+                    //Line::outputTokens(&bottomLine);
                     // skip empty line
                     if bottomLine.tokens.len() == 0 { break; } else
                     // check question
                     if bottomLine.tokens[0].dataType != TokenType::Question { break; }
-                    // remove question token
-                    bottomLine.tokens.remove(0);
                 }
                 conditions.push(lineBottomLink);
-                lines.remove(i);
-                *linesLength -= 1;
-                continue;
+                i += 1;
             }
         }
         // if no conditions
         if conditions.len() == 0 { return false; }
     }
-
     // read conditions
     let mut conditionTruth: bool = false;
-    for condition in &mut conditions {
-        let mut condition = condition.write().unwrap();
+    for conditionLink in &mut conditions {
+        let condition = conditionLink.read().unwrap();
         // if elif
         if condition.tokens.len() != 0 {
             { // check condition truth and unlock mcl
                 let method = methodLink.read().unwrap();
-                conditionTruth = method.memoryCellExpression(&mut condition.tokens,0).data == "true";
+                let mut conditionTokens = condition.tokens.clone(); // todo: no clone ? fix its please
+                conditionTokens.remove(0);
+                conditionTruth = method.memoryCellExpression(&mut conditionTokens,0).data == "true";
             }
             if conditionTruth {
+                // new temporary method
                 let mut conditionLinesLength: usize = condition.lines.len();
                 let mut conditionLineIndex:   usize = 0;
-//                println!("\n>>> Next read block [if-el]");
-                _methods.push(
+                let method = 
                     Arc::new(
                     RwLock::new(
                         Method::new(
@@ -323,20 +311,17 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
                             condition.lines.clone(),
                             Some(methodLink.clone())
                         )
-                    ))
-                );
-                let methodNum: usize = _methods.len()-1;
-                readLines(_methods[_methods.len()-1].clone(), &mut conditionLineIndex, &mut conditionLinesLength);
-                _methods.remove(methodNum);
-                break;
+                    ));
+                readLines(method, &mut conditionLineIndex, &mut conditionLinesLength);
+                break; // end
             }
         // else
         } else
         if !conditionTruth {
+            // new temporary method
             let mut conditionLinesLength: usize = condition.lines.len();
             let mut conditionLineIndex:   usize = 0;
-//            println!("  Next read block [else]");
-            _methods.push(
+            let method = 
                 Arc::new(
                 RwLock::new(
                     Method::new(
@@ -344,12 +329,9 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
                         condition.lines.clone(),
                         Some(methodLink.clone())
                     )
-                ))
-            );
-            let methodNum: usize = _methods.len()-1;
-            readLines(_methods[methodNum].clone(), &mut conditionLineIndex, &mut conditionLinesLength);
-            _methods.remove(methodNum);
-            break;
+                ));
+            readLines(method, &mut conditionLineIndex, &mut conditionLinesLength);
+            break; // end
         }
     }
     return true;
@@ -358,34 +340,45 @@ unsafe fn searchCondition(lineIndex: usize, linesLength: &mut usize, methodLink:
    e:
      methodCall(parameters)
 */
-unsafe fn searchMethodCall(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
-    let mut line = line.write().unwrap();
+unsafe fn searchMethodCall(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
+    let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+    let lines:  &Vec< Arc<RwLock<Line>> >   = &method.lines;
+    let line:   RwLockReadGuard<'_, Line>   = lines[lineIndex].read().unwrap();
 
-    let tokens:       &mut Vec<Token> = &mut line.tokens;
-    let tokensLength: usize           = tokens.len();
-    let mut j: usize = 0;
+    let     tokensLength: usize = line.tokens.len();
+    let mut            j: usize = 0;
 
     let mut expressionValue: Vec<Token>;
     let mut result: bool;
 
     let mut token: &Token;
     while j < tokensLength {
-        token = &tokens[j];
+        token = &line.tokens[j];
 
         if token.dataType == TokenType::Word {
             // add method call
-            if j+1 < tokensLength && tokens[j+1].dataType == TokenType::CircleBracketBegin {
+            if j+1 < tokensLength && line.tokens[j+1].dataType == TokenType::CircleBracketBegin {
                 // check lower first char
                 if token.data.starts_with(|c: char| c.is_lowercase()) {
-                    expressionValue = tokens[j+1].tokens.clone();
+                    expressionValue = line.tokens[j+1].tokens.clone();
                     // todo: multi-param
-
                     // basic methods
                     result = true;
                     {
-                        let mut method = methodLink.write().unwrap();
-//                        println!("searchMethodCall() in [{}]",method.name);
-                        //let mut mcl = &mut method.mcl.write().unwrap();
+                        let method = methodLink.read().unwrap();
+                        // go block up
+                        if token.data == "go" {
+                            if let Some(parentLink) = &line.parent {
+                                let parent = parentLink.read().unwrap();
+                                if let Some(methodParent) = &method.parent {
+                                    searchCondition(parentLink.clone(), methodParent.clone());
+                                }
+                            }
+                        } else
+                        // exit block up
+                        if token.data == "ex" {
+                            println!("ex");
+                        } else
                         // println
                         if token.data == "println" {
                             println!("{}",
@@ -396,8 +389,8 @@ unsafe fn searchMethodCall(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                                     ).data
                                 )
                             );
-                        // print
                         } else 
+                        // print
                         if token.data == "print" {
                             print!("{}",
                                 formatPrint(
@@ -407,8 +400,8 @@ unsafe fn searchMethodCall(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                                     ).data
                                 )
                             );
-                        // exec
                         } else 
+                        // exec
                         if token.data == "exec" {
                             let expression: String = method.memoryCellExpression(&mut expressionValue,0).data;
                             let mut parts = expression.split_whitespace();
@@ -423,8 +416,8 @@ unsafe fn searchMethodCall(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                             if !outputStr.is_empty() {
                                 print!("{}", outputStr);
                             }
-                        // exit
                         } else 
+                        // exit
                         if token.data == "exit" {
                             _exitCode = true;
                         // custom method
@@ -609,23 +602,25 @@ unsafe fn searchMethod(line: &mut Line) -> bool {
      memoryCellName~  -> variable locked
      memoryCellName~~ -> variable unlocked
 */
-unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
-    let mut line = line.write().unwrap();
+unsafe fn searchMemoryCell(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
+    let mut method: RwLockWriteGuard<'_, Method> = methodLink.write().unwrap();
+    let      lines: &Vec< Arc<RwLock<Line>> >    = &method.lines;
+    let mut   line: RwLockWriteGuard<'_, Line>   = lines[lineIndex].write().unwrap();
 
-    let tokens:           &mut Vec<Token> = &mut line.tokens;
+    let           tokens: &Vec<Token>     = &line.tokens;
     let mut tokensLength: usize           = tokens.len();
-    let mut j:            usize           = 0;
-    let mut goNext:       bool            = true;
+    let mut            j: usize           = 0;
+    let mut       goNext: bool            = true;
 
-    let mut nameBuffer:     String         = String::new();
-    let mut modeBuffer:     MemoryCellMode = MemoryCellMode::LockedFinal;
-    let mut modeReceived:   bool           = false;
+    let mut   nameBuffer: String         = String::new();
+    let mut   modeBuffer: MemoryCellMode = MemoryCellMode::LockedFinal;
+    let mut modeReceived: bool           = false;
 
-    let mut typeBuffer:     TokenType = TokenType::None;
-    let mut typeReceived:   bool      = false;
+    let mut   typeBuffer: TokenType = TokenType::None;
+    let mut typeReceived: bool      = false;
 
     let mut operatorBuffer: TokenType  = TokenType::None;
-    let mut valueBuffer:    Vec<Token> = Vec::new();
+    let mut    valueBuffer: Vec<Token> = Vec::new();
 
     let mut token: &Token;
     while j < tokensLength {
@@ -638,22 +633,22 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                 // e: variableName~~
                 if j+2 < tokensLength && tokens[j+2].dataType == TokenType::Tilde {
                     modeBuffer = MemoryCellMode::UnlockedVariable;
-                    tokens.remove(j); // remove name
-                    tokens.remove(j); // remove ~
-                    tokens.remove(j); // remove ~
-                    tokensLength -= 3;
+                    // skip name
+                    // skip ~
+                    // skip ~
+                    j += 3;
                 // e: variableName~
                 } else
                 if j+1 < tokensLength && tokens[j+1].dataType == TokenType::Tilde {
                     modeBuffer = MemoryCellMode::LockedVariable;
-                    tokens.remove(j); // remove name
-                    tokens.remove(j); // remove ~
-                    tokensLength -= 2;
+                    // skip name
+                    // skip ~
+                    j += 2;
                 // e: variableName
                 } else {
                     modeBuffer = MemoryCellMode::LockedFinal;
-                    tokens.remove(j);
-                    tokensLength -= 1; // remove name
+                    // skip name
+                    j += 1;
                 }
                 //
                 goNext = false;
@@ -666,9 +661,9 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                     let nextTokenType = tokens[j+1].dataType.clone();
                     if checkMemoryCellType(nextTokenType.clone()) {
                         typeBuffer = nextTokenType;
-                        tokens.remove(j); // remove :
-                        tokens.remove(j); // remove type
-                        tokensLength -= 2;
+                        // skip :
+                        // skip type
+                        j += 2;
                     }
                 }
                 //
@@ -682,7 +677,6 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                     operatorBuffer = token.dataType.clone();
                     // value
                     valueBuffer = tokens[j+1..(tokensLength)].to_vec();
-                    tokens.clear();
                 }
                 // todo: made?
                 //   if + or - or * or / and more ...
@@ -700,25 +694,8 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     }
     //
     if !nameBuffer.is_empty() {
-//        println!("MemoryCell: {}",nameBuffer);
-        //if let Some(mclLink) = getMemoryCellListByMemoryCellName(methodLink.clone(),&nameBuffer) {
-        //    memoryCellOp(mclLink);
-
-            //let mut mcl = mclLink.write().unwrap();
-            //mcl.op( // todo: 2 repeats to search one name, rewrite this func
-            //    nameBuffer,
-            //    operatorBuffer,
-            //    Token::newNesting(valueBuffer)
-            //);
-        //} else 
-        let mut method = methodLink.write().unwrap();
-//        println!("  Method: {:?}",method.name);
         // if searched in methods
         if let Some(memoryCellLink) = method.getMemoryCellByName(&nameBuffer) {
-//            {
-//                let memoryCell = memoryCellLink.read().unwrap();
-//                println!("  OK! searched memoryCell [{}]",memoryCell.name);
-//            }
             method.memoryCellOp(
                 memoryCellLink, 
                 operatorBuffer, 
@@ -726,11 +703,9 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
             );
         // if no searched, then create new MemoryCell and equal right value
         } else {
-//            println!("  NO searched! op [{}]",operatorBuffer.to_string());
             // memoryCellName - op - value
             // array
             if valueBuffer.len() > 0 && valueBuffer[0].dataType == TokenType::SquareBracketBegin {
-                println!("    Array in method [{}]",method.name);
                 valueBuffer = valueBuffer[0].tokens.clone();
                 valueBuffer.retain(|token| token.dataType != TokenType::Comma);
                 method.pushMemoryCell(
@@ -744,7 +719,6 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                 return true;
             // basic cell
             } else {
-//                println!("    Basic in method [{}]",method.name);
                 method.pushMemoryCell(
                     MemoryCell::new(
                         nameBuffer,
@@ -764,7 +738,6 @@ unsafe fn searchMemoryCell(line: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
 static mut _methods: Vec< Arc<RwLock<Method>> > = Vec::new();
 
 // parse lines
-static mut _lines:       Vec< Arc<RwLock<Line>> > = Vec::new();
 static mut _lineIndex:   usize                    = 0;
 static mut _linesLength: usize                    = 0;
 
@@ -773,8 +746,6 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
     if unsafe{_debugMode} {
         logSeparator(" > AST preparation");
     }
-
-    _lines = tokenizerLinesLinks;
 
     // define upper struct [Class / Enum]
 //    let mut classes: Vec<Class> = Vec::new();
@@ -885,10 +856,11 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
         RwLock::new(
             Method::new(
                 String::from("main"),
-                _lines.clone(),
+                tokenizerLinesLinks.clone(),
                 None,
             )
         ));
+    // argc & argv
     {
         let mut mainMethod = mainMethodLink.write().unwrap();
         // argc
@@ -920,7 +892,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
     }
     _methods.push(mainMethodLink);
 
-    _linesLength = _lines.len();
+    _linesLength = tokenizerLinesLinks.len();
     readLines(_methods[0].clone(), &mut _lineIndex, &mut _linesLength);
     // duration
     if unsafe{_debugMode} {
@@ -930,31 +902,28 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
     }
 }
 pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: &mut usize, linesLength: &mut usize) {
-    let mut line: Option< Arc<RwLock<Line>> >;
     while _exitCode == false && *lineIndex < *linesLength {
-        line = None;
+        let lineLink: Arc<RwLock<Line>>;
         {
-            let method = methodLink.read().unwrap();
-            // no tokens in line ?
-            let methodLine = method.lines[*lineIndex].read().unwrap();
-            if methodLine.tokens.len() == 0 {
+            let     method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+            lineLink = method.lines[*lineIndex].clone();
+            let line: RwLockReadGuard<'_, Line>   = lineLink.read().unwrap();
+            // check tokens in line
+            if line.tokens.len() == 0 {
                 *lineIndex += 1;
                 continue;
             }
-            // clone line
-            line = Some(method.lines[*lineIndex].clone());
         }
         {
             // search conditions
-            if !searchCondition(*lineIndex, linesLength, methodLink.clone()) {
-            // search methods calls
-                if let Some(mut l) = line {
-                    if !searchMethodCall(l.clone(), methodLink.clone()) {
-            // search memory cells
-                        searchMemoryCell(l, methodLink.clone());
-                    }
+            if !searchCondition(lineLink, methodLink.clone()) {
+                // search methods calls
+                if !searchMethodCall(*lineIndex, methodLink.clone()) {
+                // search memory cells
+                    searchMemoryCell(*lineIndex, methodLink.clone());
                 }
             }
+            //
         }
 /*
         // save line now for logger

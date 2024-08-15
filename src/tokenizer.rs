@@ -411,6 +411,9 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
                 { // set parent line link
                     let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
                     nestingLine.parent = Some( linesLinks[index].clone() );
+                    if let Some(parentLink) = &nestingLine.parent {
+                        let parent = parentLink.read().unwrap();
+                    }
                 }
                 // push nesting
                 let mut currentLine = linesLinks[index].write().unwrap();
@@ -435,8 +438,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
         let mut deleteLine: bool  = false;
         'exit: { // interrupt
             // get line and check lines len
-            let mut line: RwLockWriteGuard<'_, Line> = 
-                linesLinks[index].write().unwrap();
+            let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
             if !line.lines.is_empty() {
                 deleteDoubleComment(&mut line.lines, index);
             }
@@ -629,6 +631,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
                         Line {
                             tokens:       _lineTokens.clone(),
                             indent:       _linesIdent,
+                            index:        _linesCount,
                             lines:        Vec::new(),
                             linesDeleted: _linesDeleted+_linesCount,
                             parent:       None

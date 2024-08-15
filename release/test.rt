@@ -1,8 +1,9 @@
 i = 0
 ? i < 10
-  println(f"\bg(#ffffff)\fg(#ff0000){i}\c")
+  print(f"\bg(#ffffff)\fg(#ff0000){i}\c")
   i += 1
-  :1
+  go(1)
+println()
 
 #
   d = true = 1
