@@ -256,6 +256,7 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
        block
 */
 unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("searchCondition");
     // todo: delete lineIndex and use methodLink.lines ?
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
@@ -269,6 +270,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
                 i = line.index;
             }
             // if line index < lines length
+//            println!("  i [{}] linesLength [{}]",i,linesLength);
             while i < linesLength {
                 // check question
                 let mut lineBottomLink: Arc<RwLock<Line>> = lines[i].clone();
@@ -285,6 +287,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
             }
         }
         // if no conditions
+//        println!("  conditions.len [{}]",conditions.len());
         if conditions.len() == 0 { return false; }
     }
     // read conditions
@@ -341,6 +344,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
      methodCall(parameters)
 */
 unsafe fn searchMethodCall(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("searchMethodCall");
     let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
     let lines:  &Vec< Arc<RwLock<Line>> >   = &method.lines;
     let line:   RwLockReadGuard<'_, Line>   = lines[lineIndex].read().unwrap();
@@ -603,6 +607,7 @@ unsafe fn searchMethod(line: &mut Line) -> bool {
      memoryCellName~~ -> variable unlocked
 */
 unsafe fn searchMemoryCell(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("searchMemoryCell");
     let mut method: RwLockWriteGuard<'_, Method> = methodLink.write().unwrap();
     let      lines: &Vec< Arc<RwLock<Line>> >    = &method.lines;
     let mut   line: RwLockWriteGuard<'_, Line>   = lines[lineIndex].write().unwrap();
