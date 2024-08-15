@@ -2,13 +2,15 @@
 i = 0
 c = 0
 ? i < 10
+  exec("sleep 0.001")
   print(f"\bg(#ffffff)\fg(#ff0000){i}\c")
   i += 1
   ? i >= 10
-    ? c < 5
+    ? c < 300
       i = 0
       c += 1
-      print(" ")
+    ?
+      println("\c")
   go(1)
 println()
 

@@ -24,6 +24,8 @@ use crate::tokenizer::*;
 use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
+use std::{io, io::Write};
+
 use std::process::Command;
 
 use std::time::Instant;
@@ -256,7 +258,6 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
        block
 */
 unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
-//    println!("searchCondition");
     // todo: delete lineIndex and use methodLink.lines ?
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
@@ -270,13 +271,11 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
                 i = line.index;
             }
             // if line index < lines length
-//            println!("  i [{}] linesLength [{}]",i,linesLength);
             while i < linesLength {
                 // check question
                 let mut lineBottomLink: Arc<RwLock<Line>> = lines[i].clone();
                 { // check question token
                     let bottomLine: RwLockReadGuard<'_, Line> = lineBottomLink.read().unwrap();
-                    //Line::outputTokens(&bottomLine);
                     // skip empty line
                     if bottomLine.tokens.len() == 0 { break; } else
                     // check question
@@ -344,7 +343,6 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
      methodCall(parameters)
 */
 unsafe fn searchMethodCall(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
-//    println!("searchMethodCall");
     let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
     let lines:  &Vec< Arc<RwLock<Line>> >   = &method.lines;
     let line:   RwLockReadGuard<'_, Line>   = lines[lineIndex].read().unwrap();
@@ -407,6 +405,7 @@ unsafe fn searchMethodCall(lineIndex: usize, methodLink: Arc<RwLock<Method>>) ->
                         } else 
                         // exec
                         if token.data == "exec" {
+                            io::stdout().flush().unwrap(); // forced withdrawal of old
                             let expression: String = method.memoryCellExpression(&mut expressionValue,0).data;
                             let mut parts = expression.split_whitespace();
                             let commandStr = parts.next().expect("No command found in expression");
@@ -607,7 +606,6 @@ unsafe fn searchMethod(line: &mut Line) -> bool {
      memoryCellName~~ -> variable unlocked
 */
 unsafe fn searchMemoryCell(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
-//    println!("searchMemoryCell");
     let mut method: RwLockWriteGuard<'_, Method> = methodLink.write().unwrap();
     let      lines: &Vec< Arc<RwLock<Line>> >    = &method.lines;
     let mut   line: RwLockWriteGuard<'_, Line>   = lines[lineIndex].write().unwrap();
