@@ -22,18 +22,37 @@ getHex -> String
     go(1)
   = result
 
-i = 0 # 0-9 counter
-c = 0 # main cycles counter
-? i < 10
-  # sleep
-  sleep(1)
-  # print and go next char
-  print(f"\bg({getHex()}) \c")
-  i += 1
-  ? i >= 10
-    ? c < 300
-    ? c < 256
-      i = 0
-      c += 1
+# get random spaces
+getSpaces -> String
+  l = 0
+  result = ""
+  ? l < randUInt(0,100)
+    l += 1
+    result += " "
+    go(1)
+  = result
+
+# write
+write
+  i = 0 # 0-9 counter
+  c = 0 # main cycles counter
+  ? i < 10
+    # sleep
+    sleep(10)
+    # print and go next char
+    print(f"\bg({getHex()}){c}{getSpaces()}\c")
+    i += 1
+    ? i >= 10
+      ? c < 300
+      ? c < 256
+        i = 0
+        c += 1
+    go(1)
+  println("\c")
+
+# main cycle
+j = 0
+? j < 10
+  write()
+  j += 1
   go(1)
-println("\c")
