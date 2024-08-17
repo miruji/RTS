@@ -87,6 +87,8 @@ pub enum TokenType {
     Exclusion, // ! (not)
     
     Loop, // loop
+
+    Custom(String),
 }
 
 impl ToString for TokenType {
@@ -180,6 +182,8 @@ impl ToString for TokenType {
             TokenType::Exclusion => String::from("Exclusion"), // ! (not)
 
             TokenType::Loop => String::from("loop"), // while
+
+            TokenType::Custom(value) => value.clone(),
         }
     }
 }

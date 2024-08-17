@@ -16,11 +16,12 @@ use crate::parser::readTokens;
 use crate::parser::readLines;
 use crate::parser::searchCondition;
 
-use std::{io, io::Write};
-use std::process::Command;
-
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+use std::{io, io::Write};
+use std::process::Command;
+use std::thread::sleep;
+use std::time::Duration;
 use rand::Rng;
 
 pub struct Method {
@@ -532,6 +533,17 @@ impl Method {
                                     ).data
                                 )
                             );
+                        } else 
+                        // print
+                        if token.data == "sleep" {
+                            io::stdout().flush().unwrap(); // forced withdrawal of old
+                            let value = 
+                                &self.memoryCellExpression(
+                                    &mut expressionValue,
+                                    0
+                                ).data;
+                            let valueNumber = value.parse::<u64>().unwrap_or(0);
+                            sleep(Duration::from_millis(valueNumber));
                         } else 
                         // exec
                         if token.data == "exec" {

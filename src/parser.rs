@@ -341,13 +341,40 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     let line = lineLink.read().unwrap();
     let mut lineTokens: Vec<Token> = line.tokens.clone();
     let mut method = methodLink.write().unwrap();
-    
+
     if lineTokens[0].dataType == TokenType::Equals {
         lineTokens.remove(0);
-        method.result = Some( method.memoryCellExpression(&mut lineTokens,0) );
+
+        let methodResultType = 
+            if let Some(methodResult) = &method.result {
+                methodResult.dataType.clone()
+            } else {
+                TokenType::None
+            };
+        method.result = Some(method.memoryCellExpression(&mut lineTokens, 0));
+        if let Some(methodResult) = &mut method.result {
+            methodResult.dataType = methodResultType;
+        }
+
         return true;
     }
     return false;
+}
+// get method result type
+fn getMethodResultType(word: String) -> TokenType {
+    match word.as_str() {
+        "Int"      => TokenType::Int,
+        "UInt"     => TokenType::UInt,
+        "Float"    => TokenType::Float,
+        "UFloat"   => TokenType::UFloat,
+        "Rational" => TokenType::Rational,
+        "Complex"  => TokenType::Complex,
+        "Array"    => TokenType::Array,
+        "Char"     => TokenType::Char,
+        "String"   => TokenType::String,
+        "Bool"     => TokenType::Bool,
+        _ => TokenType::Custom(word),
+    }
 }
 // define methods [function / procedure]
 unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
@@ -363,23 +390,26 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     if lineTokens[0].dataType == TokenType::Word && line.lines.len() > 0 {
         while i < lineTokensLength {
             let token: &Token = &lineTokens[i];
-            println!("      i [{}] t [{}]",i,token.dataType.to_string());
+//            println!("      i [{}] t [{}]",i,token.dataType.to_string());
             i += 1;
         }
 
         // if there are parameters
+        let mut newMethodResultType: Option<TokenType> = None;
         if lineTokensLength > 1 && lineTokens[1].dataType == TokenType::CircleBracketBegin {
-            println!("        OK param");
-            if lineTokensLength > 2 && lineTokens[2].dataType == TokenType::Pointer {
-                println!("          OK Pointer");
+//            println!("        OK param");
+            if lineTokensLength > 3 && lineTokens[2].dataType == TokenType::Pointer && 
+               lineTokens[3].dataType == TokenType::Word {
+//                println!("          OK Pointer");
+                newMethodResultType = Some( getMethodResultType(lineTokens[3].data.to_string()) );
             }
         // if no
         } else {
-            println!("        NO param");
+//            println!("        NO param");
             if lineTokensLength > 2 && lineTokens[1].dataType == TokenType::Pointer && 
                lineTokens[2].dataType == TokenType::Word {
-                println!("          OK Pointer, type [{}]",lineTokens[2].data);
-
+//                println!("          OK Pointer, type [{}]",lineTokens[2].data);
+                newMethodResultType = Some( getMethodResultType(lineTokens[2].data.to_string()) );
             }
         }
 
@@ -390,14 +420,20 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
         // name -> Type
         // name(param) -> Type
         let mut main = _main.write().unwrap();
+        let mut newMethodBuffer = 
+            Method::new(
+                lineTokens[0].data.clone(),
+                line.lines.clone(),
+                Some(methodLink)
+            );
+        if let Some(newMethodResultType) = newMethodResultType {
+            newMethodBuffer.result = Some( Token::newEmpty(newMethodResultType.clone()) );
+        }
+        //methodBuffer.result = Token::newEmpty(TokenType::);
         main.methods.push(
             Arc::new(
             RwLock::new(
-                Method::new(
-                    lineTokens[0].data.clone(),
-                    line.lines.clone(),
-                    Some(methodLink)
-                )
+                newMethodBuffer
             ))
         );
 
