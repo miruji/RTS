@@ -24,10 +24,6 @@ use crate::tokenizer::*;
 use crate::tokenizer::token::*;
 use crate::tokenizer::line::*;
 
-use std::{io, io::Write};
-
-use std::process::Command;
-
 use std::time::Instant;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -258,6 +254,7 @@ unsafe fn defineLowerStruct(methods: &mut Vec<Method>, lists: &mut Vec<List>) {
        block
 */
 unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("  searchCondition");
     // todo: delete lineIndex and use methodLink.lines ?
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
@@ -286,7 +283,6 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
             }
         }
         // if no conditions
-//        println!("  conditions.len [{}]",conditions.len());
         if conditions.len() == 0 { return false; }
     }
     // read conditions
@@ -338,162 +334,74 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
     }
     return true;
 }
-/* search methods call
-   e:
-     methodCall(parameters)
-*/
-unsafe fn searchMethodCall(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
-    let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
-    let lines:  &Vec< Arc<RwLock<Line>> >   = &method.lines;
-    let line:   RwLockReadGuard<'_, Line>   = lines[lineIndex].read().unwrap();
-
-    let     tokensLength: usize = line.tokens.len();
-    let mut            j: usize = 0;
-
-    let mut expressionValue: Vec<Token>;
-    let mut result: bool;
-
-    let mut token: &Token;
-    while j < tokensLength {
-        token = &line.tokens[j];
-
-        if token.dataType == TokenType::Word {
-            // add method call
-            if j+1 < tokensLength && line.tokens[j+1].dataType == TokenType::CircleBracketBegin {
-                // check lower first char
-                if token.data.starts_with(|c: char| c.is_lowercase()) {
-                    expressionValue = line.tokens[j+1].tokens.clone();
-                    // todo: multi-param
-                    // basic methods
-                    result = true;
-                    {
-                        let method = methodLink.read().unwrap();
-                        // go block up
-                        if token.data == "go" {
-                            if let Some(parentLink) = &line.parent {
-                                let parent = parentLink.read().unwrap();
-                                if let Some(methodParent) = &method.parent {
-                                    searchCondition(parentLink.clone(), methodParent.clone());
-                                }
-                            }
-                        } else
-                        // exit block up
-                        if token.data == "ex" {
-                            println!("ex");
-                        } else
-                        // println
-                        if token.data == "println" {
-                            println!("{}",
-                                formatPrint(
-                                    &method.memoryCellExpression(
-                                        &mut expressionValue,
-                                        0
-                                    ).data
-                                )
-                            );
-                        } else 
-                        // print
-                        if token.data == "print" {
-                            print!("{}",
-                                formatPrint(
-                                    &method.memoryCellExpression(
-                                        &mut expressionValue,
-                                        0
-                                    ).data
-                                )
-                            );
-                        } else 
-                        // exec
-                        if token.data == "exec" {
-                            io::stdout().flush().unwrap(); // forced withdrawal of old
-                            let expression: String = method.memoryCellExpression(&mut expressionValue,0).data;
-                            let mut parts = expression.split_whitespace();
-                            let commandStr = parts.next().expect("No command found in expression");
-                            let args: Vec<&str> = parts.collect();
-                            let commandOutput = 
-                                Command::new(commandStr)
-                                    .args(&args)
-                                    .output()
-                                    .expect("failed to execute process");
-                            let outputStr = String::from_utf8_lossy(&commandOutput.stdout);
-                            if !outputStr.is_empty() {
-                                print!("{}", outputStr);
-                            }
-                        } else 
-                        // exit
-                        if token.data == "exit" {
-                            _exitCode = true;
-                        // custom method
-                        } else {
-                            result = false;
-                        }
-                    };
-                    // custom methods
-                    if !result {
-                        // search in _methods
-                        for method in &_methods {
-                            let methodGuard = method.read().unwrap();
-                            if token.data == methodGuard.name {
-                                let mut linesLengthBuffer: usize = methodGuard.lines.len();
-                                let mut lineIndexBuffer:   usize = 0;
-                                readLines(method.clone(), &mut lineIndexBuffer, &mut linesLengthBuffer);
-                                return true;
-                            }
-                        }
-                    }
-                    return result;
-                } else {
-                // read error
-                    log("syntax","");
-                    log("path",&format!(
-                        "{} -> Word \"{}\"",
-                        &*_filePath,
-                        token.data
-                    ));
-                    Line::outputTokens( &getSavedLine() );
-                    log("note","Method calls and variable names must begin with a lower char");
-                    logExit();
-                }
-            }
-        }
-
-        j += 1;
+// return [function only]
+    // e:  = value
+unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("  searchReturn");
+    let line = lineLink.read().unwrap();
+    let mut lineTokens: Vec<Token> = line.tokens.clone();
+    let mut method = methodLink.write().unwrap();
+    
+    if lineTokens[0].dataType == TokenType::Equals {
+        lineTokens.remove(0);
+        method.result = Some( method.memoryCellExpression(&mut lineTokens,0) );
+        return true;
     }
     return false;
 }
-/*
 // define methods [function / procedure]
-unsafe fn searchMethod(line: &mut Line) -> bool {
+unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("  searchMethod");
+    let line = lineLink.read().unwrap();
+
     let mut i: usize = 0;
     let lineTokens: &Vec<Token> = &line.tokens;
     let lineTokensLength: usize = lineTokens.len();
+
     // e:  methodName
     //       block
     if lineTokens[0].dataType == TokenType::Word && line.lines.len() > 0 {
-        println!("WORD BEGIN");
-        /*
         while i < lineTokensLength {
             let token: &Token = &lineTokens[i];
-            println!("  i {} t {}",i,token.dataType.to_string());
+            println!("      i [{}] t [{}]",i,token.dataType.to_string());
             i += 1;
         }
-        */
 
+        // if there are parameters
+        if lineTokensLength > 1 && lineTokens[1].dataType == TokenType::CircleBracketBegin {
+            println!("        OK param");
+            if lineTokensLength > 2 && lineTokens[2].dataType == TokenType::Pointer {
+                println!("          OK Pointer");
+            }
+        // if no
+        } else {
+            println!("        NO param");
+            if lineTokensLength > 2 && lineTokens[1].dataType == TokenType::Pointer && 
+               lineTokens[2].dataType == TokenType::Word {
+                println!("          OK Pointer, type [{}]",lineTokens[2].data);
+
+            }
+        }
+
+        // todo:
         // min = 1, max = 4 tokens:
         // name
         // name(param)
         // name -> Type
         // name(param) -> Type
-
-        _methods.push(
-            Method::new(
-                lineTokens[0].data.clone(),
-                line.lines.clone(),
-                None, // todo
-            )
+        let mut main = _main.write().unwrap();
+        main.methods.push(
+            Arc::new(
+            RwLock::new(
+                Method::new(
+                    lineTokens[0].data.clone(),
+                    line.lines.clone(),
+                    Some(methodLink)
+                )
+            ))
         );
 
-        outputTokens(lineTokens,0,0);
+        //outputTokens(lineTokens,0,0);
         return true;
     }
 
@@ -598,17 +506,16 @@ unsafe fn searchMethod(line: &mut Line) -> bool {
     //
     */
 }
-*/
 /* search MemoryCell
    e:
      memoryCellName   -> final    locked
      memoryCellName~  -> variable locked
      memoryCellName~~ -> variable unlocked
 */
-unsafe fn searchMemoryCell(lineIndex: usize, methodLink: Arc<RwLock<Method>>) -> bool {
-    let mut method: RwLockWriteGuard<'_, Method> = methodLink.write().unwrap();
-    let      lines: &Vec< Arc<RwLock<Line>> >    = &method.lines;
-    let mut   line: RwLockWriteGuard<'_, Line>   = lines[lineIndex].write().unwrap();
+unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool {
+//    println!("  searchMemoryCell");
+    let     method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+    let mut   line: RwLockWriteGuard<'_, Line>  = lineLink.write().unwrap();
 
     let           tokens: &Vec<Token>     = &line.tokens;
     let mut tokensLength: usize           = tokens.len();
@@ -738,7 +645,17 @@ unsafe fn searchMemoryCell(lineIndex: usize, methodLink: Arc<RwLock<Method>>) ->
     return false;
 }
 //
-static mut _methods: Vec< Arc<RwLock<Method>> > = Vec::new();
+lazy_static! {
+    static ref _main: Arc<RwLock<Method>> = Arc::new(
+        RwLock::new(
+            Method::new(
+                String::from("main"),
+                Vec::new(),
+                None
+            )
+        )
+    );
+}
 
 // parse lines
 static mut _lineIndex:   usize                    = 0;
@@ -853,21 +770,12 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
     if unsafe{_debugMode} {
         logSeparator(" > AST interpretation");
     }
-    // create main method, without name
-    let mainMethodLink = 
-        Arc::new(
-        RwLock::new(
-            Method::new(
-                String::from("main"),
-                tokenizerLinesLinks.clone(),
-                None,
-            )
-        ));
     // argc & argv
     {
-        let mut mainMethod = mainMethodLink.write().unwrap();
+        let mut main = _main.write().unwrap();
+        main.lines = tokenizerLinesLinks.clone();
         // argc
-        mainMethod.pushMemoryCell(
+        main.pushMemoryCell(
             MemoryCell::new(
                 String::from("argc"),
                 MemoryCellMode::LockedFinal,
@@ -884,7 +792,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
                 Token::new(TokenType::String, String::from(a))
             );
         }
-        mainMethod.pushMemoryCell(
+        main.pushMemoryCell(
             MemoryCell::new(
                 String::from("argv"),
                 MemoryCellMode::LockedFinal,
@@ -893,10 +801,9 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) {
             )
         );
     }
-    _methods.push(mainMethodLink);
 
     _linesLength = tokenizerLinesLinks.len();
-    readLines(_methods[0].clone(), &mut _lineIndex, &mut _linesLength);
+    readLines(_main.clone(), &mut _lineIndex, &mut _linesLength);
     // duration
     if unsafe{_debugMode} {
         let endTime  = Instant::now();
@@ -908,9 +815,9 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: &mut usize, 
     while _exitCode == false && *lineIndex < *linesLength {
         let lineLink: Arc<RwLock<Line>>;
         {
-            let     method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+            let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
             lineLink = method.lines[*lineIndex].clone();
-            let line: RwLockReadGuard<'_, Line>   = lineLink.read().unwrap();
+            let   line: RwLockReadGuard<'_, Line>   = lineLink.read().unwrap();
             // check tokens in line
             if line.tokens.len() == 0 {
                 *lineIndex += 1;
@@ -918,43 +825,31 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: &mut usize, 
             }
         }
         {
-            // search conditions
-            if !searchCondition(lineLink, methodLink.clone()) {
-                // search methods calls
-                if !searchMethodCall(*lineIndex, methodLink.clone()) {
-                // search memory cells
-                    searchMemoryCell(*lineIndex, methodLink.clone());
-                }
-            }
-            //
-        }
 /*
         // save line now for logger
         // todo: delete its pls
         replaceSavedLine( method.lines[*lineIndex].clone() );
-
-        // search conditions
-//        if !searchCondition(lines, *lineIndex, linesLength, methodLink, mcl) {
-            line = &mut method.lines[*lineIndex];
-//            searchMemoryCell(line, methodLink.clone());
-//        }
 */
-        /*
-        // search conditions
-        if !searchCondition(methodLink.clone(), lines, *lineIndex, linesLength, mcl) {
-            line = &mut lines[*lineIndex]; // set editable line
-        // search methods
-            if !searchMethod(line) {
-        // search methods calls
-                if !searchMethodCall(line, mcl) {
-        // search memory cells
-                    searchMemoryCell(line, methodLink.clone(), mcl);
+            // search conditions
+            if !searchCondition(lineLink.clone(), methodLink.clone()) {
+                // search methods
+                if !searchMethod(lineLink.clone(), methodLink.clone()) {
+                    // search return
+                    if !searchReturn(lineLink.clone(), methodLink.clone()) {
+                        // search methods calls
+                        let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+                        if !method.methodCall(lineLink.clone()) {
+                            // search memory cells
+                            searchMemoryCell(lineLink, methodLink.clone());
+                        }
+                    }
                 }
             }
+//            println!("E");
+            //
         }
-        */
-        {
-            let mut method = methodLink.write().unwrap();
+        { // todo: rewrite this part
+            let mut method = methodLink.read().unwrap();
             if method.lines.len() < *linesLength {
                 *linesLength = method.lines.len();
             } else {

@@ -132,7 +132,9 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
                 b'\0'
             };
 
-        if isLetter(__byte1) || (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) {
+        if isLetter(__byte1) || 
+           (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) ||
+           (isDigit(__byte1) && !__result.is_empty()) {
             __result.push(__byte1 as char);
             __index += 1;
         } else {
@@ -147,11 +149,6 @@ unsafe fn getWord(buffer: &[u8]) -> Token {
 
     // next return
     match &__result[..] {
-        "Int"      => Token::newEmpty(TokenType::Int),
-        "UInt"     => Token::newEmpty(TokenType::UInt),
-        "Float"    => Token::newEmpty(TokenType::Float),
-        "UFloat"   => Token::newEmpty(TokenType::UFloat),
-        "Rational" => Token::newEmpty(TokenType::Rational),
         "true"     => Token::new(TokenType::Bool, String::from("1")),
         "false"    => Token::new(TokenType::Bool, String::from("0")),
         "loop"     => Token::newEmpty(TokenType::Loop),

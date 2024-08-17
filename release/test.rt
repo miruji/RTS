@@ -1,36 +1,31 @@
 
-i = 0 # 0-9 counter
-c = 0 # main cycles counter
-? i < 10
-  exec("sleep 0.001")
-  
-  s = "" # hex color
-  l = 0  # color cycle
-  ? l < 6
-    a = randUInt(0,15)
-    ? a = 10
-      a = 'a'
-    ? a = 11
-      a = 'b'
-    ? a = 12
-      a = 'c'
-    ? a = 13
-      a = 'd'
-    ? a = 14
-      a = 'e'
-    ? a = 15
-      a = 'f'
-    s += a
-    l += 1
+# get random hex color
+getHex -> UInt
+  result = "#" # hex color
+  i = 0        # color cycle
+  ? i < 6
+    rand = randUInt(0,15)
+    ? rand = 10
+      rand = 'a'
+    ? rand = 11
+      rand = 'b'
+    ? rand = 12
+      rand = 'c'
+    ? rand = 13
+      rand = 'd'
+    ? rand = 14
+      rand = 'e'
+    ? rand = 15
+      rand = 'f'
+    result += rand
+    i += 1
     go(1)
-  # print and go next char
-  print(f"\bg(#{s}) \c ")
-  i += 1
-  ? i >= 10
-    ? c < 256
-      i = 0
-      c += 1
-  
-  go(1)
+  = result
 
-println()
+a = getHex()
+println(f"{a}:{type(a)}")
+b = getHex()
+println(f"{b}:{type(b)}")
+c = getHex()
+println(f"{c}:{type(c)}")
+println(f"{a} {b} {c}")

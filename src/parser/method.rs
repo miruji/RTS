@@ -4,6 +4,7 @@
 
 use crate::logger::*;
 use crate::_filePath;
+use crate::_exitCode;
 
 use crate::tokenizer::line::*;
 use crate::tokenizer::token::*;
@@ -12,10 +13,13 @@ use crate::parser::memoryCellList::*;
 use crate::parser::memoryCell::*;
 
 use crate::parser::readTokens;
+use crate::parser::readLines;
+use crate::parser::searchCondition;
 
 use std::{io, io::Write};
+use std::process::Command;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use rand::Rng;
 
@@ -26,8 +30,7 @@ pub struct Method {
                                                        // todo: Option
     pub parameters:     Vec<Token>,                    // parameters
                                                        // todo: Option< Arc<RwLock<Token>> >
-    pub resultType:     String,                        // result type
-                                                       // todo: Option
+    pub result:         Option<Token>,                 // result type
         // if result type = None, => procedure
         // else => function
     pub memoryCellList: Arc<RwLock<MemoryCellList>>,   // todo: option< Arc<RwLock<MemoryCellList>> > ?
@@ -44,10 +47,28 @@ impl Method {
             name,
             lines,
             parameters:     Vec::new(),
-            resultType:     String::from("None"),
+            result:         None,
             memoryCellList: Arc::new(RwLock::new(MemoryCellList::new())),
             methods:        Vec::new(),
             parent
+        }
+    }
+
+    // get method by name
+    pub fn getMethodByName(&self, name: &str) -> Option<Arc<RwLock<Method>>> {
+        for childMethodLink in &self.methods {
+            let childMethod = childMethodLink.read().unwrap();
+            if name == childMethod.name {
+                return Some(childMethodLink.clone());
+            }
+        }
+
+        // Check the parent method if it exists
+        if let Some(parentLink) = &self.parent {
+            let parentMethod = parentLink.read().unwrap();
+            parentMethod.getMethodByName(name)
+        } else {
+            None
         }
     }
 
@@ -203,12 +224,11 @@ impl Method {
                         if value[i+1].tokens.len() > 0 {
                             value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
                             value[i].dataType = TokenType::Int;
+                            value.remove(i+1);
                         } else {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
                         }
-
-                        value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
@@ -217,12 +237,11 @@ impl Method {
                             value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
                             value[i].data = (value[i].data.parse::<u8>().unwrap() as char).to_string();
                             value[i].dataType = TokenType::Char;
+                            value.remove(i+1);
                         } else {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
                         }
-
-                        value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
@@ -230,12 +249,11 @@ impl Method {
                         if value[i+1].tokens.len() > 0 {
                             value[i] = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1);
                             value[i].dataType = TokenType::String;
+                            value.remove(i+1);
                         } else {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
                         }
-
-                        value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
@@ -243,12 +261,11 @@ impl Method {
                         if value[i+1].tokens.len() > 0 {
                             value[i].data = self.memoryCellExpression(&mut value[i+1].tokens.clone(),indent+1).dataType.to_string();
                             value[i].dataType = TokenType::String;
+                            value.remove(i+1);
                         } else {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
                         }
-
-                        value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else
@@ -259,6 +276,7 @@ impl Method {
                                 print!("{}",inputTextToken.data);
                                 io::stdout().flush().unwrap();
                             }
+                            value.remove(i+1);
                         } else {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
@@ -269,14 +287,13 @@ impl Method {
                         value[i].data = value[i].data.trim_end().to_string();
                         value[i].dataType = TokenType::String;
 
-                        value.remove(i+1);
                         valueLength -= 1;
                         continue;
                     } else 
                     if functionName == "randUInt" {
                         // get expressions
                         let mut expressions: Vec<Token> = Vec::new();
-                        {
+                        if value[i+1].tokens.len() > 0 {
                             let mut expressionsBuffer: Vec<Vec<Token>> = Vec::new();
                             {
                                 let mut l = 0;
@@ -303,6 +320,7 @@ impl Method {
                                     self.memoryCellExpression(&mut expression,indent+1)
                                 );
                             }
+                            value.remove(i+1);
                         }
                         // todo: check errors
                         if expressions.len() == 2 {
@@ -317,6 +335,29 @@ impl Method {
                             value[i].data     = String::new();
                             value[i].dataType = TokenType::None;
                         }
+
+                        valueLength -= 1;
+                        continue;
+                    } else {
+                        let mut lineBuffer = Line::newEmpty();
+                        lineBuffer.tokens = value.clone();
+                        unsafe{ self.methodCall( Arc::new(RwLock::new(lineBuffer)) ); }
+
+                        // todo: rewrite
+                        if let Some(methodLink) = self.getMethodByName(&value[0].data) {
+                            let method = methodLink.read().unwrap();
+                            if let Some(result) = &method.result {
+                                value[i].data     = result.data.clone();
+                                value[i].dataType = result.dataType.clone();
+                            } else {
+                                value[i].data     = String::new();
+                                value[i].dataType = TokenType::None;
+                            }
+                        } else {
+                            value[i].data     = String::new();
+                            value[i].dataType = TokenType::None;
+                        }
+
                         value.remove(i+1);
                         valueLength -= 1;
                         continue;
@@ -433,6 +474,119 @@ impl Method {
         } else {
             Token::newEmpty(TokenType::None)
         }
+    }
+
+    /* search methods call
+       e:
+         methodCall(parameters)
+    */
+    pub unsafe fn methodCall(&self, lineLink: Arc<RwLock<Line>>) -> bool {
+    //    println!("  searchMethodCall");
+        let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
+
+        let mut expressionValue: Vec<Token>;
+        let mut result: bool;
+
+        let mut token: &Token = &line.tokens[0];
+        if line.tokens[0].dataType == TokenType::Word {
+            // add method call
+            if line.tokens.len() > 1 && line.tokens[1].dataType == TokenType::CircleBracketBegin {
+                // check lower first char
+                if token.data.starts_with(|c: char| c.is_lowercase()) {
+                    expressionValue = line.tokens[1].tokens.clone();
+                    // todo: multi-param
+                    // basic methods
+                    result = true;
+                    {
+                        // go block up
+                        if token.data == "go" {
+                            if let Some(parentLink) = &line.parent {
+                                let parent = parentLink.read().unwrap();
+                                if let Some(methodParent) = &self.parent {
+                                    searchCondition(parentLink.clone(), methodParent.clone());
+                                }
+                            }
+                        } else
+                        // exit block up
+                        if token.data == "ex" {
+                            println!("ex");
+                        } else
+                        // println
+                        if token.data == "println" {
+                            println!("{}",
+                                formatPrint(
+                                    &self.memoryCellExpression(
+                                        &mut expressionValue,
+                                        0
+                                    ).data
+                                )
+                            );
+                        } else 
+                        // print
+                        if token.data == "print" {
+                            print!("{}",
+                                formatPrint(
+                                    &self.memoryCellExpression(
+                                        &mut expressionValue,
+                                        0
+                                    ).data
+                                )
+                            );
+                        } else 
+                        // exec
+                        if token.data == "exec" {
+                            io::stdout().flush().unwrap(); // forced withdrawal of old
+                            let expression: String = self.memoryCellExpression(&mut expressionValue,0).data;
+                            let mut parts = expression.split_whitespace();
+                            let commandStr = parts.next().expect("No command found in expression");
+                            let args: Vec<&str> = parts.collect();
+                            let commandOutput = 
+                                Command::new(commandStr)
+                                    .args(&args)
+                                    .output()
+                                    .expect("failed to execute process");
+                            let outputStr = String::from_utf8_lossy(&commandOutput.stdout);
+                            if !outputStr.is_empty() {
+                                print!("{}", outputStr);
+                            }
+                        } else 
+                        // exit
+                        if token.data == "exit" {
+                            _exitCode = true;
+                        // custom method
+                        } else {
+                            result = false;
+                        }
+                    };
+                    // custom methods
+                    if !result {
+                        if let Some(calledMethodLink) = self.getMethodByName(&token.data) {
+                            let mut linesLengthBuffer: usize = 0;
+                            let mut   lineIndexBuffer: usize = 0;
+                            {
+                                let calledMethod = calledMethodLink.read().unwrap();
+                                linesLengthBuffer = calledMethod.lines.len();
+                            }
+                            readLines(calledMethodLink.clone(), &mut lineIndexBuffer, &mut linesLengthBuffer);
+                            return true;
+                        }
+                    }
+                    return result;
+                } else {
+                // read error
+                    log("syntax","");
+                    log("path",&format!(
+                        "{} -> Word \"{}\"",
+                        &*_filePath,
+                        token.data
+                    ));
+                    Line::outputTokens( &getSavedLine() );
+                    log("note","Method calls and variable names must begin with a lower char");
+                    logExit();
+                }
+            }
+        }
+        return false;
     }
 }
 /*

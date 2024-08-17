@@ -25,13 +25,12 @@ impl MemoryCellList {
 }
 
 // get memory cell by name
-pub fn getMemoryCellByName(mcl: Arc<RwLock<MemoryCellList>>, name: &str) -> Option<Arc<RwLock<MemoryCell>>> {
-    let mcl2 = mcl.read().unwrap();
-    for memoryCell in &mcl2.value {
-        let mc = memoryCell.read().unwrap();
-        if name == mc.name {
-//            println!("    ! searched [{}]", name);
-            return Some(Arc::clone(memoryCell));
+pub fn getMemoryCellByName(memoryCellListLink: Arc<RwLock<MemoryCellList>>, name: &str) -> Option<Arc<RwLock<MemoryCell>>> {
+    let memoryCellList = memoryCellListLink.read().unwrap();
+    for memoryCellLink in &memoryCellList.value {
+        let memoryCell = memoryCellLink.read().unwrap();
+        if name == memoryCell.name {
+            return Some(memoryCellLink.clone());
         }
     }
     None
