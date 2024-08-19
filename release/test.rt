@@ -1,23 +1,29 @@
 
-# get random hex color
+# get hex char
+getHexChar -> char
+  rand = randUInt(0,randUInt(0,24))
+  ? rand = 10
+    rand = 'a'
+  ? rand = 11
+    rand = 'b'
+  ? rand = 12
+    rand = 'c'
+  ? rand = 13
+    rand = 'd'
+  ? rand = 14
+    rand = 'e'
+  ? rand >= 15
+    rand = 'f'
+  ? rand >= 16
+    rand = '0'
+  = rand
+
+# get random string of hex color
 getHex -> String
   result = "#" # hex color
   l = 0        # color cycle
   ? l < 6
-    rand = randUInt(0,randUInt(5,15))
-    ? rand = 10
-      rand = 'a'
-    ? rand = 11
-      rand = 'b'
-    ? rand = 12
-      rand = 'c'
-    ? rand = 13
-      rand = 'd'
-    ? rand = 14
-      rand = 'e'
-    ? rand = 15
-      rand = 'f'
-    result += rand
+    result += str( getHexChar() )
     l += 1
     go(1)
   = result
@@ -26,7 +32,7 @@ getHex -> String
 getSpaces -> String
   l = 0
   result = ""
-  ? l < randUInt(0,100)
+  ? l < randUInt(0,5)
     l += 1
     result += " "
     go(1)
@@ -38,12 +44,11 @@ write
   c = 0 # main cycles counter
   ? i < 10
     # sleep
-    sleep(10)
+    sleep(1)
     # print and go next char
-    print(f"\bg({getHex()}){c}{getSpaces()}\c")
+    print(f"\bg({getHex()})\fg({getHex()}){c}{getSpaces()}\c{getSpaces()}")
     i += 1
     ? i >= 10
-      ? c < 300
       ? c < 256
         i = 0
         c += 1

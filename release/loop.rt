@@ -1,20 +1,26 @@
 #
   loop
-
+  
   kinds and declarate:
-    loop         = while true
-      next lines
-
-    loop true    = while true
-      next lines
-
-    loop a = 10  = while a = 10
-      next lines
-
-    loop a = 10; a < 10; i++
-      next lines
-    ** to:do: rework "for" syntax
+  ?
+    next lines
+    go(1)
+  
+  ? true
+    next lines
+    go(1)
+  
+  ? a = 10
+    next lines
+    go(1)
+  
+  ? a = 10, a < 10, i++
+    next lines
 
 a = [10,20,30] # final Array
-loop l in a    # loop l -> a
-  println(l)   # println l
+l = 0
+? l < 3           # loop l -> a
+  print(f"{l}: ")
+  println(a[l])   # println a[l]
+  l += 1
+  go(1)

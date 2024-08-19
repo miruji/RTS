@@ -128,11 +128,22 @@ impl Method {
         if let Some(memoryCellLink) = self.getMemoryCellByName(&value[index].data) {
             let memoryCell = memoryCellLink.read().unwrap();
             if index+1 < *length && value[index+1].dataType == TokenType::SquareBracketBegin {
-                let arrayIndex: usize = value[index+1].tokens[0].data.parse::<usize>().unwrap();
+                let arrayIndex = // todo: rewrite if no UInt type ...
+                    self.memoryCellExpression(&mut value[index+1].tokens,0).data.parse::<usize>();
                 value.remove(index+1);
                 *length -= 1;
-                value[index].data     = memoryCell.value.tokens[arrayIndex].data.clone();
-                value[index].dataType = memoryCell.value.tokens[arrayIndex].dataType.clone();
+                match arrayIndex {
+                    Ok(idx) => {
+
+                        value[index].data     = memoryCell.value.tokens[idx].data.clone();
+                        value[index].dataType = memoryCell.value.tokens[idx].dataType.clone();
+                    }
+                    Err(_) => {
+                        // Обработка ошибки парсинга
+                        value[index].data     = String::new();
+                        value[index].dataType = TokenType::None;
+                    }
+                }
             } else {
                 value[index].data     = memoryCell.value.data.clone();
                 value[index].dataType = memoryCell.value.dataType.clone();
