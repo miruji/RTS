@@ -32,306 +32,372 @@ static mut __tokenType: &mut TokenType = &mut TokenType::None; // TokenType buff
 static mut __brackets:  Vec::<usize> = Vec::new();             // brackets  buffer
 
 // delete comment
-unsafe fn deleteComment(buffer: &[u8]) {
+unsafe fn deleteComment(buffer: &[u8]) 
+{
+  _index += 1;
+  _indexCount += 2;
+  
+  _lineTokens.push( Token::newEmpty(TokenType::Comment) );
+  while _index < _bufferLength && buffer[_index] != b'\n' 
+  {
     _index += 1;
-    _indexCount += 2;
-    
-    _lineTokens.push( Token::newEmpty(TokenType::Comment) );
-    while _index < _bufferLength && buffer[_index] != b'\n' {
-        _index += 1;
-        _indexCount += 1;
-    }
+    _indexCount += 1;
+  }
 }
+
 // get single char token
-fn isSingleChar(c: u8) -> bool {
-    match c {
-        b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
-        b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
-        b'(' | b')' | b'{' | b'}' | b'[' | b']' | 
-        b':' | b',' | b'.' | b'~' => true,
-        _ => false,
-    }
+fn isSingleChar(c: u8) -> bool 
+{
+  match c 
+  {
+    b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
+    b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
+    b'(' | b')' | b'{' | b'}' | b'[' | b']' | 
+    b':' | b',' | b'.' | b'~' => true,
+    _ => false,
+  }
+}
+
+// is digit ?
+fn isDigit(c: u8) -> bool 
+{
+  c >= b'0' && c <= b'9'
 }
 // get int-float token by buffer-index
-fn isDigit(c: u8) -> bool {
-    c >= b'0' && c <= b'9'
+unsafe fn getNumber(buffer: &[u8]) -> Token 
+{
+  __index = _index; // index buffer
+  __result = String::new();
+
+  __bool1 = false; // dot check
+  __bool2 = false; // negative check
+  __bool3 = false; // reational checl
+
+  while __index < _bufferLength 
+  {
+    __byte1 = buffer[__index]; // current char
+    __byte2 =                  // next char
+      if __index+1 < _bufferLength 
+      {
+        buffer[__index+1]
+      } else 
+      {
+        b'\0'
+      };
+
+    if !__bool2 && buffer[_index] == b'-' 
+    { // Int/Float flag
+      __result.push(__byte1 as char);
+      __bool2 = true;
+      __index += 1;
+    } else
+    if isDigit(__byte1) 
+    { // UInt
+      __result.push(__byte1 as char);
+      __index += 1;
+    } else 
+    if __byte1 == b'.' && !__bool1 && isDigit(__byte2) 
+    { // UFloat
+      if __bool3 
+      {
+          break;
+      }
+      __bool1 = true;
+      __result.push(__byte1 as char);
+      __index += 1;
+    } else
+    if __byte1 == b'/' && __byte2 == b'/' && !__bool1 && 
+       (__index+2 < _bufferLength && isDigit(buffer[__index+2])) 
+    { // Rational
+      __bool3 = true;
+      __result.push('/');
+      __result.push('/');
+      __index += 2;
+    } else 
+    {
+      break;
+    }
+  }
+
+  if !__result.is_empty() 
+  {
+    _index = __index;
+    _indexCount += __result.len();
+  }
+
+  match (__bool3, __bool1, __bool2) 
+  { //   rational,  dot,  negative
+    (true, _, _)     => Token::new(TokenType::Rational, __result.clone()),
+    (_, true, true)  => Token::new(TokenType::Float,    __result.clone()),
+    (_, true, false) => Token::new(TokenType::UFloat,   __result.clone()),
+    (_, false, true) => Token::new(TokenType::Int,      __result.clone()),
+    _                => Token::new(TokenType::UInt,     __result.clone()),
+  }
 }
-unsafe fn getNumber(buffer: &[u8]) -> Token {
-    __index = _index; // index buffer
-    __result = String::new();
 
-    __bool1 = false; // dot check
-    __bool2 = false; // negative check
-    __bool3 = false; // reational checl
-
-    while __index < _bufferLength {
-        __byte1 = buffer[__index]; // current char
-        __byte2 =                  // next char
-            if __index+1 < _bufferLength {
-                buffer[__index+1]
-            } else {
-                b'\0'
-            };
-
-        if !__bool2 && buffer[_index] == b'-' {
-            __result.push(__byte1 as char);
-            __bool2 = true;
-            __index += 1;
-        } else
-        if isDigit(__byte1) {
-            __result.push(__byte1 as char);
-            __index += 1;
-        } else 
-        if __byte1 == b'.' && !__bool1 && isDigit(__byte2) {
-            if __bool3 { // Rational number use Int-UInt/Int-UInt
-                break;
-            }
-            __bool1 = true;
-            __result.push(__byte1 as char);
-            __index += 1;
-        } else
-        if __byte1 == b'/' && __byte2 == b'/' && !__bool1 && 
-           (__index+2 < _bufferLength && isDigit(buffer[__index+2])) {
-            __bool3 = true;
-            __result.push('/');
-            __result.push('/');
-            __index += 2;
-        } else {
-            break;
-        }
-    }
-
-    if !__result.is_empty() {
-        _index = __index;
-        _indexCount += __result.len();
-    }
-
-    match (__bool3, __bool1, __bool2) { // rational, dot, negative
-        (true, _, _)     => Token::new(TokenType::Rational, __result.clone()),
-        (_, true, true)  => Token::new(TokenType::Float,    __result.clone()),
-        (_, true, false) => Token::new(TokenType::UFloat,   __result.clone()),
-        (_, false, true) => Token::new(TokenType::Int,      __result.clone()),
-        _                => Token::new(TokenType::UInt,     __result.clone()),
-    }
+// is letter ?
+fn isLetter(c: u8) -> bool 
+{
+  (c >= b'a' && c <= b'z') ||
+  (c >= b'A' && c <= b'Z')
 }
 // get word token by buffer-index
-fn isLetter(c: u8) -> bool {
-    (c >= b'a' && c <= b'z') ||
-    (c >= b'A' && c <= b'Z')
-}
-unsafe fn getWord(buffer: &[u8]) -> Token {
-    __index = _index;
-    __result = String::new();
+unsafe fn getWord(buffer: &[u8]) -> Token 
+{
+  __index = _index;
+  __result = String::new();
 
-    while __index < _bufferLength {
-        __byte1 = buffer[__index]; // current char
-        __byte2 =                  // next char
-            if __index+1 < _bufferLength {
-                buffer[__index+1]
-            } else {
-                b'\0'
-            };
-
-        if isLetter(__byte1) || 
-           (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) ||
-           (isDigit(__byte1) && !__result.is_empty()) {
-            __result.push(__byte1 as char);
-            __index += 1;
-        } else {
-            break;
-        }
-    }
-
-    if !__result.is_empty() {
-        _index = __index;
-        _indexCount += __result.len();
-    }
-
-    // next return
-    match &__result[..] {
-        "true"     => Token::new(TokenType::Bool, String::from("1")),
-        "false"    => Token::new(TokenType::Bool, String::from("0")),
-        "loop"     => Token::newEmpty(TokenType::Loop),
-        _          => Token::new(TokenType::Word, __result.clone()),
-    }
-}
-// get quotes token by buffer-index
-unsafe fn getQuotes(buffer: &[u8]) -> Token {
-    __byte1 = buffer[_index]; // quote
-
-    __length = buffer.len();
-    __result = String::new();
-
-    if buffer[_index] == __byte1 {
-        let mut open:             bool = false;
-        let mut noSlash:          bool;
-        let mut backslashCounter: usize;
-
-        while _index < __length {
-            __byte2 = buffer[_index]; // current char
-
-            // check endline error
-            if __byte2 == b'\n' {
-                // quotes were not closed
-                // skipped it!
-                return Token::newEmpty(TokenType::None);
-            }
-
-            // read quote
-            if __byte2 != __byte1 {
-                __result.push(__byte2 as char);
-            } else
-            if __byte2 == __byte1 {
-                noSlash = true;
-                // check back slash of end quote
-                if buffer[_index-1] == b'\\' {
-                    backslashCounter = 1;
-                    for i in (0.._index-1).rev() {
-                        if buffer[i] == b'\\' {
-                            backslashCounter += 1;
-                        } else {
-                            break;
-                        }
-                    }
-                    if backslashCounter % 2 == 1 {
-                        // add slash (\' \" \`)
-                        __result.push(__byte2 as char);
-                        noSlash = false;
-                    }
-                }
-                //
-                if open && noSlash {
-                    _index += 1;
-                    _indexCount += 1;
-                    break;
-                } else {
-                    open = true;
-                }
-            }
-            _index += 1;
-            _indexCount += 1;
-        }
-    }
-    // next return
-    if __byte1 == b'\'' {
-        return if __result.len() > 1 {
-            // single quotes can only contain 1 character
-            // skipped it!
-            Token::newEmpty(TokenType::None)
-        } else {
-            Token::new(TokenType::Char, __result.clone())
-        }
-    } else if __byte1 == b'"' {
-        Token::new(TokenType::String, __result.clone())
-    } else if __byte1 == b'`' {
-        Token::new(TokenType::RawString, __result.clone())
-    } else {
-        Token::newEmpty(TokenType::None)
-    }
-}
-// get operator token by buffer-index
-unsafe fn getOperator(buffer: &[u8]) -> Token {
-    let currentChar = buffer[_index];
-    let nextChar = 
-        if _index+1<_bufferLength { 
-            buffer[_index+1]
-        } else { 
-            b'\0'
+  while __index < _bufferLength 
+  {
+    __byte1 = buffer[__index]; // current char
+    __byte2 =                  // next char
+        if __index+1 < _bufferLength 
+        {
+          buffer[__index+1]
+        } else 
+        {
+          b'\0'
         };
 
-    let increment = |count: usize| {
-        _index      += count;
-        _indexCount += count;
+    if isLetter(__byte1) || 
+       (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) ||
+       (isDigit(__byte1) && !__result.is_empty()) 
+    {
+      __result.push(__byte1 as char);
+      __index += 1;
+    } else 
+    {
+      break;
+    }
+  }
+
+  if !__result.is_empty() 
+  {
+    _index = __index;
+    _indexCount += __result.len();
+  }
+
+  // next return
+  match &__result[..] 
+  {
+    "true"     => Token::new(TokenType::Bool, String::from("1")),
+    "false"    => Token::new(TokenType::Bool, String::from("0")),
+    "loop"     => Token::newEmpty(TokenType::Loop),
+    _          => Token::new(TokenType::Word, __result.clone()),
+  }
+}
+
+// get quotes token by buffer-index
+unsafe fn getQuotes(buffer: &[u8]) -> Token 
+{
+  __byte1 = buffer[_index]; // quote
+
+  __length = buffer.len();
+  __result = String::new();
+
+  if buffer[_index] == __byte1 
+  {
+    let mut open:             bool = false;
+    let mut noSlash:          bool;
+    let mut backslashCounter: usize;
+
+    while _index < __length 
+    {
+      __byte2 = buffer[_index]; // current char
+
+      // check endline error
+      if __byte2 == b'\n' 
+      {
+        // quotes were not closed
+        // skipped it!
+        return Token::newEmpty(TokenType::None);
+      }
+
+      // read quote
+      if __byte2 != __byte1 
+      {
+        __result.push(__byte2 as char);
+      } else
+      if __byte2 == __byte1 
+      {
+        noSlash = true;
+        // check back slash of end quote
+        if buffer[_index-1] == b'\\' 
+        {
+          backslashCounter = 1;
+          for i in (0.._index-1).rev() 
+          {
+            if buffer[i] == b'\\' 
+            {
+              backslashCounter += 1;
+            } else 
+            {
+              break;
+            }
+          }
+          if backslashCounter % 2 == 1 
+          {
+            // add slash (\' \" \`)
+            __result.push(__byte2 as char);
+            noSlash = false;
+          }
+        }
+        //
+        if open && noSlash 
+        {
+          _index += 1;
+          _indexCount += 1;
+          break;
+        } else 
+        {
+          open = true;
+        }
+      }
+      _index += 1;
+      _indexCount += 1;
+    }
+  }
+  // next return
+  if __byte1 == b'\'' 
+  {
+    return if __result.len() > 1 
+    {
+      // single quotes can only contain 1 character
+      // skipped it!
+      Token::newEmpty(TokenType::None)
+    } else 
+    {
+      Token::new(TokenType::Char, __result.clone())
+    }
+  } else if __byte1 == b'"' 
+  {
+    Token::new(TokenType::String, __result.clone())
+  } else if __byte1 == b'`' 
+  {
+    Token::new(TokenType::RawString, __result.clone())
+  } else 
+  {
+    Token::newEmpty(TokenType::None)
+  }
+}
+
+// get operator token by buffer-index
+unsafe fn getOperator(buffer: &[u8]) -> Token 
+{
+  let currentChar = buffer[_index];
+  let nextChar = 
+    if _index+1<_bufferLength 
+    { 
+      buffer[_index+1]
+    } else 
+    { 
+      b'\0'
     };
 
-    match currentChar {
-        b'+' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::PlusEquals) } 
-            else if nextChar == b'+' 
-                { increment(2); Token::newEmpty(TokenType::UnaryPlus) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Plus) }
-        }
-        b'-' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::MinusEquals) } 
-            else if nextChar == b'-' 
-                { increment(2); Token::newEmpty(TokenType::UnaryMinus) } 
-            else if nextChar == b'>' 
-                { increment(2); Token::newEmpty(TokenType::Pointer) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Minus) }
-        }
-        b'*' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::MultiplyEquals) } 
-            else if nextChar == b'*' 
-                { increment(2); Token::newEmpty(TokenType::UnaryMultiply) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Multiply) }
-        }
-        b'/' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::DivideEquals) } 
-            else if nextChar == b'/' 
-                { increment(2); Token::newEmpty(TokenType::UnaryDivide) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Divide) }
-        }
-        b'%' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
-            else if nextChar == b'%' 
-                { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
-            else 
-                { increment(1); Token::newEmpty(TokenType::Modulo) }
-        }
-        b'^' => {
-                 if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
-            else if nextChar == b'^' 
-                { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
-            else 
-                { increment(1); Token::newEmpty(TokenType::Disjoint) }
-        }
-        b'>' => {
-            if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::GreaterThanOrEquals) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::GreaterThan) }
-        }
-        b'<' => {
-            if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::LessThanOrEquals) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::LessThan) }
-        }
-        b'!' => {
-            if nextChar == b'=' 
-                { increment(2); Token::newEmpty(TokenType::NotEquals) } 
-            else 
-                { increment(1); Token::newEmpty(TokenType::Exclusion) }
-        }
-        b'&' => { increment(1); Token::newEmpty(TokenType::Joint) }
-        b'|' => { increment(1); Token::newEmpty(TokenType::Inclusion) }
-        b'=' => { increment(1); Token::newEmpty(TokenType::Equals) }
-        // brackets
-        b'(' => { increment(1); Token::newEmpty(TokenType::CircleBracketBegin) }
-        b')' => { increment(1); Token::newEmpty(TokenType::CircleBracketEnd) }
-        b'{' => { increment(1); Token::newEmpty(TokenType::FigureBracketBegin) }
-        b'}' => { increment(1); Token::newEmpty(TokenType::FigureBracketEnd) }
-        b'[' => { increment(1); Token::newEmpty(TokenType::SquareBracketBegin) }
-        b']' => { increment(1); Token::newEmpty(TokenType::SquareBracketEnd) }
-        // other
-        b';' => { increment(1); Token::newEmpty(TokenType::Endline) }
-        b':' => { increment(1); Token::newEmpty(TokenType::Colon) }
-        b',' => { increment(1); Token::newEmpty(TokenType::Comma) }
-        b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
-        b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
-        b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
-        _ => Token::new(TokenType::None, String::new()),
+  let increment = |count: usize| 
+  {
+    _index      += count;
+    _indexCount += count;
+  };
+
+  match currentChar 
+  {
+    b'+' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::PlusEquals) } 
+      else if nextChar == b'+' 
+        { increment(2); Token::newEmpty(TokenType::UnaryPlus) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::Plus) }
     }
+    b'-' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::MinusEquals) } 
+      else if nextChar == b'-' 
+        { increment(2); Token::newEmpty(TokenType::UnaryMinus) } 
+      else if nextChar == b'>' 
+        { increment(2); Token::newEmpty(TokenType::Pointer) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::Minus) }
+    }
+    b'*' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::MultiplyEquals) } 
+      else if nextChar == b'*' 
+        { increment(2); Token::newEmpty(TokenType::UnaryMultiply) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::Multiply) }
+    }
+    b'/' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::DivideEquals) } 
+      else if nextChar == b'/' 
+        { increment(2); Token::newEmpty(TokenType::UnaryDivide) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::Divide) }
+    }
+    b'%' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+      else if nextChar == b'%' 
+        { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+      else 
+        { increment(1); Token::newEmpty(TokenType::Modulo) }
+    }
+    b'^' => 
+    {
+           if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+      else if nextChar == b'^' 
+        { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+      else 
+        { increment(1); Token::newEmpty(TokenType::Disjoint) }
+    }
+    b'>' => 
+    {
+      if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::GreaterThanOrEquals) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::GreaterThan) }
+    }
+    b'<' => 
+    {
+      if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::LessThanOrEquals) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::LessThan) }
+    }
+    b'!' => 
+    {
+      if nextChar == b'=' 
+        { increment(2); Token::newEmpty(TokenType::NotEquals) } 
+      else 
+        { increment(1); Token::newEmpty(TokenType::Exclusion) }
+    }
+    b'&' => { increment(1); Token::newEmpty(TokenType::Joint) }
+    b'|' => { increment(1); Token::newEmpty(TokenType::Inclusion) }
+    b'=' => { increment(1); Token::newEmpty(TokenType::Equals) }
+    // brackets
+    b'(' => { increment(1); Token::newEmpty(TokenType::CircleBracketBegin) }
+    b')' => { increment(1); Token::newEmpty(TokenType::CircleBracketEnd) }
+    b'{' => { increment(1); Token::newEmpty(TokenType::FigureBracketBegin) }
+    b'}' => { increment(1); Token::newEmpty(TokenType::FigureBracketEnd) }
+    b'[' => { increment(1); Token::newEmpty(TokenType::SquareBracketBegin) }
+    b']' => { increment(1); Token::newEmpty(TokenType::SquareBracketEnd) }
+    // other
+    b';' => { increment(1); Token::newEmpty(TokenType::Endline) }
+    b':' => { increment(1); Token::newEmpty(TokenType::Colon) }
+    b',' => { increment(1); Token::newEmpty(TokenType::Comma) }
+    b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
+    b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
+    b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
+    _ => Token::new(TokenType::None, String::new()),
+  }
 }
 
 // bracket nasting [begin bracket -> end bracket]
@@ -339,91 +405,107 @@ unsafe fn getOperator(buffer: &[u8]) -> Token {
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
-unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) {
-    for token in tokens.iter_mut() {
-        if token.tokens.len() > 0 {
-            bracketNesting(&mut token.tokens, beginType, endType);
-        }
+unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) 
+{
+  for token in tokens.iter_mut() 
+  {
+    if token.tokens.len() > 0 
+    {
+      bracketNesting(&mut token.tokens, beginType, endType);
     }
-    blockNesting(tokens, beginType, endType);
+  }
+  blockNesting(tokens, beginType, endType);
 }
 // block nasting [begin token -> end token]
-unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) {
-    __brackets = Vec::new();
-    __length = tokens.len();
+unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) 
+{
+  __brackets = Vec::new();
+  __length = tokens.len();
 
-    __index = 0; // index buffer
-    while __index < __length {
-        *__tokenType = tokens[__index].dataType.clone();
-        if __tokenType == beginType {
-            __brackets.push(__index);
-        } else if __tokenType == endType {
-            if let Some(penultBracket) = __brackets.pop() {
-                if !__brackets.is_empty() {
-                    __token = tokens[penultBracket].clone();
-                    tokens[ __brackets[__brackets.len()-1] ]
-                        .tokens.push( __token.clone() );
+  __index = 0; // index buffer
+  while __index < __length 
+  {
+    *__tokenType = tokens[__index].dataType.clone();
+    if __tokenType == beginType 
+    {
+      __brackets.push(__index);
+    } else if __tokenType == endType 
+    {
+      if let Some(penultBracket) = __brackets.pop() 
+      {
+        if !__brackets.is_empty() 
+        {
+          __token = tokens[penultBracket].clone();
+          tokens[ __brackets[__brackets.len()-1] ]
+            .tokens.push( __token.clone() );
 
-                    tokens.remove(penultBracket);
-                    __length -= 1;
+          tokens.remove(penultBracket);
+          __length -= 1;
 
-                    if penultBracket < __index {
-                        __index -= 1;
-                    }
-                }
-            }
-
-            tokens.remove(__index);
-            __length -= 1;
-            continue;
-        } else if !__brackets.is_empty() {
-            __token = tokens.remove(__index);
-            __length -= 1;
-
-            tokens[ __brackets[__brackets.len()-1] ]
-                .tokens.push( __token.clone() );
-            continue;
+          if penultBracket < __index 
+          {
+            __index -= 1;
+          }
         }
-        __index += 1;
+      }
+
+      tokens.remove(__index);
+      __length -= 1;
+      continue;
+    } else if !__brackets.is_empty() 
+    {
+      __token = tokens.remove(__index);
+      __length -= 1;
+
+      tokens[ __brackets[__brackets.len()-1] ]
+        .tokens.push( __token.clone() );
+      continue;
     }
+    __index += 1;
+  }
 }
 // line nesting [line -> line]
-fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
-    let mut index:     usize = 0;
-    let mut nextIndex: usize = 1;
-    let mut length:    usize = linesLinks.len();
+fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) 
+{
+  let mut index:     usize = 0;
+  let mut nextIndex: usize = 1;
+  let mut length:    usize = linesLinks.len();
 
-    while index < length {
-        if nextIndex < length {
-            let isNesting: bool = 
-                { // check current indent < next indent
-                    let currentLine: RwLockReadGuard<'_, Line> = linesLinks    [index].read().unwrap();
-                    let nextLine:    RwLockReadGuard<'_, Line> = linesLinks[nextIndex].read().unwrap();
-                    currentLine.indent < nextLine.indent
-                };
-            if isNesting {
-                // get next line and remove
-                let nestingLineLink = linesLinks.remove(nextIndex);
-                length -= 1;
-                { // set parent line link
-                    let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
-                    nestingLine.parent = Some( linesLinks[index].clone() );
-                    if let Some(parentLink) = &nestingLine.parent {
-                        let parent = parentLink.read().unwrap();
-                    }
-                }
-                // push nesting
-                let mut currentLine = linesLinks[index].write().unwrap();
-                currentLine.lines.push(nestingLineLink); // nesting
-                lineNesting(&mut currentLine.lines);     // cycle
-            } else {
-                index += 1; // next line < current line => skip
-                nextIndex = index+1;
-            }
-        } else {
-            break; // if no lines
+  while index < length 
+  {
+    if nextIndex < length 
+    {
+      let isNesting: bool = 
+        { // check current indent < next indent
+            let currentLine: RwLockReadGuard<'_, Line> = linesLinks    [index].read().unwrap();
+            let nextLine:    RwLockReadGuard<'_, Line> = linesLinks[nextIndex].read().unwrap();
+            currentLine.indent < nextLine.indent
+        };
+      if isNesting 
+      {
+        // get next line and remove
+        let nestingLineLink = linesLinks.remove(nextIndex);
+        length -= 1;
+        { // set parent line link
+          let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
+          nestingLine.parent = Some( linesLinks[index].clone() );
+          if let Some(parentLink) = &nestingLine.parent 
+          {
+              let parent = parentLink.read().unwrap();
+          }
         }
+        // push nesting
+        let mut currentLine = linesLinks[index].write().unwrap();
+        currentLine.lines.push(nestingLineLink); // nesting
+        lineNesting(&mut currentLine.lines);     // cycle
+      } else {
+        index += 1; // next line < current line => skip
+        nextIndex = index+1;
+      }
+    } else {
+      break; // if no lines
     }
+  }
 }
 // get new line nesting nums
 fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
@@ -437,137 +519,155 @@ fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
 }
 
 // delete DoubleComment
-unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) {
-    let mut linesLinksLength: usize = linesLinks.len();
-    let mut lastTokenIndex:   usize;
+unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) 
+{
+  let mut linesLinksLength: usize = linesLinks.len();
+  let mut lastTokenIndex:   usize;
 
-    while index < linesLinksLength {
-        let mut deleteLine: bool  = false;
-        'exit: { // interrupt
-            // get line and check lines len
-            let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
-            if !line.lines.is_empty() {
-                deleteDoubleComment(&mut line.lines, index);
-            }
-            // skip separator
-            if line.tokens.is_empty() {
-                break 'exit;
-            }
-            // ? delete comment
-            lastTokenIndex = line.tokens.len()-1;
-            if line.tokens[lastTokenIndex].dataType == TokenType::Comment {
-                line.tokens.remove(lastTokenIndex);
-                if line.tokens.is_empty() { // go to delete empty line
-                    deleteLine = true;      //
-                    break 'exit;            //
-                }
-            }
+  while index < linesLinksLength 
+  {
+    let mut deleteLine: bool  = false;
+    'exit: 
+    { // interrupt
+      // get line and check lines len
+      let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
+      if !line.lines.is_empty() 
+      {
+        deleteDoubleComment(&mut line.lines, index);
+      }
+      // skip separator
+      if line.tokens.is_empty() {
+        break 'exit;
+      }
+      // ? delete comment
+      lastTokenIndex = line.tokens.len()-1;
+      if line.tokens[lastTokenIndex].dataType == TokenType::Comment {
+        line.tokens.remove(lastTokenIndex);
+        if line.tokens.is_empty() { // go to delete empty line
+          deleteLine = true;        //
+          break 'exit;              //
         }
-        // after interrupt -> delete line
-        if deleteLine {
-            linesLinks.remove(index);
-            linesLinksLength -= 1;
-            continue;
-        }
-        // next
-        index += 1;
+      }
     }
+    // after interrupt -> delete line
+    if deleteLine 
+    {
+      linesLinks.remove(index);
+      linesLinksLength -= 1;
+      continue;
+    }
+    // next
+    index += 1;
+  }
 }
 
 // output token and its tokens
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) {
-    let lineIdentString: String = " ".repeat(lineIdent*2+1);
-    let identString:     String = " ".repeat(indent*2+1);
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) 
+{
+  let lineIdentString: String = " ".repeat(lineIdent*2+1);
+  let identString:     String = " ".repeat(indent*2+1);
 
-    let tokenCount: usize = tokens.len();
-    for (i, token) in tokens.iter().enumerate() {
-        __char = 
-            if i == tokenCount-1 {
-                'X'
-            } else {
-                '┃'
-            };
+  let tokenCount: usize = tokens.len();
+  for (i, token) in tokens.iter().enumerate() 
+  {
+    __char = 
+      if i == tokenCount-1 
+      {
+        'X'
+      } else 
+      {
+        '┃'
+      };
 
-        if !token.data.is_empty() {
-        // single quote
-            if token.dataType == TokenType::Char || token.dataType == TokenType::FormattedChar {
-                log("parserToken",&format!(
-                    "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
-                    lineIdentString,
-                    __char,
-                    identString,
-                    token.data,
-                    token.dataType.to_string()
-                ));
-        // double quote
-            } else
-            if token.dataType == TokenType::String || token.dataType == TokenType::FormattedString {
-                log("parserToken",&format!(
-                    "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
-                    lineIdentString,
-                    __char,
-                    identString,
-                    token.data,
-                    token.dataType.to_string()
-                ));
-        // back quote
-            } else
-            if token.dataType == TokenType::RawString || token.dataType == TokenType::FormattedRawString {
-                log("parserToken",&format!(
-                    "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
-                    lineIdentString,
-                    __char,
-                    identString,
-                    token.data,
-                    token.dataType.to_string()
-                ));
-        // basic
-            } else {
-                log("parserToken",&format!(
-                    "{}{}{}{}  |{}",
-                    lineIdentString,
-                    __char,
-                    identString,
-                    token.data,
-                    token.dataType.to_string()
-                ));
-            }
-        // type only
-        } else {
-            println!(
-                "{}{}{}{}",
-                lineIdentString,
-                __char,
-                identString,
-                token.dataType.to_string()
-            );
-        }
-        if (&token.tokens).len() > 0 {
-            outputTokens(&token.tokens, lineIdent, indent+1)
-        }
+    if !token.data.is_empty() 
+    {
+    // single quote
+      if token.dataType == TokenType::Char || token.dataType == TokenType::FormattedChar {
+        log("parserToken",&format!(
+          "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
+          lineIdentString,
+          __char,
+          identString,
+          token.data,
+          token.dataType.to_string()
+        ));
+    // double quote
+      } else
+      if token.dataType == TokenType::String || token.dataType == TokenType::FormattedString {
+        log("parserToken",&format!(
+          "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
+          lineIdentString,
+          __char,
+          identString,
+          token.data,
+          token.dataType.to_string()
+        ));
+    // back quote
+      } else
+      if token.dataType == TokenType::RawString || token.dataType == TokenType::FormattedRawString {
+        log("parserToken",&format!(
+          "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
+          lineIdentString,
+          __char,
+          identString,
+          token.data,
+          token.dataType.to_string()
+        ));
+    // basic
+      } else {
+        log("parserToken",&format!(
+          "{}{}{}{}  |{}",
+          lineIdentString,
+          __char,
+          identString,
+          token.data,
+          token.dataType.to_string()
+        ));
+      }
+    // type only
+    } else {
+      println!(
+        "{}{}{}{}",
+        lineIdentString,
+        __char,
+        identString,
+        token.dataType.to_string()
+      );
     }
+    if (&token.tokens).len() > 0 
+    {
+        outputTokens(&token.tokens, lineIdent, indent+1)
+    }
+    //
+  }
 }
 // output line info
-pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) {
-    let identStr1: String = " ".repeat(indent*2);
-    let identStr2: String = " ".repeat(indent*2+1);
+pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
+{
+  let identStr1: String = " ".repeat(indent*2);
+  let identStr2: String = " ".repeat(indent*2+1);
 
-    for (i, line) in linesLinks.iter().enumerate() {
-        let line = line.read().unwrap();
-        log("parserBegin", &format!("{}+{}",identStr1,i));
+  for (i, line) in linesLinks.iter().enumerate() 
+  {
+    let line = line.read().unwrap();
+    log("parserBegin", &format!("{} {}",identStr1,i));
 
-        if (&line.tokens).len() == 0 {
-            log("parserHeader", &format!("{}┗ Separator",identStr2));
-        } else {
-            log("parserHeader", &format!("{}┣ Tokens",identStr2));
-        }
-
-        outputTokens(&line.tokens, indent, 1);
-        if (&line.lines).len() > 0 {
-            log("parserHeader", &format!("{}┗ Lines",identStr2));
-            outputLines(&line.lines, indent+1);
-        }
+    if (&line.tokens).len() == 0 
+    {
+      log("parserHeader", &format!("{}┗ Separator",identStr2));
+    } else 
+    {
+      log("parserHeader", &format!("{}┣ Tokens",identStr2));
     }
+
+    outputTokens(&line.tokens, indent, 1);
+    if (&line.lines).len() > 0 
+    {
+      log("parserHeader", &format!("{}┗ Lines",identStr2));
+      outputLines(&line.lines, indent+1);
+    }
+  }
+  //
 }
 
 // tokens reader cycle
@@ -582,145 +682,167 @@ static mut _linesDeleted: usize = 0; // <- save deleted lines num for logger
 static mut _linesIdent: usize = 0;
 static mut _lineTokens: Vec<Token> = Vec::new();
 
-pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > {
-    if unsafe{debugMode} {
-        logSeparator(" > AST generation");
-    }
-    // hmm...
-    _index        = 0;
-    _bufferLength = buffer.len();
-    _linesCount   = 0;
-    _indexCount   = 0;
-    _linesDeleted = 0;
-    _linesIdent   = 0;
-    _lineTokens   = Vec::new();
-    // mmm...
-    // maybe, maybe
+pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
+{
+  if unsafe{debugMode} 
+  {
+    logSeparator("AST");
+    log("ok","+Generation");
+    println!("     ┃");
+  }
+  // hmm...
+  _index        = 0;
+  _bufferLength = buffer.len();
+  _linesCount   = 0;
+  _indexCount   = 0;
+  _linesDeleted = 0;
+  _linesIdent   = 0;
+  _lineTokens   = Vec::new();
+  // mmm...
+  // maybe, maybe
 
-    let startTime: Instant = Instant::now();
+  let startTime: Instant = Instant::now();
 
-    let mut linesLinks:    Vec< Arc<RwLock<Line>> > = Vec::new();
-    let mut readLineIdent: bool                     = true;
+  let mut linesLinks:    Vec< Arc<RwLock<Line>> > = Vec::new();
+  let mut readLineIdent: bool                     = true;
 
-    while _index < _bufferLength {
-        __byte1 = buffer[_index]; // current char
+  while _index < _bufferLength 
+  {
+    __byte1 = buffer[_index]; // current char
 
-        // indent
-        if __byte1 == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent {
-            _index += 2;
-            _indexCount += 2;
+    // indent
+    if __byte1 == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent 
+    {
+      _index += 2;
+      _indexCount += 2;
 
-            _linesIdent += 1;
-        } else {
-            readLineIdent = false;
-            // get endline
-            if __byte1 == b'\n' || __byte1 == b';' {
-                // bracket nesting
-                bracketNesting(
-                    &mut _lineTokens,
-                    &TokenType::CircleBracketBegin, 
-                    &TokenType::CircleBracketEnd
-                );
-                bracketNesting(
-                    &mut _lineTokens,
-                    &TokenType::SquareBracketBegin, 
-                    &TokenType::SquareBracketEnd
-                );
-                bracketNesting(
-                    &mut _lineTokens,
-                    &TokenType::FigureBracketBegin, 
-                    &TokenType::FigureBracketEnd
-                );
+      _linesIdent += 1;
+    } else 
+    {
+      readLineIdent = false;
+      // get endline
+      if __byte1 == b'\n' || __byte1 == b';' 
+      {
+        // bracket nesting
+        bracketNesting(
+          &mut _lineTokens,
+          &TokenType::CircleBracketBegin, 
+          &TokenType::CircleBracketEnd
+        );
+        bracketNesting(
+          &mut _lineTokens,
+          &TokenType::SquareBracketBegin, 
+          &TokenType::SquareBracketEnd
+        );
+        bracketNesting(
+          &mut _lineTokens,
+          &TokenType::FigureBracketBegin, 
+          &TokenType::FigureBracketEnd
+        );
 
-                // add new line
-                linesLinks.push( 
-                    Arc::new(RwLock::new( 
-                        Line {
-                            tokens:       _lineTokens.clone(),
-                            indent:       _linesIdent,
-                            index:        0,
-                            lines:        Vec::new(),
-                            linesDeleted: _linesDeleted+_linesCount,
-                            parent:       None
-                        }
-                    ))
-                );
-                _linesDeleted = 0;
-                _linesIdent = 0;
-
-                readLineIdent = true;
-                _lineTokens.clear();
-                _index += 1;
-
-                _linesCount += 1;
-                _indexCount = 0;
-            } else
-            // delete comment
-            if __byte1 == b'#' {
-                deleteComment(&buffer);
-            } else
-            // get int-float
-            if isDigit(__byte1) || (__byte1 == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) {
-                _lineTokens.push( getNumber(&buffer) );
-            } else
-            // get word
-            if isLetter(__byte1) {
-                _lineTokens.push( getWord(&buffer) );
-            } else
-            // get quotes ' " `
-            if __byte1 == b'\'' || __byte1 == b'"' || __byte1 == b'`' {
-                __token = getQuotes(&buffer);
-                if __token.dataType != TokenType::None {
-                    let backTokenIndex = _lineTokens.len()-1;
-                    // if formatted quotes
-                    if _lineTokens[backTokenIndex].dataType == TokenType::Word && _lineTokens[backTokenIndex].data == "f" {
-                        if __token.dataType == TokenType::RawString { __token.dataType = TokenType::FormattedRawString; } else
-                        if __token.dataType == TokenType::String    { __token.dataType = TokenType::FormattedString;    } else
-                        if __token.dataType == TokenType::Char      { __token.dataType = TokenType::FormattedChar;      }
-                        _lineTokens[backTokenIndex] = __token.clone(); // todo: remove copy please
-                    // basic quotes
-                    } else {
-                        _lineTokens.push(__token.clone()); // todo: remove copy please
-                    }
-                } else {
-                    _index += 1;
-                    _indexCount += 1;
-                }
-            } else
-            // get single and double chars
-            if isSingleChar(__byte1) {
-                __token = getOperator(&buffer);
-                if __token.dataType != TokenType::None {
-                    _lineTokens.push(__token.clone()); // todo: remove copy
-                } else {
-                    _index += 1;
-                    _indexCount += 1;
-                }
-                // skip
-            } else {
-                _index += 1;
-                _indexCount += 1;
+        // add new line
+        linesLinks.push( 
+          Arc::new(RwLock::new( 
+            Line {
+              tokens:       _lineTokens.clone(),
+              indent:       _linesIdent,
+              index:        0,
+              lines:        Vec::new(),
+              linesDeleted: _linesDeleted+_linesCount,
+              parent:       None
             }
+          ))
+        );
+        _linesDeleted = 0;
+        _linesIdent = 0;
+
+        readLineIdent = true;
+        _lineTokens.clear();
+        _index += 1;
+
+        _linesCount += 1;
+        _indexCount = 0;
+      } else
+      // delete comment
+      if __byte1 == b'#' 
+      {
+        deleteComment(&buffer);
+      } else
+      // get int-float
+      if isDigit(__byte1) || (__byte1 == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) 
+      {
+        _lineTokens.push( getNumber(&buffer) );
+      } else
+      // get word
+      if isLetter(__byte1) 
+      {
+        _lineTokens.push( getWord(&buffer) );
+      } else
+      // get quotes ' " `
+      if __byte1 == b'\'' || __byte1 == b'"' || __byte1 == b'`' 
+      {
+        __token = getQuotes(&buffer);
+        if __token.dataType != TokenType::None 
+        {
+          let backTokenIndex = _lineTokens.len()-1;
+          // if formatted quotes
+          if _lineTokens[backTokenIndex].dataType == TokenType::Word && _lineTokens[backTokenIndex].data == "f" 
+          {
+            if __token.dataType == TokenType::RawString { __token.dataType = TokenType::FormattedRawString; } else
+            if __token.dataType == TokenType::String    { __token.dataType = TokenType::FormattedString;    } else
+            if __token.dataType == TokenType::Char      { __token.dataType = TokenType::FormattedChar;      }
+            _lineTokens[backTokenIndex] = __token.clone(); // todo: remove copy please
+          // basic quotes
+          } else 
+          {
+            _lineTokens.push(__token.clone()); // todo: remove copy please
+          }
+        } else 
+        {
+          _index += 1;
+          _indexCount += 1;
         }
+      } else
+      // get single and double chars
+      if isSingleChar(__byte1) 
+      {
+        __token = getOperator(&buffer);
+        if __token.dataType != TokenType::None 
+        {
+            _lineTokens.push(__token.clone()); // todo: remove copy
+        } else 
+        {
+          _index += 1;
+          _indexCount += 1;
+        }
+          // skip
+      } else 
+      {
+        _index += 1;
+        _indexCount += 1;
+      }
     }
+  }
 
-    // line nesting
-    lineNesting(&mut linesLinks);
+  // line nesting
+  lineNesting(&mut linesLinks);
 
-    // delete DoubleComment
-    __index = 0;
-    deleteDoubleComment(&mut linesLinks, __index);
+  // delete DoubleComment
+  __index = 0;
+  deleteDoubleComment(&mut linesLinks, __index);
 
-    // debug output and return
-    if debugMode {
-        // duration
-        let endTime  = Instant::now();
-        let duration = endTime-startTime;
-        // lines
-        outputLines(&linesLinks,0);
-        //
-        logSeparator( &format!("?> Tokenizer duration: {:?}",duration) );
-    }
-    setLineNestingNums(&mut linesLinks); // set correct line nums
-    linesLinks
+  // debug output and return
+  if debugMode 
+  {
+    // duration
+    let endTime  = Instant::now();
+    let duration = endTime-startTime;
+    // lines
+    outputLines(&linesLinks,2);
+    //
+    println!("     ┃");
+    log("ok",&format!("xDuration: {:?}",duration));
+  }
+  setLineNestingNums(&mut linesLinks); // set correct line nums
+  linesLinks
 }
