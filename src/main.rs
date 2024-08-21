@@ -66,47 +66,47 @@ fn main() -> io::Result<()>
 
     for arg in input.iter().skip(1) // skip first arg
     { 
-        if arg.starts_with('-') 
-        { // read key
-            if let Some(key) = readBuffer.take() 
-            { // use `take` to get the current key
-                args.push((key, values.clone()));
-                values.clear();
-            }
-            readBuffer = Some(arg.clone());
-        } else if let Some(_) = readBuffer 
-        { // read values
-            values.push(arg.clone());
+      if arg.starts_with('-') 
+      { // read key
+        if let Some(key) = readBuffer.take() 
+        { // use `take` to get the current key
+          args.push((key, values.clone()));
+          values.clear();
         }
+        readBuffer = Some(arg.clone());
+      } else if let Some(_) = readBuffer 
+      { // read values
+        values.push(arg.clone());
+      }
     }
 
     if let Some(key) = readBuffer 
     { // set last key
-        args.push((key, values));
+      args.push((key, values));
     }
   }
 
   // debug mode on ?
   for (key, _) in &args 
   { // read keys
-      match key.as_str() 
-      {
-          "-v" => 
-          { // version
-              log("ok",&format!("RTS v{}",*_version));
-              logExit();
-          }
-          "-d" => 
-          { // debug mode
-              unsafe { _debugMode = true; }
-          }
-          _ => {}
+    match key.as_str() 
+    {
+      "-v" => 
+      { // version
+        log("ok",&format!("RTS v{}",*_version));
+        logExit();
       }
+      "-d" => 
+      { // debug mode
+        unsafe { _debugMode = true; }
+      }
+      _ => {}
+    }
   }
   if unsafe{_debugMode} 
   {
-      logSeparator("Arguments");
-      log("ok","Debug mode");
+    logSeparator("Arguments");
+    log("ok","Debug mode");
   }
 
   // read args
@@ -121,33 +121,33 @@ fn main() -> io::Result<()>
     {
       "-rf" => 
       { // run file
-          unsafe
-          {
-              _argc = valuesLength-1;
-              _argv = values.clone();
-              _argv.remove(0); // remove file name
-              _filePath = values[0].clone();
-          }
+        unsafe
+        {
+          _argc = valuesLength-1;
+          _argv = values.clone();
+          _argv.remove(0); // remove file name
+          _filePath = values[0].clone();
+        }
 
-          // todo: check filePath file type
-          noRun = false;
-          if unsafe{_debugMode} {
-              log("ok",&format!("Run [{}]",unsafe{&*_filePath}));
-          }
-          runFile = true;
+        // todo: check filePath file type
+        noRun = false;
+        if unsafe{_debugMode} {
+          log("ok",&format!("Run [{}]",unsafe{&*_filePath}));
+        }
+        runFile = true;
       } 
       "-rs" => 
       { // run script
-          let combinedString: String = values.concat().replace("\\n", "\n"); // todo: \\n ?
-          buffer = combinedString.clone().into_bytes();
-          // todo: argc & argv
+        let combinedString: String = values.concat().replace("\\n", "\n"); // todo: \\n ?
+        buffer = combinedString.clone().into_bytes();
+        // todo: argc & argv
 
-          // todo: check filePath file type
-          noRun = false;
-          if unsafe{_debugMode} 
-          {
-              log("ok",&format!("Run [{}]",combinedString));
-          }
+        // todo: check filePath file type
+        noRun = false;
+        if unsafe{_debugMode} 
+        {
+          log("ok",&format!("Run [{}]",combinedString));
+        }
       }
       _ => {}
     }
@@ -155,71 +155,69 @@ fn main() -> io::Result<()>
   
   if noRun 
   {
-      log("err","Use the [-rf <filename>] or [-rs \"<script>\"] flag");
-      logExit();
+    log("err","Use the [-rf <filename>] or [-rs \"<script>\"] flag");
+    logExit();
   }
 
   // run file
   if runFile 
   {
-      if unsafe{_debugMode} 
+    if unsafe{_debugMode} 
+    {
+      logSeparator("File");
+    }
+    // open file
+    let mut file: File = match File::open(unsafe{&*_filePath}) 
+    {
+      Ok(file) => 
       {
-          logSeparator("File");
+        if unsafe{_debugMode} 
+        {
+          log("ok",&format!("Opening the file [{}] was successful",unsafe{&*_filePath}));
+        }
+        file
+      },
+      Err(_) => 
+      {
+        log("err",&format!("Unable to opening file [{}]",unsafe{&*_filePath}));
+        logExit()
       }
-      // open file
-      let mut file: File = match File::open(unsafe{&*_filePath}) 
+    };
+    // read file into buffer
+    match file.read_to_end(&mut buffer) 
+    {
+      Ok(_) => 
       {
-          Ok(file) => 
-          {
-              if unsafe{_debugMode} 
-              {
-                  log("ok",&format!("Opening the file [{}] was successful",unsafe{&*_filePath}));
-              }
-              file
-          },
-          Err(_) => 
-          {
-              log("err",&format!("Unable to opening file [{}]",unsafe{&*_filePath}));
-              logExit();
-              std::process::exit(1)
-          }
-      };
-      // read file into buffer
-      match file.read_to_end(&mut buffer) 
-      {
-          Ok(_) => 
-          {
-              // add endl if it doesn't exist
-              if !buffer.ends_with(&[b'\n']) 
-              {
-                  buffer.push(b'\n');
-              }
-              if unsafe{_debugMode} 
-              {
-                  log("ok",&format!("Reading the file [{}] was successful",unsafe{&*_filePath}));
-              }
-          }
-          Err(_) => 
-          {
-              log("err",&format!("Unable to read file [{}]",unsafe{&*_filePath}));
-              logExit();
-              ()
-          }
+        // add endl if it doesn't exist
+        if !buffer.ends_with(&[b'\n']) 
+        {
+          buffer.push(b'\n');
+        }
+        if unsafe{_debugMode} 
+        {
+          log("ok",&format!("Reading the file [{}] was successful",unsafe{&*_filePath}));
+        }
       }
+      Err(_) => 
+      {
+        log("err",&format!("Unable to read file [{}]",unsafe{&*_filePath}));
+        logExit()
+      }
+    }
   }
 
   // read
   unsafe 
   {
-      parseLines( readTokens(buffer, _debugMode) );
+    parseLines( readTokens(buffer, _debugMode) );
   }
 
   // duration
   if unsafe{_debugMode} 
   {
-      let endTime  = Instant::now();
-      let duration = endTime-startTime;
-      log("ok",&format!("All duration [{:?}]",duration));
+    let endTime  = Instant::now();
+    let duration = endTime-startTime;
+    log("ok",&format!("All duration [{:?}]",duration));
   }
   // ** to release test, use hyperfine/perf
 

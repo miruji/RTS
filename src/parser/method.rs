@@ -3,7 +3,6 @@
 */
 
 use crate::logger::*;
-use crate::_filePath;
 use crate::_exitCode;
 
 use crate::tokenizer::line::*;
@@ -82,12 +81,12 @@ impl Method
   }
 
   // push memoryCell to self memoryCellList
-  pub fn pushMemoryCell(&self, mut memoryCell: MemoryCell) 
+  pub fn pushMemoryCell(&self, mut memoryCell: MemoryCell) -> ()
   {
     // basic
     if memoryCell.valueType != TokenType::Array 
     {
-      memoryCell.value = self.memoryCellExpression(&mut memoryCell.value.tokens.clone(), 0);
+      memoryCell.value = self.memoryCellExpression(&mut memoryCell.value.tokens.clone());
     }
     // array
     let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = self.memoryCellList.write().unwrap();
@@ -113,7 +112,7 @@ impl Method
   }
 
   // memory cell op
-  pub fn memoryCellOp(&self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) 
+  pub fn memoryCellOp(&self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) -> ()
   {
     if op != TokenType::Equals         &&
        op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
@@ -121,7 +120,7 @@ impl Method
       { return; }
 
     // calculate new values
-    let rightValue: Token = self.memoryCellExpression(&mut opValue.tokens.clone(), 0);
+    let rightValue: Token = self.memoryCellExpression(&mut opValue.tokens.clone());
     let mut memoryCell = memoryCellLink.write().unwrap();
     // =
     if op == TokenType::Equals 
@@ -138,7 +137,7 @@ impl Method
   }
 
   // update value
-  fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) 
+  fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
   {
     if let Some(memoryCellLink) = self.getMemoryCellByName(&value[index].data) 
     {
@@ -147,7 +146,7 @@ impl Method
       {
         let arrayIndex = // todo: rewrite if no UInt type ...
             self
-                .memoryCellExpression(&mut value[index+1].tokens,0)
+                .memoryCellExpression(&mut value[index+1].tokens)
                 .data.parse::<usize>();
 
         value.remove(index+1);
@@ -171,18 +170,9 @@ impl Method
         value[index].dataType = memoryCell.value.dataType.clone();
       }
     } else 
-    {
-      log("syntax","");
-      log("path",&format!(
-        "{} -> MemoryCell",
-        unsafe{&*_filePath},
-      ));
-      Line::outputTokens( &getSavedLine() );
-      log("note",&format!(
-        "An undeclared variable \"{}\" is used",
-        value[index].data
-      ));
-      logExit();
+    { // error -> skip
+      value[index].data     = String::new();
+      value[index].dataType = TokenType::None;
     }
   }
 
@@ -214,7 +204,7 @@ impl Method
           let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
           let expressionLine     = expressionLineLink.read().unwrap();
           let mut expressionBufferTokens: Vec<Token> = expressionLine.tokens.clone();
-          result += &self.memoryCellExpression(&mut expressionBufferTokens,0).data;
+          result += &self.memoryCellExpression(&mut expressionBufferTokens).data;
         }
         expressionBuffer = String::new();
       } else 
@@ -233,7 +223,8 @@ impl Method
   }
 
   // get expression parameters
-  fn getExpressionParameters(&self, value: &mut Vec<Token>, indent: usize, i: usize) -> Vec<Token> {
+  fn getExpressionParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  {
     let mut result = Vec::new();
 
     if let Some(tokens) = value.get(i+1).map(|v| &v.tokens) 
@@ -244,7 +235,7 @@ impl Method
         if token.dataType == TokenType::Comma || l+1 == tokens.len() 
         { // comma or line end
           expressionBuffer.push( token.clone() );
-          result.push( self.memoryCellExpression(&mut expressionBuffer, indent+1) );
+          result.push( self.memoryCellExpression(&mut expressionBuffer) );
           expressionBuffer.clear();
         } else 
         { // push new expression token
@@ -258,9 +249,8 @@ impl Method
   }
 
   // expression
-  pub fn memoryCellExpression(&self, value: &mut Vec<Token>, indent: usize) -> Token 
+  pub fn memoryCellExpression(&self, value: &mut Vec<Token>) -> Token 
   {
-    let identStr: String = " ".repeat(indent*2);
     let mut valueLength: usize = value.len();
 
     // 1 number
@@ -295,7 +285,7 @@ impl Method
             if functionName == "int" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               // 
               if expressions.len() > 0 
               {
@@ -312,7 +302,7 @@ impl Method
             if functionName == "char" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               // 
               if expressions.len() > 0 
               {
@@ -330,7 +320,7 @@ impl Method
             if functionName == "str" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               // 
               if expressions.len() > 0 
               {
@@ -347,7 +337,7 @@ impl Method
             if functionName == "type" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               // 
               if expressions.len() > 0 
               {
@@ -364,7 +354,7 @@ impl Method
             if functionName == "input" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               //
               if expressions.len() > 0 
               {
@@ -383,7 +373,7 @@ impl Method
             if functionName == "randUInt" 
             {
               // get expressions
-              let mut expressions: Vec<Token> = self.getExpressionParameters(value, indent, i);
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
               // 
               if expressions.len() > 1 
               {
@@ -450,7 +440,7 @@ impl Method
       token = value[i].clone();
       if token.dataType == TokenType::CircleBracketBegin 
       {
-        value[i] = self.memoryCellExpression(&mut token.tokens.clone(),indent+1);
+        value[i] = self.memoryCellExpression(&mut token.tokens.clone());
       }
       i += 1;
     }
@@ -586,7 +576,6 @@ impl Method
             {
               if let Some(parentLink) = &line.parent 
               {
-                let parent = parentLink.read().unwrap();
                 if let Some(methodParent) = &self.parent 
                 {
                     // todo: check expressionValue
@@ -603,36 +592,26 @@ impl Method
             if token.data == "println" 
             {
               println!("{}",formatPrint(
-                &self.memoryCellExpression(
-                    &mut expressionValue,
-                    0
-                ).data
+                &self.memoryCellExpression(&mut expressionValue).data
               ));
               io::stdout().flush().unwrap(); // forced withdrawal of old
             } else 
             // print
             if token.data == "print" {
               print!("{}",formatPrint(
-                &self.memoryCellExpression(
-                    &mut expressionValue,
-                    0
-                ).data
+                &self.memoryCellExpression(&mut expressionValue).data
               ));
               io::stdout().flush().unwrap(); // forced withdrawal of old
             } else 
             // sleep
             if token.data == "sleep" {
-              let value = 
-                &self.memoryCellExpression(
-                    &mut expressionValue,
-                    0
-                ).data;
+              let value = &self.memoryCellExpression(&mut expressionValue).data;
               let valueNumber = value.parse::<u64>().unwrap_or(0);
               sleep(Duration::from_millis(valueNumber));
             } else 
             // exec
             if token.data == "exec" {
-              let expression: String              = self.memoryCellExpression(&mut expressionValue,0).data;
+              let expression: String              = self.memoryCellExpression(&mut expressionValue).data;
               let mut  parts: SplitWhitespace<'_> = expression.split_whitespace();
 
               let command: &str      = parts.next().expect("No command found in expression"); // todo: 
@@ -658,36 +637,25 @@ impl Method
             {
               result = false;
             }
-          };
+          }
           // custom methods
           if !result 
           {
             if let Some(calledMethodLink) = self.getMethodByName(&token.data) 
             {
-              let mut linesLengthBuffer: usize = 0;
               let mut   lineIndexBuffer: usize = 0;
-              {
-                let calledMethod = calledMethodLink.read().unwrap();
-                linesLengthBuffer = calledMethod.lines.len();
-              }
+              let mut linesLengthBuffer: usize = 
+                {
+                  let calledMethod = calledMethodLink.read().unwrap();
+                  calledMethod.lines.len()
+                };
               readLines(calledMethodLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
               return true;
             }
           }
           return result;
-        } else 
-        {
-        // read error
-          log("syntax","");
-          log("path",&format!(
-            "{} -> Word \"{}\"",
-            &*_filePath,
-            token.data
-          ));
-          Line::outputTokens( &getSavedLine() );
-          log("note","Method calls and variable names must begin with a lower char");
-          logExit();
         }
+        //
       }
     }
     return false;

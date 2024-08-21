@@ -2,14 +2,10 @@
   Memory Cell List
 */
 
-use crate::logger::*;
-use crate::_filePath;
-
 use crate::parser::memoryCell::*;
 use crate::parser::value::*;
 use crate::parser::uf64::*;
 use crate::tokenizer::token::*;
-use crate::tokenizer::line::*;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 

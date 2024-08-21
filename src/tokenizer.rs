@@ -3,8 +3,6 @@
 */
 
 use crate::logger::*;
-use crate::_filePath;
-use crate::_debugMode;
 
 pub mod token; use crate::tokenizer::token::*;
 pub mod line;  use crate::tokenizer::line::*;
@@ -32,12 +30,11 @@ static mut __tokenType: &mut TokenType = &mut TokenType::None; // TokenType buff
 static mut __brackets:  Vec::<usize> = Vec::new();             // brackets  buffer
 
 // delete comment
-unsafe fn deleteComment(buffer: &[u8]) 
+unsafe fn deleteComment(buffer: &[u8]) -> ()
 {
   _index += 1;
   _indexCount += 2;
   
-  _lineTokens.push( Token::newEmpty(TokenType::Comment) );
   while _index < _bufferLength && buffer[_index] != b'\n' 
   {
     _index += 1;
@@ -405,7 +402,7 @@ unsafe fn getOperator(buffer: &[u8]) -> Token
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
-unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) 
+unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   for token in tokens.iter_mut() 
   {
@@ -417,7 +414,7 @@ unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType
   blockNesting(tokens, beginType, endType);
 }
 // block nasting [begin token -> end token]
-unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) 
+unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   __brackets = Vec::new();
   __length = tokens.len();
@@ -465,7 +462,7 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
   }
 }
 // line nesting [line -> line]
-fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) 
+fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
 {
   let mut index:     usize = 0;
   let mut nextIndex: usize = 1;
@@ -489,10 +486,6 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >)
         { // set parent line link
           let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
           nestingLine.parent = Some( linesLinks[index].clone() );
-          if let Some(parentLink) = &nestingLine.parent 
-          {
-              let parent = parentLink.read().unwrap();
-          }
         }
         // push nesting
         let mut currentLine = linesLinks[index].write().unwrap();
@@ -519,7 +512,7 @@ fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
 }
 
 // delete DoubleComment
-unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) 
+unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
 {
   let mut linesLinksLength: usize = linesLinks.len();
   let mut lastTokenIndex:   usize;
@@ -562,7 +555,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
 }
 
 // output token and its tokens
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) 
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) -> ()
 {
   let lineIdentString: String = " ".repeat(lineIdent*2+1);
   let identString:     String = " ".repeat(indent*2+1);
@@ -642,7 +635,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
   }
 }
 // output line info
-pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
+pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) -> ()
 {
   let identStr1: String = " ".repeat(indent*2);
   let identStr2: String = " ".repeat(indent*2+1);
@@ -680,11 +673,10 @@ static mut _indexCount:   usize = 0; // their use is better than a vector of str
 static mut _linesDeleted: usize = 0; // <- save deleted lines num for logger
 
 static mut _linesIdent: usize = 0;
-static mut _lineTokens: Vec<Token> = Vec::new();
 
 pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
 {
-  if unsafe{debugMode} 
+  if debugMode 
   {
     logSeparator("AST");
     log("ok","+Generation");
@@ -697,7 +689,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   _indexCount   = 0;
   _linesDeleted = 0;
   _linesIdent   = 0;
-  _lineTokens   = Vec::new();
+  let mut _lineTokens: Vec<Token> = Vec::new();
   // mmm...
   // maybe, maybe
 
@@ -767,6 +759,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       if __byte1 == b'#' 
       {
         deleteComment(&buffer);
+        _lineTokens.push( Token::newEmpty(TokenType::Comment) );
       } else
       // get int-float
       if isDigit(__byte1) || (__byte1 == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) 

@@ -30,7 +30,6 @@ impl Value
       Value::UFloat(v) => *v!=uf64::from(0.0),
       Value::Char(c)   => *c!='\0',
       Value::String(s) => !s.is_empty(),
-      _ => false,
     }
   }
 }

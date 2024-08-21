@@ -27,7 +27,7 @@ fn divideWhitespace(input: &str) -> (&str, &str)
   (&input[..firstNonSpaceIndex], &input[firstNonSpaceIndex..])
 }
 // style log
-fn logWithStyle(string: &str) 
+fn logWithStyle(string: &str) -> ()
 {
   print!("{}",&formatPrint(string));
 }
@@ -75,15 +75,11 @@ pub fn formatPrint(string: &str) -> String
             if _i+2 < _stringLength && _stringChars[_i+2] == 'g' 
             { // bg
               _i += 5;
-              _string = String::new();
-              for j in _i.._stringLength 
-              {
-                if _stringChars[j] == ')' 
-                {
-                    break;
-                }
-                _string.push(_stringChars[j]);
-              }
+              _string = String::from_iter(
+                _stringChars[_i.._stringLength]
+                  .iter()
+                  .take_while(|&&c| c != ')')
+              );
               _result.push_str(&format!(
                   "{}",
                   Bg(hexToTermionColor(&_string).unwrap_or_else(|| Rgb(0, 0, 0)))
@@ -102,15 +98,11 @@ pub fn formatPrint(string: &str) -> String
             if _i+2 < _stringLength && _stringChars[_i+2] == 'g' 
             { // fg
                 _i += 5;
-                _string = String::new();
-                for j in _i.._stringLength 
-                {
-                    if _stringChars[j] == ')' 
-                    {
-                        break;
-                    }
-                    _string.push(_stringChars[j]);
-                }
+                _string = String::from_iter(
+                  _stringChars[_i.._stringLength]
+                    .iter()
+                    .take_while(|&&c| c != ')')
+                );
                 _result.push_str(&format!(
                     "{}",
                     Fg(hexToTermionColor(&_string).unwrap_or_else(|| Rgb(0, 0, 0)))
@@ -168,7 +160,7 @@ pub fn formatPrint(string: &str) -> String
       // basic
       } else 
       {
-          _result.push( _stringChars[_i] );
+        _result.push( _stringChars[_i] );
       }
       _i += 1;
     }
@@ -176,7 +168,7 @@ pub fn formatPrint(string: &str) -> String
   }
 }
 // separator log
-pub fn logSeparator(text: &str) 
+pub fn logSeparator(text: &str) -> ()
 {
   logWithStyle(&format!(
     " \\fg(#55af96)\\bx \\fg(#0095B6){}\\c\n",
@@ -184,7 +176,7 @@ pub fn logSeparator(text: &str)
   ));
 }
 // exit log
-pub fn logExit() 
+pub fn logExit() -> !
 {
   logWithStyle("   \\b┗\\fg(#f94d4d) Exit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
   std::process::exit(1);
@@ -192,7 +184,7 @@ pub fn logExit()
 // basic style log
 static mut _parts:       Vec<String> = Vec::new();
 static mut _outputParts: Vec<String> = Vec::new();
-pub fn log(textType: &str, text: &str) 
+pub fn log(textType: &str, text: &str) -> ()
 {
   if textType == "syntax" 
   {

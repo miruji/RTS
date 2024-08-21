@@ -253,17 +253,6 @@ impl Token
       tokens,
     }
   }
-  pub fn getData(token: &Token) -> String 
-  {
-    return 
-      if token.data.is_empty() 
-      {
-       token.dataType.to_string()
-      } else 
-      {
-        token.data.clone()
-      }
-  }
 }
 impl fmt::Display for Token 
 { // todo: debug only ?
