@@ -279,7 +279,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
           // skip empty line
           if bottomLine.tokens.len() == 0 { break; } else
           // check question
-          if *bottomLine.tokens[0].getDataType() != TokenType::Question { break; }
+          if bottomLine.tokens[0].getDataType().unwrap_or(TokenType::None) != TokenType::Question { break; }
         }
         conditions.push(lineBottomLink);
         i += 1;
@@ -359,7 +359,7 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
   let mut lineTokens: Vec<Token> = line.tokens.clone();
   let mut method = methodLink.write().unwrap();
 
-  if *lineTokens[0].getDataType() == TokenType::Equals 
+  if lineTokens[0].getDataType().unwrap_or(TokenType::None) == TokenType::Equals 
   {
     lineTokens.remove(0);
 
@@ -368,7 +368,7 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
       {
         methodResult.getDataType().clone()
       } else {
-        TokenType::None
+        Some(TokenType::None)
       };
     method.result = Some(method.memoryCellExpression(&mut lineTokens));
     if let Some(methodResult) = &mut method.result 
@@ -395,18 +395,18 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
 
   //
   let mut parameters: Option< Vec<Token> > = None;
-  if *lineTokens[0].getDataType() == TokenType::Word && line.lines.len() > 0 
+  if lineTokens[0].getDataType().unwrap_or(TokenType::None) == TokenType::Word && line.lines.len() > 0 
   { // if there are parameters
     let mut newMethodResultType: Option<TokenType> = None;
-    if lineTokensLength > 1 && *lineTokens[1].getDataType() == TokenType::CircleBracketBegin 
+    if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
     {
       let method = methodLink.read().unwrap();
       if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
         parameters = Some( method.getMethodParameters(&mut lineTokens) );
       }
       // if result
-      if lineTokensLength > 3 && *lineTokens[2].getDataType() == TokenType::Pointer && 
-         *lineTokens[3].getDataType() == TokenType::Word 
+      if lineTokensLength > 3 && lineTokens[2].getDataType().unwrap_or(TokenType::None) == TokenType::Pointer && 
+         lineTokens[3].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
       {
         if let Some(lineTokenData) = lineTokens[3].getData() 
         {
@@ -416,8 +416,8 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     // if there are no parameters
     } else 
     { // if result
-      if lineTokensLength > 2 && *lineTokens[1].getDataType() == TokenType::Pointer && 
-         *lineTokens[2].getDataType() == TokenType::Word 
+      if lineTokensLength > 2 && lineTokens[1].getDataType().unwrap_or(TokenType::None) == TokenType::Pointer && 
+         lineTokens[2].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
       {
         if let Some(lineTokenData) = lineTokens[2].getData() 
         {
@@ -435,10 +435,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
           line.lines.clone(),
           Some(methodLink.clone())
         );
-      if let Some(newMethodResultType) = newMethodResultType 
-      {
-        newMethodBuffer.result = Some( Token::newEmpty(newMethodResultType.clone()) );
-      }
+      newMethodBuffer.result = Some( Token::newEmpty(newMethodResultType.clone()) );
       // add parameters
       if let Some(parameters) = parameters 
       {
@@ -451,7 +448,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
                 parameterData,
                 MemoryCellMode::LockedFinal,
                 TokenType::Array,
-                Token::newEmpty( parameter.getDataType().clone() )
+                Token::newEmpty( parameter.getDataType() )
               )
             );
           }
@@ -601,14 +598,14 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
   {
     token = &tokens[j];
 
-    if *token.getDataType() == TokenType::Word || modeReceived == true 
+    if token.getDataType().unwrap_or(TokenType::None) == TokenType::Word || modeReceived == true 
     {
       // check mode
       if !modeReceived 
       {
         nameBuffer = token.getData();
         // variableName~~
-        if j+2 < tokensLength && *tokens[j+2].getDataType() == TokenType::Tilde 
+        if j+2 < tokensLength && tokens[j+2].getDataType().unwrap_or(TokenType::None) == TokenType::Tilde 
         {
           modeBuffer = MemoryCellMode::UnlockedVariable;
           // skip name
@@ -617,7 +614,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
           j += 3;
         } else
         // variableName~
-        if j+1 < tokensLength && *tokens[j+1].getDataType() == TokenType::Tilde 
+        if j+1 < tokensLength && tokens[j+1].getDataType().unwrap_or(TokenType::None) == TokenType::Tilde 
         {
           modeBuffer = MemoryCellMode::LockedVariable;
           // skip name
@@ -635,12 +632,12 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
       } else 
       if !typeReceived 
       { // check type
-        if (j < tokensLength && *token.getDataType() == TokenType::Colon) && j+1 < tokensLength 
+        if (j < tokensLength && token.getDataType().unwrap_or(TokenType::None) == TokenType::Colon) && j+1 < tokensLength 
         {
           let nextTokenType = tokens[j+1].getDataType().clone();
-          if checkMemoryCellType(nextTokenType.clone()) 
+          if checkMemoryCellType( nextTokenType.clone().unwrap_or(TokenType::None) ) 
           {
-            typeBuffer = nextTokenType;
+            typeBuffer = nextTokenType.unwrap_or(TokenType::None);
             // skip :
             // skip type
             j += 2;
@@ -651,10 +648,10 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
         typeReceived = true;
       } else 
       { // check value
-        if (j < tokensLength && checkMemoryCellMathOperator( token.getDataType().clone()) ) && j+1 < tokensLength 
+        if (j < tokensLength && checkMemoryCellMathOperator( token.getDataType().unwrap_or(TokenType::None) ) ) && j+1 < tokensLength 
         {
           // operator
-          operatorBuffer = token.getDataType().clone();
+          operatorBuffer = token.getDataType().unwrap_or(TokenType::None);
           // value
           valueBuffer = Some( tokens[j+1..(tokensLength)].to_vec() );
         }
@@ -685,10 +682,11 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
     if let Some(ref value) = valueBuffer { //  let mut    valueBuffer: Option< Vec<Token> > = None;
       // memoryCellName - op - value
       // array
-      if value.len() > 0 && *value[0].getDataType() == TokenType::SquareBracketBegin 
+      if value.len() > 0 && value[0].getDataType().unwrap_or(TokenType::None) == TokenType::SquareBracketBegin 
       {
-        if let Some(mut value) = value[0].tokens.clone() {
-          value.retain(|token| *token.getDataType() != TokenType::Comma);
+        if let Some(mut value) = value[0].tokens.clone() 
+        {
+          value.retain(|token| token.getDataType().unwrap_or(TokenType::None) != TokenType::Comma);
           method.pushMemoryCell(
             MemoryCell::new(
               nameBuffer,
@@ -853,7 +851,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
         TokenType::UInt,
         Token::newNesting(
           Some( vec![
-            Token::new( TokenType::UInt, Some(_argc.to_string()) )
+            Token::new( Some(TokenType::UInt), Some(_argc.to_string()) )
           ] )
         )
       )
@@ -863,7 +861,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     for a in &_argv 
     {
       argv.push(
-        Token::new( TokenType::String, Some(String::from(a)) )
+        Token::new( Some(TokenType::String), Some(String::from(a)) )
       );
     }
     main.pushMemoryCell(

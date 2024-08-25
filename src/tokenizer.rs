@@ -99,11 +99,11 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
   // next return
   match (rational, dot, negative) 
   { //   rational,  dot,  negative
-    (true, _, _)     => Token::new( TokenType::Rational, Some(result.clone()) ),
-    (_, true, true)  => Token::new( TokenType::Float,    Some(result.clone()) ),
-    (_, true, false) => Token::new( TokenType::UFloat,   Some(result.clone()) ),
-    (_, false, true) => Token::new( TokenType::Int,      Some(result.clone()) ),
-    _                => Token::new( TokenType::UInt,     Some(result.clone()) ),
+    (true, _, _)     => Token::new( Some(TokenType::Rational), Some(result.clone()) ),
+    (_, true, true)  => Token::new( Some(TokenType::Float),    Some(result.clone()) ),
+    (_, true, false) => Token::new( Some(TokenType::UFloat),   Some(result.clone()) ),
+    (_, false, true) => Token::new( Some(TokenType::Int),      Some(result.clone()) ),
+    _                => Token::new( Some(TokenType::UInt),     Some(result.clone()) ),
   }
 }
 
@@ -147,10 +147,10 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
   // next return
   match &result[..] 
   {
-    "true"     => Token::new( TokenType::Bool, Some(String::from("1")) ),
-    "false"    => Token::new( TokenType::Bool, Some(String::from("0")) ),
-    "loop"     => Token::newEmpty(TokenType::Loop),
-    _          => Token::new( TokenType::Word, Some(result.clone()) ),
+    "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
+    "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
+    "loop"     => Token::newEmpty( Some(TokenType::Loop) ),
+    _          => Token::new( Some(TokenType::Word), Some(result.clone()) ),
   }
 }
 
@@ -177,7 +177,7 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
       {
         // quotes were not closed
         // skipped it!
-        return Token::newEmpty(TokenType::None);
+        return Token::newEmpty(None);
       }
 
       // read quote
@@ -229,20 +229,20 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
     {
       // single quotes can only contain 1 character
       // skipped it!
-      Token::newEmpty(TokenType::None)
+      Token::newEmpty(None)
     } else 
     {
-      Token::new( TokenType::Char, Some(result.clone()) )
+      Token::new( Some(TokenType::Char), Some(result.clone()) )
     }
   } else if byte1 == b'"' 
   {
-    Token::new( TokenType::String, Some(result.clone()) )
+    Token::new( Some(TokenType::String), Some(result.clone()) )
   } else if byte1 == b'`' 
   {
-    Token::new( TokenType::RawString, Some(result.clone()) )
+    Token::new( Some(TokenType::RawString), Some(result.clone()) )
   } else 
   {
-    Token::newEmpty(TokenType::None)
+    Token::newEmpty(None)
   }
 }
 
@@ -269,98 +269,98 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
     b'+' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::PlusEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::PlusEquals) ) }
       else if nextChar == b'+' 
-        { increment(2); Token::newEmpty(TokenType::UnaryPlus) } 
+        { increment(2); Token::newEmpty( Some(TokenType::UnaryPlus) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::Plus) }
+        { increment(1); Token::newEmpty( Some(TokenType::Plus) ) }
     }
     b'-' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::MinusEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::MinusEquals) ) }
       else if nextChar == b'-' 
-        { increment(2); Token::newEmpty(TokenType::UnaryMinus) } 
+        { increment(2); Token::newEmpty( Some(TokenType::UnaryMinus) ) }
       else if nextChar == b'>' 
-        { increment(2); Token::newEmpty(TokenType::Pointer) } 
+        { increment(2); Token::newEmpty( Some(TokenType::Pointer) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::Minus) }
+        { increment(1); Token::newEmpty( Some(TokenType::Minus) ) }
     }
     b'*' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::MultiplyEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::MultiplyEquals) ) }
       else if nextChar == b'*' 
-        { increment(2); Token::newEmpty(TokenType::UnaryMultiply) } 
+        { increment(2); Token::newEmpty( Some(TokenType::UnaryMultiply) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::Multiply) }
+        { increment(1); Token::newEmpty( Some(TokenType::Multiply) ) }
     }
     b'/' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::DivideEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::DivideEquals) ) }
       else if nextChar == b'/' 
-        { increment(2); Token::newEmpty(TokenType::UnaryDivide) } 
+        { increment(2); Token::newEmpty( Some(TokenType::UnaryDivide) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::Divide) }
+        { increment(1); Token::newEmpty( Some(TokenType::Divide) ) }
     }
     b'%' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+        { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
       else if nextChar == b'%' 
-        { increment(2); Token::newEmpty(TokenType::Modulo) } // todo: add new type in Token
+        { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
       else 
-        { increment(1); Token::newEmpty(TokenType::Modulo) }
+        { increment(1); Token::newEmpty( Some(TokenType::Modulo) ) }
     }
     b'^' => 
     {
            if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+        { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
       else if nextChar == b'^' 
-        { increment(2); Token::newEmpty(TokenType::Exponent) } // todo: add new type in Token
+        { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
       else 
-        { increment(1); Token::newEmpty(TokenType::Disjoint) }
+        { increment(1); Token::newEmpty( Some(TokenType::Disjoint) ) }
     }
     b'>' => 
     {
       if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::GreaterThanOrEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::GreaterThanOrEquals) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::GreaterThan) }
+        { increment(1); Token::newEmpty( Some(TokenType::GreaterThan) ) }
     }
     b'<' => 
     {
       if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::LessThanOrEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::LessThanOrEquals) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::LessThan) }
+        { increment(1); Token::newEmpty( Some(TokenType::LessThan) ) }
     }
     b'!' => 
     {
       if nextChar == b'=' 
-        { increment(2); Token::newEmpty(TokenType::NotEquals) } 
+        { increment(2); Token::newEmpty( Some(TokenType::NotEquals) ) }
       else 
-        { increment(1); Token::newEmpty(TokenType::Exclusion) }
+        { increment(1); Token::newEmpty( Some(TokenType::Exclusion) ) }
     }
-    b'&' => { increment(1); Token::newEmpty(TokenType::Joint) }
-    b'|' => { increment(1); Token::newEmpty(TokenType::Inclusion) }
-    b'=' => { increment(1); Token::newEmpty(TokenType::Equals) }
+    b'&' => { increment(1); Token::newEmpty( Some(TokenType::Joint) ) }
+    b'|' => { increment(1); Token::newEmpty( Some(TokenType::Inclusion) ) }
+    b'=' => { increment(1); Token::newEmpty( Some(TokenType::Equals) ) }
     // brackets
-    b'(' => { increment(1); Token::newEmpty(TokenType::CircleBracketBegin) }
-    b')' => { increment(1); Token::newEmpty(TokenType::CircleBracketEnd) }
-    b'{' => { increment(1); Token::newEmpty(TokenType::FigureBracketBegin) }
-    b'}' => { increment(1); Token::newEmpty(TokenType::FigureBracketEnd) }
-    b'[' => { increment(1); Token::newEmpty(TokenType::SquareBracketBegin) }
-    b']' => { increment(1); Token::newEmpty(TokenType::SquareBracketEnd) }
+    b'(' => { increment(1); Token::newEmpty( Some(TokenType::CircleBracketBegin) ) }
+    b')' => { increment(1); Token::newEmpty( Some(TokenType::CircleBracketEnd) ) }
+    b'{' => { increment(1); Token::newEmpty( Some(TokenType::FigureBracketBegin) ) }
+    b'}' => { increment(1); Token::newEmpty( Some(TokenType::FigureBracketEnd) ) }
+    b'[' => { increment(1); Token::newEmpty( Some(TokenType::SquareBracketBegin) ) }
+    b']' => { increment(1); Token::newEmpty( Some(TokenType::SquareBracketEnd) ) }
     // other
-    b';' => { increment(1); Token::newEmpty(TokenType::Endline) }
-    b':' => { increment(1); Token::newEmpty(TokenType::Colon) }
-    b',' => { increment(1); Token::newEmpty(TokenType::Comma) }
-    b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
-    b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
-    b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
-    _ => Token::new( TokenType::None, None ),
+    b';' => { increment(1); Token::newEmpty( Some(TokenType::Endline) ) }
+    b':' => { increment(1); Token::newEmpty( Some(TokenType::Colon) ) }
+    b',' => { increment(1); Token::newEmpty( Some(TokenType::Comma) ) }
+    b'.' => { increment(1); Token::newEmpty( Some(TokenType::Dot) ) }
+    b'?' => { increment(1); Token::newEmpty( Some(TokenType::Question) ) }
+    b'~' => { increment(1); Token::newEmpty( Some(TokenType::Tilde) ) }
+    _ => Token::newEmpty( None ),
   }
 }
 
@@ -389,7 +389,7 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &T
   let mut l = 0; // index buffer
   while l < length 
   {
-    let tokenType: &TokenType = tokens[l].getDataType();
+    let tokenType: &TokenType = &tokens[l].getDataType().unwrap_or(TokenType::None);
     if tokenType == beginType 
     {
       brackets.push(l);
@@ -521,7 +521,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
       }
       // ? delete comment
       lastTokenIndex = line.tokens.len()-1;
-      if *line.tokens[lastTokenIndex].getDataType() == TokenType::Comment {
+      if line.tokens[lastTokenIndex].getDataType().unwrap_or(TokenType::None) == TokenType::Comment {
         line.tokens.remove(lastTokenIndex);
         if line.tokens.is_empty() { // go to delete empty line
           deleteLine = true;        //
@@ -562,36 +562,39 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
     if let Some(tokenData) = token.getData()
     {
     // single quote
-      if *token.getDataType() == TokenType::Char || *token.getDataType() == TokenType::FormattedChar {
+      if token.getDataType().unwrap_or(TokenType::None) == TokenType::Char || 
+         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedChar {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().to_string()
+          token.getDataType().unwrap_or(TokenType::None).to_string()
         ));
     // double quote
       } else
-      if *token.getDataType() == TokenType::String || *token.getDataType() == TokenType::FormattedString {
+      if token.getDataType().unwrap_or(TokenType::None) == TokenType::String || 
+         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().to_string()
+          token.getDataType().unwrap_or(TokenType::None).to_string()
         ));
     // back quote
       } else
-      if *token.getDataType() == TokenType::RawString || *token.getDataType() == TokenType::FormattedRawString {
+      if token.getDataType().unwrap_or(TokenType::None) == TokenType::RawString || 
+         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedRawString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().to_string()
+          token.getDataType().unwrap_or(TokenType::None).to_string()
         ));
     // basic
       } else {
@@ -601,7 +604,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           c,
           identString,
           tokenData,
-          token.getDataType().to_string()
+          token.getDataType().unwrap_or(TokenType::None).to_string()
         ));
       }
     // type only
@@ -611,7 +614,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
         lineIdentString,
         c,
         identString,
-        token.getDataType().to_string()
+        token.getDataType().unwrap_or(TokenType::None).to_string()
       );
     }
     if let Some(tokens) = &token.tokens
@@ -727,7 +730,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       if byte == b'#' 
       {
         deleteComment(&buffer, &mut index, bufferLength);
-        lineTokens.push( Token::newEmpty(TokenType::Comment) );
+        lineTokens.push( Token::newEmpty( Some(TokenType::Comment) ) );
       } else
       // get int-float
       if isDigit(byte) || (byte == b'-' && index+1 < bufferLength && isDigit(buffer[index+1])) 
@@ -743,16 +746,25 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       if byte == b'\'' || byte == b'"' || byte == b'`' 
       {
         let mut token: Token = getQuotes(&buffer, &mut index);
-        if *token.getDataType() != TokenType::None 
+        if token.getDataType() != None 
         {
           let backTokenIndex = lineTokens.len()-1;
           // if formatted quotes
-          if *lineTokens[backTokenIndex].getDataType() == TokenType::Word && 
+          if lineTokens[backTokenIndex].getDataType().unwrap_or(TokenType::None) == TokenType::Word && 
              lineTokens[backTokenIndex].getData().unwrap_or( String::new() ) == "f" 
           {
-            if *token.getDataType() == TokenType::RawString { token.setDataType( TokenType::FormattedRawString ); } else
-            if *token.getDataType() == TokenType::String    { token.setDataType( TokenType::FormattedString );    } else
-            if *token.getDataType() == TokenType::Char      { token.setDataType( TokenType::FormattedChar );      }
+            if token.getDataType().unwrap_or(TokenType::None) == TokenType::RawString 
+            {
+             token.setDataType( Some(TokenType::FormattedRawString) ); 
+            } else
+            if token.getDataType().unwrap_or(TokenType::None) == TokenType::String 
+            { 
+              token.setDataType( Some(TokenType::FormattedString) ); 
+            } else
+            if token.getDataType().unwrap_or(TokenType::None) == TokenType::Char 
+            { 
+              token.setDataType( Some(TokenType::FormattedChar) ); 
+            }
             lineTokens[backTokenIndex] = token.clone(); // todo: remove copy please
           // basic quotes
           } else 
@@ -768,7 +780,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       if isSingleChar(byte) 
       {
         let token: Token = getOperator(&buffer, &mut index, bufferLength);
-        if *token.getDataType() != TokenType::None 
+        if token.getDataType() != None
         {
             lineTokens.push(token.clone()); // todo: remove copy
         } else 

@@ -43,7 +43,7 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
 {
   // get values of types
   let leftTokenData:     String    = leftToken.getData().unwrap_or( String::new() );
-  let leftTokenDataType: TokenType = leftToken.getDataType().clone();
+  let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or(TokenType::None);
   let leftValue = match leftTokenDataType
   {
     TokenType::Int => 
@@ -91,7 +91,7 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
     _ => Value::UInt(0),
   };
   let rightTokenData:     String    = rightToken.getData().unwrap_or( String::new() );
-  let rightTokenDataType: TokenType = rightToken.getDataType().clone();
+  let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or(TokenType::None);
   let rightValue = match rightTokenDataType {
     TokenType::Int    => 
     { 
@@ -216,5 +216,5 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
       resultType = TokenType::Int;
     }
   }
-  return Token::new( resultType, Some(resultValue) );
+  return Token::new( Some(resultType), Some(resultValue) );
 }

@@ -192,7 +192,7 @@ impl ToString for TokenType
 pub struct Token 
 {
         data: Option< String >,
-    dataType: TokenType,             // todo: option !!!
+    dataType: Option< TokenType >,
   pub tokens: Option< Vec<Token> >,
 }
 impl Token 
@@ -202,23 +202,23 @@ impl Token
     Token 
     {
           data: None,
-      dataType: TokenType::None,
+      dataType: None,
         tokens: None,
     }
   }
   pub fn newEmpty(
-    dataType: TokenType
+    dataType: Option< TokenType >
   ) -> Self 
   {
     Token 
     {
           data: None,
       dataType,
-         tokens: None,
+        tokens: None,
     }
   }
   pub fn new(
-    dataType: TokenType,
+    dataType: Option< TokenType >,
     data:     Option< String >
   ) -> Self 
   {
@@ -230,7 +230,7 @@ impl Token
     }
   }
   pub fn newFull(
-    dataType: TokenType,
+    dataType: Option< TokenType >,
     data:     Option< String >,
     tokens:   Option< Vec<Token> >
   ) -> Self 
@@ -249,7 +249,7 @@ impl Token
     Token 
     {
           data: None,
-      dataType: TokenType::None,
+      dataType: None,
         tokens,
     }
   }
@@ -279,7 +279,8 @@ impl Token
     {
       if data.chars().nth(0) == Some('-') 
       {
-        if self.dataType == TokenType::UInt || self.dataType == TokenType::UFloat 
+        if self.dataType.clone().unwrap_or(TokenType::None) == TokenType::UInt ||
+           self.dataType.clone().unwrap_or(TokenType::None) == TokenType::UFloat 
         {
           *data = data[1..].to_string()
         }
@@ -288,12 +289,12 @@ impl Token
   }
 
   //
-  pub fn getDataType(&self) -> &TokenType 
+  pub fn getDataType(&self) -> Option< TokenType >
   {
-    &self.dataType
+    self.dataType.clone()
   }
   //
-  pub fn setDataType(&mut self, newDataType: TokenType) -> ()
+  pub fn setDataType(&mut self, newDataType: Option< TokenType >) -> ()
   {
     self.dataType = newDataType;
     self.convertData();
