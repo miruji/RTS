@@ -11,34 +11,13 @@ use std::time::Instant;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-// prevariables
-// in fact, i moved the most used variables here so that reading happens faster, 
-// without re-declaring identical memory areas
-static mut __index:  usize  = 0;                               // index  buffer
-static mut __length: usize  = 0;                               // length buffer
-
-static mut __byte1:  u8     = b'\0';                           // byte 1 buffer
-static mut __byte2:  u8     = b'\0';                           // byte 2 buffer
-static mut __char:   char   = '\0';                            // char   buffer
-static mut __result: String = String::new();                   // result buffer
-static mut __bool1:  bool   = false;                           // bool 1 buffer
-static mut __bool2:  bool   = false;                           // bool 2 buffer
-static mut __bool3:  bool   = false;                           // bool 3 buffer
-
-static mut __token:     Token  = Token::newStatic();           // Token     buffer
-static mut __tokenType: &mut TokenType = &mut TokenType::None; // TokenType buffer
-static mut __brackets:  Vec::<usize> = Vec::new();             // brackets  buffer
-
 // delete comment
-unsafe fn deleteComment(buffer: &[u8]) -> ()
+unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -> ()
 {
-  _index += 1;
-  _indexCount += 2;
-  
-  while _index < _bufferLength && buffer[_index] != b'\n' 
+  *index += 1;
+  while *index < bufferLength && buffer[*index] != b'\n' 
   {
-    _index += 1;
-    _indexCount += 1;
+    *index += 1;
   }
 }
 
@@ -61,74 +40,70 @@ fn isDigit(c: u8) -> bool
   c >= b'0' && c <= b'9'
 }
 // get int-float token by buffer-index
-unsafe fn getNumber(buffer: &[u8]) -> Token 
+unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
-  __index = _index; // index buffer
-  __result = String::new();
+  let mut savedIndex: usize = *index; // index buffer
+  let mut result: String = String::new();
 
-  __bool1 = false; // dot check
-  __bool2 = false; // negative check
-  __bool3 = false; // reational checl
+  let mut      dot = false; // dot check
+  let mut negative = false; // negative check
+  let mut rational = false; // reational check
 
-  while __index < _bufferLength 
+  while savedIndex < bufferLength 
   {
-    __byte1 = buffer[__index]; // current char
-    __byte2 =                  // next char
-      if __index+1 < _bufferLength 
+    let byte1: u8 = buffer[savedIndex]; // current char
+    let byte2: u8 =                     // next char
+      if savedIndex+1 < bufferLength 
       {
-        buffer[__index+1]
+        buffer[savedIndex+1]
       } else 
       {
         b'\0'
       };
 
-    if !__bool2 && buffer[_index] == b'-' 
+    if !negative && buffer[*index] == b'-' 
     { // Int/Float flag
-      __result.push(__byte1 as char);
-      __bool2 = true;
-      __index += 1;
+      result.push(byte1 as char);
+      negative = true;
+      savedIndex += 1;
     } else
-    if isDigit(__byte1) 
+    if isDigit(byte1) 
     { // UInt
-      __result.push(__byte1 as char);
-      __index += 1;
+      result.push(byte1 as char);
+      savedIndex += 1;
     } else 
-    if __byte1 == b'.' && !__bool1 && isDigit(__byte2) 
+    if byte1 == b'.' && !dot && isDigit(byte2) 
     { // UFloat
-      if __bool3 
+      if rational 
       {
           break;
       }
-      __bool1 = true;
-      __result.push(__byte1 as char);
-      __index += 1;
+      dot = true;
+      result.push(byte1 as char);
+      savedIndex += 1;
     } else
-    if __byte1 == b'/' && __byte2 == b'/' && !__bool1 && 
-       (__index+2 < _bufferLength && isDigit(buffer[__index+2])) 
+    if byte1 == b'/' && byte2 == b'/' && !dot && 
+       (savedIndex+2 < bufferLength && isDigit(buffer[savedIndex+2])) 
     { // Rational
-      __bool3 = true;
-      __result.push('/');
-      __result.push('/');
-      __index += 2;
+      rational = true;
+      result.push('/');
+      result.push('/');
+      savedIndex += 2;
     } else 
     {
       break;
     }
   }
 
-  if !__result.is_empty() 
-  {
-    _index = __index;
-    _indexCount += __result.len();
-  }
-
-  match (__bool3, __bool1, __bool2) 
+  *index = savedIndex;
+  // next return
+  match (rational, dot, negative) 
   { //   rational,  dot,  negative
-    (true, _, _)     => Token::new(TokenType::Rational, __result.clone()),
-    (_, true, true)  => Token::new(TokenType::Float,    __result.clone()),
-    (_, true, false) => Token::new(TokenType::UFloat,   __result.clone()),
-    (_, false, true) => Token::new(TokenType::Int,      __result.clone()),
-    _                => Token::new(TokenType::UInt,     __result.clone()),
+    (true, _, _)     => Token::new(TokenType::Rational, result.clone()),
+    (_, true, true)  => Token::new(TokenType::Float,    result.clone()),
+    (_, true, false) => Token::new(TokenType::UFloat,   result.clone()),
+    (_, false, true) => Token::new(TokenType::Int,      result.clone()),
+    _                => Token::new(TokenType::UInt,     result.clone()),
   }
 }
 
@@ -139,71 +114,66 @@ fn isLetter(c: u8) -> bool
   (c >= b'A' && c <= b'Z')
 }
 // get word token by buffer-index
-unsafe fn getWord(buffer: &[u8]) -> Token 
+unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
-  __index = _index;
-  __result = String::new();
+  let mut savedIndex: usize = *index; // index buffer
+  let mut result: String = String::new();
 
-  while __index < _bufferLength 
+  while savedIndex < bufferLength 
   {
-    __byte1 = buffer[__index]; // current char
-    __byte2 =                  // next char
-        if __index+1 < _bufferLength 
+    let byte1: u8 = buffer[savedIndex]; // current char
+    let byte2: u8 =                  // next char
+        if savedIndex+1 < bufferLength 
         {
-          buffer[__index+1]
+          buffer[savedIndex+1]
         } else 
         {
           b'\0'
         };
 
-    if isLetter(__byte1) || 
-       (__byte1 == b'-' && !__result.is_empty() && isLetter(__byte2)) ||
-       (isDigit(__byte1) && !__result.is_empty()) 
+    if isLetter(byte1) || 
+       (byte1 == b'-' && !result.is_empty() && isLetter(byte2)) ||
+       (isDigit(byte1) && !result.is_empty()) 
     {
-      __result.push(__byte1 as char);
-      __index += 1;
+      result.push(byte1 as char);
+      savedIndex += 1;
     } else 
     {
       break;
     }
   }
 
-  if !__result.is_empty() 
-  {
-    _index = __index;
-    _indexCount += __result.len();
-  }
-
+  *index = savedIndex;
   // next return
-  match &__result[..] 
+  match &result[..] 
   {
     "true"     => Token::new(TokenType::Bool, String::from("1")),
     "false"    => Token::new(TokenType::Bool, String::from("0")),
     "loop"     => Token::newEmpty(TokenType::Loop),
-    _          => Token::new(TokenType::Word, __result.clone()),
+    _          => Token::new(TokenType::Word, result.clone()),
   }
 }
 
 // get quotes token by buffer-index
-unsafe fn getQuotes(buffer: &[u8]) -> Token 
+unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token 
 {
-  __byte1 = buffer[_index]; // quote
+  let byte1: u8 = buffer[*index]; // quote
 
-  __length = buffer.len();
-  __result = String::new();
+  let length: usize = buffer.len();
+  let mut result = String::new();
 
-  if buffer[_index] == __byte1 
+  if buffer[*index] == byte1 
   {
     let mut open:             bool = false;
     let mut noSlash:          bool;
     let mut backslashCounter: usize;
 
-    while _index < __length 
+    while *index < length 
     {
-      __byte2 = buffer[_index]; // current char
+      let byte2: u8 = buffer[*index]; // current char
 
       // check endline error
-      if __byte2 == b'\n' 
+      if byte2 == b'\n' 
       {
         // quotes were not closed
         // skipped it!
@@ -211,18 +181,18 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token
       }
 
       // read quote
-      if __byte2 != __byte1 
+      if byte2 != byte1 
       {
-        __result.push(__byte2 as char);
+        result.push(byte2 as char);
       } else
-      if __byte2 == __byte1 
+      if byte2 == byte1 
       {
         noSlash = true;
         // check back slash of end quote
-        if buffer[_index-1] == b'\\' 
+        if buffer[*index-1] == b'\\' 
         {
           backslashCounter = 1;
-          for i in (0.._index-1).rev() 
+          for i in (0..*index-1).rev() 
           {
             if buffer[i] == b'\\' 
             {
@@ -235,43 +205,41 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token
           if backslashCounter % 2 == 1 
           {
             // add slash (\' \" \`)
-            __result.push(__byte2 as char);
+            result.push(byte2 as char);
             noSlash = false;
           }
         }
         //
         if open && noSlash 
         {
-          _index += 1;
-          _indexCount += 1;
+          *index += 1;
           break;
         } else 
         {
           open = true;
         }
       }
-      _index += 1;
-      _indexCount += 1;
+      *index += 1;
     }
   }
   // next return
-  if __byte1 == b'\'' 
+  if byte1 == b'\'' 
   {
-    return if __result.len() > 1 
+    return if result.len() > 1 
     {
       // single quotes can only contain 1 character
       // skipped it!
       Token::newEmpty(TokenType::None)
     } else 
     {
-      Token::new(TokenType::Char, __result.clone())
+      Token::new(TokenType::Char, result.clone())
     }
-  } else if __byte1 == b'"' 
+  } else if byte1 == b'"' 
   {
-    Token::new(TokenType::String, __result.clone())
-  } else if __byte1 == b'`' 
+    Token::new(TokenType::String, result.clone())
+  } else if byte1 == b'`' 
   {
-    Token::new(TokenType::RawString, __result.clone())
+    Token::new(TokenType::RawString, result.clone())
   } else 
   {
     Token::newEmpty(TokenType::None)
@@ -279,23 +247,22 @@ unsafe fn getQuotes(buffer: &[u8]) -> Token
 }
 
 // get operator token by buffer-index
-unsafe fn getOperator(buffer: &[u8]) -> Token 
+unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
-  let currentChar = buffer[_index];
+  let currentChar = buffer[*index];
   let nextChar = 
-    if _index+1<_bufferLength 
+    if *index+1 < bufferLength 
     { 
-      buffer[_index+1]
+      buffer[*index+1]
     } else 
     { 
       b'\0'
     };
 
-  let increment = |count: usize| 
-  {
-    _index      += count;
-    _indexCount += count;
-  };
+  let mut increment = |count: usize| 
+    {
+      *index += count;
+    };
 
   match currentChar 
   {
@@ -402,63 +369,63 @@ unsafe fn getOperator(buffer: &[u8]) -> Token
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
-unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
+unsafe fn bracketNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &TokenType, endType: &TokenType) -> ()
 {
   for token in tokens.iter_mut() 
   {
     if token.tokens.len() > 0 
     {
-      bracketNesting(&mut token.tokens, beginType, endType);
+      bracketNesting(&mut token.tokens, index, beginType, endType);
     }
   }
-  blockNesting(tokens, beginType, endType);
+  blockNesting(tokens, index, beginType, endType);
 }
 // block nasting [begin token -> end token]
-unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
+unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &TokenType, endType: &TokenType) -> ()
 {
-  __brackets = Vec::new();
-  __length = tokens.len();
+  let mut brackets: Vec::<usize> = Vec::new();
+  let mut   length: usize        = tokens.len();
 
-  __index = 0; // index buffer
-  while __index < __length 
+  let mut l = 0; // index buffer
+  while l < length 
   {
-    *__tokenType = tokens[__index].dataType.clone();
-    if __tokenType == beginType 
+    let tokenType: &TokenType = tokens[l].getDataType();
+    if tokenType == beginType 
     {
-      __brackets.push(__index);
-    } else if __tokenType == endType 
+      brackets.push(l);
+    } else if tokenType == endType 
     {
-      if let Some(penultBracket) = __brackets.pop() 
+      if let Some(penultBracket) = brackets.pop() 
       {
-        if !__brackets.is_empty() 
+        if !brackets.is_empty() 
         {
-          __token = tokens[penultBracket].clone();
-          tokens[ __brackets[__brackets.len()-1] ]
-            .tokens.push( __token.clone() );
+          let savedToken: Token = tokens[penultBracket].clone();
+          tokens[ brackets[brackets.len()-1] ]
+            .tokens.push( savedToken.clone() );
 
           tokens.remove(penultBracket);
-          __length -= 1;
+          length -= 1;
 
-          if penultBracket < __index 
+          if penultBracket < l 
           {
-            __index -= 1;
+            l -= 1;
           }
         }
       }
 
-      tokens.remove(__index);
-      __length -= 1;
+      tokens.remove(l);
+      length -= 1;
       continue;
-    } else if !__brackets.is_empty() 
+    } else if !brackets.is_empty() 
     {
-      __token = tokens.remove(__index);
-      __length -= 1;
+      let savedToken: Token = tokens.remove(l);
+      length -= 1;
 
-      tokens[ __brackets[__brackets.len()-1] ]
-        .tokens.push( __token.clone() );
+      tokens[ brackets[brackets.len()-1] ]
+        .tokens.push( savedToken.clone() );
       continue;
     }
-    __index += 1;
+    l += 1;
   }
 }
 // line nesting [line -> line]
@@ -534,7 +501,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
       }
       // ? delete comment
       lastTokenIndex = line.tokens.len()-1;
-      if line.tokens[lastTokenIndex].dataType == TokenType::Comment {
+      if *line.tokens[lastTokenIndex].getDataType() == TokenType::Comment {
         line.tokens.remove(lastTokenIndex);
         if line.tokens.is_empty() { // go to delete empty line
           deleteLine = true;        //
@@ -563,7 +530,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
   let tokenCount: usize = tokens.len();
   for (i, token) in tokens.iter().enumerate() 
   {
-    __char = 
+    let c: char = 
       if i == tokenCount-1 
       {
         'X'
@@ -572,49 +539,49 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
         '┃'
       };
 
-    if !token.data.is_empty() 
+    if !token.getData().is_empty() 
     {
     // single quote
-      if token.dataType == TokenType::Char || token.dataType == TokenType::FormattedChar {
+      if *token.getDataType() == TokenType::Char || *token.getDataType() == TokenType::FormattedChar {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
           lineIdentString,
-          __char,
+          c,
           identString,
-          token.data,
-          token.dataType.to_string()
+          token.getData(),
+          token.getDataType().to_string()
         ));
     // double quote
       } else
-      if token.dataType == TokenType::String || token.dataType == TokenType::FormattedString {
+      if *token.getDataType() == TokenType::String || *token.getDataType() == TokenType::FormattedString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
           lineIdentString,
-          __char,
+          c,
           identString,
-          token.data,
-          token.dataType.to_string()
+          token.getData(),
+          token.getDataType().to_string()
         ));
     // back quote
       } else
-      if token.dataType == TokenType::RawString || token.dataType == TokenType::FormattedRawString {
+      if *token.getDataType() == TokenType::RawString || *token.getDataType() == TokenType::FormattedRawString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
           lineIdentString,
-          __char,
+          c,
           identString,
-          token.data,
-          token.dataType.to_string()
+          token.getData(),
+          token.getDataType().to_string()
         ));
     // basic
       } else {
         log("parserToken",&format!(
           "{}{}{}{}  |{}",
           lineIdentString,
-          __char,
+          c,
           identString,
-          token.data,
-          token.dataType.to_string()
+          token.getData(),
+          token.getDataType().to_string()
         ));
       }
     // type only
@@ -622,9 +589,9 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
       println!(
         "{}{}{}{}",
         lineIdentString,
-        __char,
+        c,
         identString,
-        token.dataType.to_string()
+        token.getDataType().to_string()
       );
     }
     if (&token.tokens).len() > 0 
@@ -664,16 +631,6 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
 }
 
 // tokens reader cycle
-static mut _index:        usize = 0; // it is more profitable to contain the value here,
-static mut _bufferLength: usize = 0; // than to shove it into methods every time.
-                                     // bufferLength would be better if it were final, 
-                                     // but it is not :( and i like unsafe!
-static mut _linesCount:   usize = 1; // even if these variables are not used,
-static mut _indexCount:   usize = 0; // their use is better than a vector of strings
-static mut _linesDeleted: usize = 0; // <- save deleted lines num for logger
-
-static mut _linesIdent: usize = 0;
-
 pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
 {
   if debugMode 
@@ -682,52 +639,48 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
     log("ok","+Generation");
     println!("     ┃");
   }
-  // hmm...
-  _index        = 0;
-  _bufferLength = buffer.len();
-  _linesCount   = 0;
-  _indexCount   = 0;
-  _linesDeleted = 0;
-  _linesIdent   = 0;
-  let mut _lineTokens: Vec<Token> = Vec::new();
-  // mmm...
-  // maybe, maybe
+
+  let mut      index: usize = 0;
+  let   bufferLength: usize = buffer.len();
+  let mut  lineIdent: usize = 0;
+  let mut lineTokens: Vec<Token> = Vec::new();
 
   let startTime: Instant = Instant::now();
 
   let mut linesLinks:    Vec< Arc<RwLock<Line>> > = Vec::new();
   let mut readLineIdent: bool                     = true;
 
-  while _index < _bufferLength 
+  while index < bufferLength 
   {
-    __byte1 = buffer[_index]; // current char
+    let byte: u8 = buffer[index]; // current char
 
     // indent
-    if __byte1 == b' ' && _index+1 < _bufferLength && buffer[_index+1] == b' ' && readLineIdent 
+    if byte == b' ' && index+1 < bufferLength && buffer[index+1] == b' ' && readLineIdent 
     {
-      _index += 2;
-      _indexCount += 2;
-
-      _linesIdent += 1;
+      index += 2;
+      lineIdent += 1;
     } else 
     {
       readLineIdent = false;
       // get endline
-      if __byte1 == b'\n' || __byte1 == b';' 
+      if byte == b'\n' || byte == b';' 
       {
         // bracket nesting
         bracketNesting(
-          &mut _lineTokens,
+          &mut lineTokens,
+          &mut index,
           &TokenType::CircleBracketBegin, 
           &TokenType::CircleBracketEnd
         );
         bracketNesting(
-          &mut _lineTokens,
+          &mut lineTokens,
+          &mut index,
           &TokenType::SquareBracketBegin, 
           &TokenType::SquareBracketEnd
         );
         bracketNesting(
-          &mut _lineTokens,
+          &mut lineTokens,
+          &mut index,
           &TokenType::FigureBracketBegin, 
           &TokenType::FigureBracketEnd
         );
@@ -736,83 +689,75 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
         linesLinks.push( 
           Arc::new(RwLock::new( 
             Line {
-              tokens:       _lineTokens.clone(),
-              indent:       _linesIdent,
-              index:        0,
-              lines:        Vec::new(),
-              linesDeleted: _linesDeleted+_linesCount,
-              parent:       None
+              tokens: lineTokens.clone(),
+              indent: lineIdent,
+              index:  0,
+              lines:  Vec::new(),
+              parent: None
             }
           ))
         );
-        _linesDeleted = 0;
-        _linesIdent = 0;
+        lineIdent = 0;
 
         readLineIdent = true;
-        _lineTokens.clear();
-        _index += 1;
-
-        _linesCount += 1;
-        _indexCount = 0;
+        lineTokens.clear();
+        index += 1;
       } else
       // delete comment
-      if __byte1 == b'#' 
+      if byte == b'#' 
       {
-        deleteComment(&buffer);
-        _lineTokens.push( Token::newEmpty(TokenType::Comment) );
+        deleteComment(&buffer, &mut index, bufferLength);
+        lineTokens.push( Token::newEmpty(TokenType::Comment) );
       } else
       // get int-float
-      if isDigit(__byte1) || (__byte1 == b'-' && _index+1 < _bufferLength && isDigit(buffer[_index+1])) 
+      if isDigit(byte) || (byte == b'-' && index+1 < bufferLength && isDigit(buffer[index+1])) 
       {
-        _lineTokens.push( getNumber(&buffer) );
+        lineTokens.push( getNumber(&buffer, &mut index, bufferLength) );
       } else
       // get word
-      if isLetter(__byte1) 
+      if isLetter(byte) 
       {
-        _lineTokens.push( getWord(&buffer) );
+        lineTokens.push( getWord(&buffer, &mut index, bufferLength) );
       } else
       // get quotes ' " `
-      if __byte1 == b'\'' || __byte1 == b'"' || __byte1 == b'`' 
+      if byte == b'\'' || byte == b'"' || byte == b'`' 
       {
-        __token = getQuotes(&buffer);
-        if __token.dataType != TokenType::None 
+        let mut token: Token = getQuotes(&buffer, &mut index);
+        if *token.getDataType() != TokenType::None 
         {
-          let backTokenIndex = _lineTokens.len()-1;
+          let backTokenIndex = lineTokens.len()-1;
           // if formatted quotes
-          if _lineTokens[backTokenIndex].dataType == TokenType::Word && _lineTokens[backTokenIndex].data == "f" 
+          if *lineTokens[backTokenIndex].getDataType() == TokenType::Word && lineTokens[backTokenIndex].getData() == "f" 
           {
-            if __token.dataType == TokenType::RawString { __token.dataType = TokenType::FormattedRawString; } else
-            if __token.dataType == TokenType::String    { __token.dataType = TokenType::FormattedString;    } else
-            if __token.dataType == TokenType::Char      { __token.dataType = TokenType::FormattedChar;      }
-            _lineTokens[backTokenIndex] = __token.clone(); // todo: remove copy please
+            if *token.getDataType() == TokenType::RawString { token.setDataType( TokenType::FormattedRawString ); } else
+            if *token.getDataType() == TokenType::String    { token.setDataType( TokenType::FormattedString );    } else
+            if *token.getDataType() == TokenType::Char      { token.setDataType( TokenType::FormattedChar );      }
+            lineTokens[backTokenIndex] = token.clone(); // todo: remove copy please
           // basic quotes
           } else 
           {
-            _lineTokens.push(__token.clone()); // todo: remove copy please
+            lineTokens.push(token.clone()); // todo: remove copy please
           }
         } else 
         {
-          _index += 1;
-          _indexCount += 1;
+          index += 1;
         }
       } else
       // get single and double chars
-      if isSingleChar(__byte1) 
+      if isSingleChar(byte) 
       {
-        __token = getOperator(&buffer);
-        if __token.dataType != TokenType::None 
+        let token: Token = getOperator(&buffer, &mut index, bufferLength);
+        if *token.getDataType() != TokenType::None 
         {
-            _lineTokens.push(__token.clone()); // todo: remove copy
+            lineTokens.push(token.clone()); // todo: remove copy
         } else 
         {
-          _index += 1;
-          _indexCount += 1;
+          index += 1;
         }
           // skip
       } else 
       {
-        _index += 1;
-        _indexCount += 1;
+        index += 1;
       }
     }
   }
@@ -821,8 +766,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   lineNesting(&mut linesLinks);
 
   // delete DoubleComment
-  __index = 0;
-  deleteDoubleComment(&mut linesLinks, __index);
+  deleteDoubleComment(&mut linesLinks, 0);
 
   // debug output and return
   if debugMode 

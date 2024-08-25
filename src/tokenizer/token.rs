@@ -191,8 +191,8 @@ impl ToString for TokenType
 #[derive(Clone)]
 pub struct Token 
 {
-  pub data:     String,     // todo: option !!!
-  pub dataType: TokenType,
+  data:     String,     // todo: option !!!
+  dataType: TokenType,
   pub tokens:   Vec<Token>, // todo: option ?
 }
 impl Token 
@@ -252,6 +252,60 @@ impl Token
       dataType: TokenType::None,
       tokens,
     }
+  }
+
+  // convert type
+  // todo:
+  /*
+  fn convertType(&mut self) 
+  {
+    if self.data.chars().nth(0) == Some('-') 
+    {
+      self.dataType = 
+        match self.dataType 
+        {
+          TokenType::UInt => TokenType::Int,
+          TokenType::UFloat => TokenType::Float,
+          _ => self.dataType.clone(),
+        }
+    }
+  }
+  */
+
+  // convert data
+  fn convertData(&mut self) 
+  {
+    if self.data.chars().nth(0) == Some('-') 
+    {
+      if self.dataType == TokenType::UInt || self.dataType == TokenType::UFloat 
+      {
+        self.data = self.data[1..].to_string()
+      }
+    }
+  }
+
+  //
+  pub fn getDataType(&self) -> &TokenType 
+  {
+    &self.dataType
+  }
+  //
+  pub fn setDataType(&mut self, newDataType: TokenType) 
+  {
+    self.dataType = newDataType;
+    self.convertData();
+  }
+
+  //
+  pub fn getData(&self) -> &str 
+  {
+    &self.data
+  }
+  //
+  pub fn setData(&mut self, newData: String) 
+  {
+    self.data = newData;
+    self.convertData();
   }
 }
 impl fmt::Display for Token 

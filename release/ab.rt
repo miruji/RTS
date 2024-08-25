@@ -1,9 +1,9 @@
-##
+#
   ab
-##
                           # if lower fist char
-ab(a: Int, b: Int) -> Int # final a, final b, expected Integer
+ab(a: UInt, b: Int) -> UInt # final a, final b, expected Integer
+  print(f"{a}:{type(a)} {b}:{type(b)} ")
   = a + b                 # return Integer value
 
-c = ab(10, -20) # final Unsigned
-println(c)      # println c (-10)
+c = ab(11, -20) # final Unsigned
+println(f"= {c}:{type(c)}")      # println c (-10)

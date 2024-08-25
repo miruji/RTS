@@ -18,7 +18,6 @@ pub struct Line {
                                                  // todo: Option
   pub        lines: Vec< Arc<RwLock<Line>> >,    // child lines
                                                  // todo: Option
-  pub linesDeleted: usize,                       // deleted lines
   pub       parent: Option< Arc<RwLock<Line>> >  // parent link
 }
 impl Line 
@@ -27,12 +26,11 @@ impl Line
   {
     Line 
     {
-            tokens: Vec::new(),
-            indent: 0,
-             index: 0,
-             lines: Vec::new(),
-      linesDeleted: 0,
-            parent: None
+      tokens: Vec::new(),
+      indent: 0,
+       index: 0,
+       lines: Vec::new(),
+      parent: None
     }
   }
 }

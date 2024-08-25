@@ -39,105 +39,106 @@ pub fn getMemoryCellByName(memoryCellListLink: Arc<RwLock<MemoryCellList>>, name
 }
 
 // calculate value
-pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token 
+pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token 
 {
-  // set types
-  let leftValue = match left.dataType 
+  // get values of types
+  let leftTokenData = leftToken.getData(); // todo: type
+  let leftTokenDataType: TokenType = leftToken.getDataType().clone();
+  let leftValue = match leftTokenDataType
   {
     TokenType::Int => 
     {
-      left.data.parse::<i64>()
+      leftTokenData.parse::<i64>()
         .map(Value::Int)
         .unwrap_or(Value::Int(0))
     },
     TokenType::UInt => 
     {
-      left.data.parse::<u64>()
+      leftTokenData.parse::<u64>()
         .map(Value::UInt)
         .unwrap_or(Value::UInt(0))
     },
     TokenType::Float => 
     {
-      left.data.parse::<f64>()
+      leftTokenData.parse::<f64>()
         .map(Value::Float)
         .unwrap_or(Value::Float(0.0))
     },
     TokenType::UFloat => 
     {
-      left.data.parse::<f64>()
+      leftTokenData.parse::<f64>()
         .map(uf64::from)
         .map(Value::UFloat)
         .unwrap_or(Value::UFloat(uf64::from(0.0)))
     },
     TokenType::Char => 
     {
-      left.data.parse::<char>()
+      leftTokenData.parse::<char>()
         .map(|x| Value::Char(x))
         .unwrap_or(Value::Char('\0'))
     },
     TokenType::String => 
     {
-      left.data.parse::<String>()
+      leftTokenData.parse::<String>()
         .map(|x| Value::String(x))
         .unwrap_or(Value::String("".to_string()))
     },
     TokenType::Bool => 
     {
-      if left.data == "1" { Value::UInt(1) } 
-      else                { Value::UInt(0)}
+      if leftTokenData == "1" { Value::UInt(1) } 
+      else                    { Value::UInt(0)}
     },
     _ => Value::UInt(0),
   };
-  let rightValue = match right.dataType {
+  let rightTokenData = rightToken.getData(); // todo: type
+  let rightTokenDataType: TokenType = rightToken.getDataType().clone();
+  let rightValue = match rightTokenDataType {
     TokenType::Int    => 
     { 
-      right.data.parse::<i64>()
+      rightTokenData.parse::<i64>()
         .map(Value::Int)
         .unwrap_or(Value::Int(0)) 
     },
     TokenType::UInt   => 
     { 
-      right.data.parse::<u64>()
+      rightTokenData.parse::<u64>()
         .map(Value::UInt)
         .unwrap_or(Value::UInt(0)) 
     },
     TokenType::Float  => 
     { 
-      right.data.parse::<f64>()
+      rightTokenData.parse::<f64>()
         .map(Value::Float)
         .unwrap_or(Value::Float(0.0)) 
     },
     TokenType::UFloat => 
     { 
-      right.data.parse::<f64>()
+      rightTokenData.parse::<f64>()
         .map(uf64::from)
         .map(Value::UFloat)
         .unwrap_or(Value::UFloat(uf64::from(0.0))) 
     },
     TokenType::Char   => 
     { 
-      right.data.parse::<char>()
+      rightTokenData.parse::<char>()
         .map(|x| Value::Char(x))
         .unwrap_or(Value::Char('\0')) 
     },
     TokenType::String => 
     { 
-      right.data.parse::<String>()
+      rightTokenData.parse::<String>()
         .map(|x| Value::String(x))
         .unwrap_or(Value::String("".to_string())) 
     },
     TokenType::Bool   => 
     { 
-      if right.data == "1" 
-          { Value::UInt(1) } 
-      else 
-          { Value::UInt(0) } 
+      if rightTokenData == "1" { Value::UInt(1) } 
+      else                     { Value::UInt(0) } 
     },
     _ => Value::UInt(0),
   };
-  // next: set type, calculate value, check result type, return
+  // calculate and set pre-result type
   let mut resultType: TokenType = TokenType::UInt;
-  // calculate
   let resultValue: String = match *op 
   {
     TokenType::Plus     => (leftValue + rightValue).to_string(),
@@ -189,28 +190,28 @@ pub fn calculate(op: &TokenType, left: &Token, right: &Token) -> Token
   // set result type
   if resultType != TokenType::Bool 
   {
-    if left.dataType == TokenType::String || right.dataType == TokenType::String 
+    if leftTokenDataType == TokenType::String || rightTokenDataType == TokenType::String 
     {
       resultType = TokenType::String;
     } else
-    if (left.dataType == TokenType::Int   || left.dataType == TokenType::Int) && 
-        right.dataType == TokenType::Char 
+    if (leftTokenDataType == TokenType::Int   || leftTokenDataType == TokenType::UInt) && // todo: ?
+        rightTokenDataType == TokenType::Char 
     {
-      resultType = left.dataType.clone();
-    }
-    if left.dataType == TokenType::Char 
+      resultType = leftTokenDataType.clone();
+    } else
+    if leftTokenDataType == TokenType::Char 
     {
       resultType = TokenType::Char;
     } else
-    if left.dataType == TokenType::Float  || right.dataType == TokenType::Float 
+    if leftTokenDataType == TokenType::Float  || rightTokenDataType == TokenType::Float 
     {
       resultType = TokenType::Float;
     } else
-    if left.dataType == TokenType::UFloat || right.dataType == TokenType::UFloat 
+    if leftTokenDataType == TokenType::UFloat || rightTokenDataType == TokenType::UFloat 
     {
       resultType = TokenType::UFloat;
     } else
-    if left.dataType == TokenType::Int    || right.dataType == TokenType::Int 
+    if leftTokenDataType == TokenType::Int    || rightTokenDataType == TokenType::Int 
     {
       resultType = TokenType::Int;
     }

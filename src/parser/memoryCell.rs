@@ -34,8 +34,8 @@ pub struct MemoryCell
 {
   pub      name: String,         // unique name
   pub      mode: MemoryCellMode, // mode
-  pub valueType: TokenType,      // type         todo: store in value
-  pub     value: Token           // value
+  pub valueType: TokenType,      // type         todo: store in value | option please
+  pub     value: Token           // value        todo: option please
 }
 impl MemoryCell 
 {
