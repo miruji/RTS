@@ -192,8 +192,8 @@ impl ToString for TokenType
 pub struct Token 
 {
   data:     String,     // todo: option !!!
-  dataType: TokenType,
-  pub tokens:   Vec<Token>, // todo: option ?
+  dataType: TokenType,  // todo: option !!!
+  pub tokens: Option< Vec<Token> >,
 }
 impl Token 
 {
@@ -203,7 +203,7 @@ impl Token
     {
       data: String::new(),
       dataType: TokenType:: None,
-      tokens: Vec::new(),
+      tokens: None,
     }
   }
   pub fn newEmpty(
@@ -214,7 +214,7 @@ impl Token
     {
       data:   String::new(),
       dataType,
-      tokens: Vec::new(),
+      tokens: None,
     }
   }
   pub fn new(
@@ -226,13 +226,13 @@ impl Token
     {
       data,
       dataType,
-      tokens: Vec::new(),
+      tokens: None,
     }
   }
   pub fn newFull(
     dataType: TokenType,
     data:     String,
-    tokens:   Vec<Token>
+    tokens:   Option< Vec<Token> >
   ) -> Self 
   {
     Token 
@@ -243,7 +243,7 @@ impl Token
     }
   }
   pub fn newNesting(
-    tokens: Vec<Token>
+    tokens: Option< Vec<Token> >
   ) -> Self 
   {
     Token 
@@ -257,7 +257,7 @@ impl Token
   // convert type
   // todo:
   /*
-  fn convertType(&mut self) 
+  fn convertType(&mut self) -> ()
   {
     if self.data.chars().nth(0) == Some('-') 
     {
@@ -273,7 +273,7 @@ impl Token
   */
 
   // convert data
-  fn convertData(&mut self) 
+  fn convertData(&mut self) -> ()
   {
     if self.data.chars().nth(0) == Some('-') 
     {
@@ -290,7 +290,7 @@ impl Token
     &self.dataType
   }
   //
-  pub fn setDataType(&mut self, newDataType: TokenType) 
+  pub fn setDataType(&mut self, newDataType: TokenType) -> ()
   {
     self.dataType = newDataType;
     self.convertData();
@@ -302,7 +302,7 @@ impl Token
     &self.data
   }
   //
-  pub fn setData(&mut self, newData: String) 
+  pub fn setData(&mut self, newData: String) -> ()
   {
     self.data = newData;
     self.convertData();

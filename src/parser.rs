@@ -387,7 +387,9 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     if lineTokensLength > 1 && *lineTokens[1].getDataType() == TokenType::CircleBracketBegin 
     {
       let method = methodLink.read().unwrap();
-      parameters = Some( method.getMethodParameters(&mut lineTokens[1].tokens.clone()) );
+      if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
+        parameters = Some( method.getMethodParameters(&mut lineTokens) );
+      }
 
       if lineTokensLength > 3 && *lineTokens[2].getDataType() == TokenType::Pointer && 
          *lineTokens[3].getDataType() == TokenType::Word 
@@ -571,7 +573,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
   let mut typeReceived: bool      = false;
 
   let mut operatorBuffer: TokenType  = TokenType::None;
-  let mut    valueBuffer: Vec<Token> = Vec::new();
+  let mut    valueBuffer: Option< Vec<Token> > = None;
 
   let mut token: &Token;
   while j < tokensLength 
@@ -633,7 +635,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
           // operator
           operatorBuffer = token.getDataType().clone();
           // value
-          valueBuffer = tokens[j+1..(tokensLength)].to_vec();
+          valueBuffer = Some( tokens[j+1..(tokensLength)].to_vec() );
         }
         // todo: made?
         //   if + or - or * or / and more ...
@@ -655,25 +657,26 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
       method.memoryCellOp(
         memoryCellLink, 
         operatorBuffer, 
-        Token::newNesting(valueBuffer)
+        Token::newNesting( valueBuffer )
       );
     // if no searched, then create new MemoryCell and equal right value
     } else 
-    {
+    if let Some(ref value) = valueBuffer { //  let mut    valueBuffer: Option< Vec<Token> > = None;
       // memoryCellName - op - value
       // array
-      if valueBuffer.len() > 0 && *valueBuffer[0].getDataType() == TokenType::SquareBracketBegin 
+      if value.len() > 0 && *value[0].getDataType() == TokenType::SquareBracketBegin 
       {
-        valueBuffer = valueBuffer[0].tokens.clone();
-        valueBuffer.retain(|token| *token.getDataType() != TokenType::Comma);
-        method.pushMemoryCell(
-          MemoryCell::new(
-            nameBuffer,
-            modeBuffer,
-            TokenType::Array,
-            Token::newNesting( valueBuffer )
-          )
-        );
+        if let Some(mut value) = value[0].tokens.clone() {
+          value.retain(|token| *token.getDataType() != TokenType::Comma);
+          method.pushMemoryCell(
+            MemoryCell::new(
+              nameBuffer,
+              modeBuffer,
+              TokenType::Array,
+              Token::newNesting( valueBuffer )
+            )
+          );
+        }
         return true;
       // basic cell
       } else 
@@ -828,7 +831,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
         MemoryCellMode::LockedFinal,
         TokenType::UInt,
         Token::newNesting(
-          vec![Token::new(TokenType::UInt, _argc.to_string())]
+          Some( vec![Token::new(TokenType::UInt, _argc.to_string())] )
         )
       )
     );
@@ -845,7 +848,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
         String::from("argv"),
         MemoryCellMode::LockedFinal,
         TokenType::Array,
-        Token::newNesting(argv)
+        Token::newNesting( Some(argv) )
       )
     );
   }

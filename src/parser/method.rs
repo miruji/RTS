@@ -105,7 +105,14 @@ impl Method
     // basic
     if memoryCell.valueType != TokenType::Array 
     {
-      memoryCell.value = self.memoryCellExpression(&mut memoryCell.value.tokens.clone());
+      memoryCell.value =
+        if let Some(mut memoryCellTokens) = memoryCell.value.tokens.clone()
+        {
+          self.memoryCellExpression(&mut memoryCellTokens)
+        } else 
+        { // error
+          Token::newEmpty( TokenType::None )
+        }
     }
     // array
     let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = self.memoryCellList.write().unwrap();
@@ -139,7 +146,14 @@ impl Method
       { return; }
 
     // calculate new values
-    let rightValue: Token = self.memoryCellExpression(&mut opValue.tokens.clone());
+    let rightValue: Token = 
+      if let Some(mut opValueTokens) = opValue.tokens.clone() 
+      {
+        self.memoryCellExpression(&mut opValueTokens)
+      } else 
+      { // error
+        Token::newEmpty( TokenType::None )
+      };
     let mut memoryCell = memoryCellLink.write().unwrap();
     // =
     if op == TokenType::Equals 
@@ -163,10 +177,17 @@ impl Method
       let memoryCell = memoryCellLink.read().unwrap();
       if index+1 < *length && *value[index+1].getDataType() == TokenType::SquareBracketBegin 
       {
-        let arrayIndex = // todo: rewrite if no UInt type ...
-            self
-                .memoryCellExpression(&mut value[index+1].tokens)
-                .getData().parse::<usize>();
+        let arrayIndex: Result<usize, _> = // todo: rewrite, (if no UInt type) ...
+          if let Some(ref mut tokens) = value[index + 1].tokens.as_mut() 
+          {
+            self.memoryCellExpression(tokens)
+              .getData()
+              .parse::<usize>()
+          } else 
+          {
+            // Handle error case
+            Ok(0)
+          };
 
         value.remove(index+1);
         *length -= 1;
@@ -174,11 +195,18 @@ impl Method
         {
           Ok(idx) => 
           {
-            value[index].setData    ( memoryCell.value.tokens[idx].getData().to_string() );
-            value[index].setDataType( memoryCell.value.tokens[idx].getDataType().clone() );
+            if let Some(memoryCellTokens) = &memoryCell.value.tokens 
+            {
+              value[index].setData    ( memoryCellTokens[idx].getData().to_string() );
+              value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
+            } else 
+            { // error -> skip
+              value[index].setData    ( String::new() );
+              value[index].setDataType( TokenType::None );
+            }
           }
           Err(_) => 
-          { // parsing errors
+          { // error -> skip
             value[index].setData    ( String::new() );
             value[index].setDataType( TokenType::None );
           }
@@ -278,27 +306,30 @@ impl Method
   // get expression parameters
   fn getExpressionParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
-    let mut result = Vec::new();
+    let mut result: Vec<Token> = Vec::new();
 
     if let Some(tokens) = value.get(i+1).map(|v| &v.tokens) 
-    { // get bracket tokens
-      let mut expressionBuffer = Vec::new(); // buffer of current expression
-      for (l, token) in tokens.iter().enumerate() 
-      { // read tokens
-        if *token.getDataType() == TokenType::Comma || l+1 == tokens.len() 
-        { // comma or line end
-          if *token.getDataType() != TokenType::Comma 
-          {
+    {
+      if let Some(tokens) = tokens
+      { // get bracket tokens
+        let mut expressionBuffer: Vec<Token> = Vec::new(); // buffer of current expression
+        for (l, token) in tokens.iter().enumerate() 
+        { // read tokens
+          if *token.getDataType() == TokenType::Comma || l+1 == tokens.len() 
+          { // comma or line end
+            if *token.getDataType() != TokenType::Comma 
+            {
+              expressionBuffer.push( token.clone() );
+            }
+            result.push( self.memoryCellExpression(&mut expressionBuffer) );
+            expressionBuffer.clear();
+          } else 
+          { // push new expression token
             expressionBuffer.push( token.clone() );
           }
-          result.push( self.memoryCellExpression(&mut expressionBuffer) );
-          expressionBuffer.clear();
-        } else 
-        { // push new expression token
-          expressionBuffer.push( token.clone() );
         }
+        value.remove(i+1); // remove bracket
       }
-      value.remove(i+1); // remove bracket
     }
 
     result
@@ -505,7 +536,14 @@ impl Method
       token = value[i].clone();
       if *token.getDataType() == TokenType::CircleBracketBegin 
       {
-        value[i] = self.memoryCellExpression(&mut token.tokens.clone());
+        value[i] = 
+          if let Some(mut tokenTokens) = token.tokens.clone() 
+          {
+            self.memoryCellExpression(&mut tokenTokens)
+          } else
+          {
+            Token::newEmpty(TokenType::None)
+          }
       }
       i += 1;
     }
@@ -623,22 +661,18 @@ impl Method
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
     if *line.tokens[0].getDataType() == TokenType::Word 
-    {
-      // add method call
+    { // add method call
       if line.tokens.len() > 1 && *line.tokens[1].getDataType() == TokenType::CircleBracketBegin 
-      {
-        // check lower first char
+      { // check lower first char
         let token: &Token = &line.tokens[0];
         if token.getData().starts_with(|c: char| c.is_lowercase()) 
         {
-          let mut expressionValue: Vec<Token> = line.tokens[1].tokens.clone();
           // todo: multi-param
           // basic methods
           let mut result = true;
           {
-            // go block up
             if token.getData() == "go" 
-            {
+            { // go block up
               if let Some(parentLink) = &line.parent 
               {
                 if let Some(methodParent) = &self.parent 
@@ -647,59 +681,73 @@ impl Method
                     searchCondition(parentLink.clone(), methodParent.clone());
                 }
               }
-            } else
-            // exit block up
-            if token.getData() == "ex" 
-            {
+            } else if token.getData() == "ex" 
+            { // exit block up
               println!("ex");
-            } else
-            // println
-            if token.getData() == "println" 
-            {
-              println!("{}",formatPrint(
-                &self.memoryCellExpression(&mut expressionValue).getData().to_string()
-              ));
-              io::stdout().flush().unwrap(); // forced withdrawal of old
-            } else 
-            // print
-            if token.getData() == "print" {
-              print!("{}",formatPrint(
-                &self.memoryCellExpression(&mut expressionValue).getData().to_string()
-              ));
-              io::stdout().flush().unwrap(); // forced withdrawal of old
-            } else 
-            // sleep
-            if token.getData() == "sleep" {
-              let value = &self.memoryCellExpression(&mut expressionValue).getData().to_string();
-              let valueNumber = value.parse::<u64>().unwrap_or(0);
-              sleep(Duration::from_millis(valueNumber));
-            } else 
-            // exec
-            if token.getData() == "exec" {
-              let expression: String              = self.memoryCellExpression(&mut expressionValue).getData().to_string();
-              let mut  parts: SplitWhitespace<'_> = expression.split_whitespace();
-
-              let command: &str      = parts.next().expect("No command found in expression"); // todo: 
-              let    args: Vec<&str> = parts.collect();
-
-              let output: Output = 
-                Command::new(command)
-                  .args(&args)
-                  .output()
-                  .expect("Failed to execute process"); // todo: 
-              let outputString: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
-              if !outputString.is_empty() 
+            } else if token.getData() == "println" 
+            { // println
+              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+              if let Some(mut expressionValue) = expressionValue 
               {
-                print!("{}", outputString);
+                println!("{}",formatPrint(
+                  &self.memoryCellExpression(&mut expressionValue)
+                    .getData().to_string()
+                ));
+              } else 
+              {
+                println!();
               }
-            } else 
-            // exit
-            if token.getData() == "exit" 
-            {
+              io::stdout().flush().unwrap(); // forced withdrawal of old
+            } else if token.getData() == "print" 
+            { // print
+              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+              if let Some(mut expressionValue) = expressionValue 
+              {
+                print!("{}",formatPrint(
+                  &self.memoryCellExpression(&mut expressionValue)
+                    .getData().to_string()
+                ));
+              } else 
+              {
+                print!("");
+              }
+              io::stdout().flush().unwrap(); // forced withdrawal of old
+            } else if token.getData() == "sleep" 
+            { // sleep
+              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+              if let Some(mut expressionValue) = expressionValue 
+              {
+                let value =  &self.memoryCellExpression(&mut expressionValue).getData().to_string();
+                let valueNumber = value.parse::<u64>().unwrap_or(0);
+                sleep(Duration::from_millis(valueNumber));
+              } // else skip
+            } else if token.getData() == "exec" 
+            { // exec
+              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+              if let Some(mut expressionValue) = expressionValue 
+              {
+                let expression: String              = self.memoryCellExpression(&mut expressionValue).getData().to_string();
+                let mut  parts: SplitWhitespace<'_> = expression.split_whitespace();
+
+                let command: &str      = parts.next().expect("No command found in expression"); // todo: 
+                let    args: Vec<&str> = parts.collect();
+
+                let output: Output = 
+                  Command::new(command)
+                    .args(&args)
+                    .output()
+                    .expect("Failed to execute process"); // todo: 
+                let outputString: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                if !outputString.is_empty() 
+                {
+                  print!("{}", outputString);
+                }
+              } // else skip
+            } else if token.getData() == "exit" 
+            { // exit
               _exitCode = true;
-            // custom method
             } else 
-            {
+            { // custom method
               result = false;
             }
           }
@@ -718,7 +766,15 @@ impl Method
               // set parameters
               // todo: merge with up method
               {
-                let mut parameters: Option< Vec<Token> > = Some( self.getMethodParameters(&mut expressionValue) );
+                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                let mut parameters:      Option< Vec<Token> > = 
+                  if let Some(mut expressionValue) = expressionValue
+                  {
+                    Some( self.getMethodParameters(&mut expressionValue) )
+                  } else 
+                  {
+                    None
+                  };
                 if let Some(parameters) = parameters 
                 {
                   let calledMethod = calledMethodLink.read().unwrap(); // todo: type

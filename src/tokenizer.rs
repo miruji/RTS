@@ -373,9 +373,9 @@ unsafe fn bracketNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: 
 {
   for token in tokens.iter_mut() 
   {
-    if token.tokens.len() > 0 
+    if let Some(ref mut tokens) = token.tokens 
     {
-      bracketNesting(&mut token.tokens, index, beginType, endType);
+      bracketNesting(tokens, index, beginType, endType);
     }
   }
   blockNesting(tokens, index, beginType, endType);
@@ -399,10 +399,20 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &T
       {
         if !brackets.is_empty() 
         {
+          // add nesting
           let savedToken: Token = tokens[penultBracket].clone();
-          tokens[ brackets[brackets.len()-1] ]
-            .tokens.push( savedToken.clone() );
+          if let Some(token) = tokens.get_mut(brackets[brackets.len()-1]) 
+          {
+            if let Some(tokenTokens) = &mut token.tokens 
+            { // contains tokens 
+              tokenTokens.push(savedToken.clone());
+            } else 
+            { // no tokens
+              token.tokens = Some( vec![savedToken.clone()] );
+            }
+          }
 
+          //
           tokens.remove(penultBracket);
           length -= 1;
 
@@ -418,11 +428,21 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &T
       continue;
     } else if !brackets.is_empty() 
     {
+      // add nesting
       let savedToken: Token = tokens.remove(l);
-      length -= 1;
+      if let Some(token) = tokens.get_mut(brackets[brackets.len()-1]) 
+      {
+        if let Some(tokenTokens) = &mut token.tokens 
+        { // contains tokens 
+          tokenTokens.push(savedToken.clone());
+        } else 
+        { // no tokens
+          token.tokens = Some( vec![savedToken.clone()] );
+        }
+      }
 
-      tokens[ brackets[brackets.len()-1] ]
-        .tokens.push( savedToken.clone() );
+      //
+      length -= 1;
       continue;
     }
     l += 1;
@@ -594,9 +614,9 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
         token.getDataType().to_string()
       );
     }
-    if (&token.tokens).len() > 0 
+    if let Some(tokens) = &token.tokens
     {
-        outputTokens(&token.tokens, lineIdent, indent+1)
+      outputTokens(tokens, lineIdent, indent+1)
     }
     //
   }
@@ -653,7 +673,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   while index < bufferLength 
   {
     let byte: u8 = buffer[index]; // current char
-
+    
     // indent
     if byte == b' ' && index+1 < bufferLength && buffer[index+1] == b' ' && readLineIdent 
     {
