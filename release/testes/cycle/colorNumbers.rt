@@ -38,7 +38,7 @@ getSpaces -> String
     go(1)
   = result
 
-# write
+# displays stripes of different colors with numbers
 write
   i = 0 # 0-9 counter
   c = 0 # main cycles counter
@@ -55,7 +55,7 @@ write
     go(1)
   println("\c")
 
-# main cycle
+# main loop for 10 times
 j = 0
 ? j < 10
   write()

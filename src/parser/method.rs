@@ -259,8 +259,8 @@ impl Method
         expressionBuffer += "\n";
         unsafe
         { 
-          let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
-          let expressionLine     = expressionLineLink.read().unwrap();
+          let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0]; // todo: type
+          let expressionLine     = expressionLineLink.read().unwrap();                            // todo: type
           let mut expressionBufferTokens: Vec<Token> = expressionLine.tokens.clone();
           if let Some(expressionData) = self.memoryCellExpression(&mut expressionBufferTokens).getData() 
           {
@@ -298,15 +298,14 @@ impl Method
           expressionBuffer.push( token.clone() );
         }
 
-        let mut parameterBuffer: Token = Token::new(None, expressionBuffer[0].getData());
         if expressionBuffer.len() == 3 
         {
           if let Some(expressionData) = expressionBuffer[2].getData() 
           {
-            parameterBuffer.setDataType( Some(getMethodResultType(expressionData)) );
+            expressionBuffer[0].setDataType( Some(getMethodResultType(expressionData)) );
           }
         }
-        result.push( parameterBuffer );
+        result.push( expressionBuffer[0].clone() );
 
         expressionBuffer.clear();
       } else 
@@ -361,8 +360,9 @@ impl Method
       if value[0].getDataType().unwrap_or(TokenType::None) != TokenType::CircleBracketBegin 
       {
         if value[0].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
-          { self.replaceMemoryCellByName(value, &mut valueLength, 0); } 
-        else 
+        { 
+          self.replaceMemoryCellByName(value, &mut valueLength, 0);
+        } else 
         if value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedRawString ||
            value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedString    ||
            value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedChar 
@@ -510,7 +510,7 @@ impl Method
                     };
 
                   let randomNumber: usize = 
-                    if min != max 
+                    if min < max 
                     {
                       rand::thread_rng().gen_range(min..=max)
                     } else 
@@ -706,22 +706,24 @@ impl Method
      e:
        methodCall(parameters)
   */
+  // todo: rename to procedureCall
   pub unsafe fn methodCall(&self, lineLink: Arc<RwLock<Line>>) -> bool 
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
-    if line.tokens[0].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
+    if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or(TokenType::None) == TokenType::Word
     { // add method call
-      if line.tokens.len() > 1 && line.tokens[1].getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
+      if line.tokens.get(1).and_then(|t| t.getDataType()).unwrap_or(TokenType::None) == TokenType::CircleBracketBegin
       { // check lower first char
         let token: &Token = &line.tokens[0];
-        if let Some(tokenData) = token.getData() {
+        if let Some(tokenData) = token.getData() 
+        {
           if tokenData.starts_with(|c: char| c.is_lowercase()) 
           {
             // todo: multi-param
             // basic methods
             let mut result = true;
-            {
-              if tokenData == "go" 
+            match tokenData.as_str() {
+              "go" =>
               { // go block up
                 if let Some(parentLink) = &line.parent 
                 {
@@ -731,10 +733,12 @@ impl Method
                       searchCondition(parentLink.clone(), methodParent.clone());
                   }
                 }
-              } else if tokenData == "ex" 
+              }
+              "ex" =>
               { // exit block up
-                println!("ex");
-              } else if tokenData == "println" 
+                println!("ex"); 
+              }
+              "println" =>
               { // println
                 // expression tokens
                 let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
@@ -753,7 +757,8 @@ impl Method
                   println!();
                 }
                 io::stdout().flush().unwrap(); // forced withdrawal of old
-              } else if tokenData == "print" 
+              }
+              "print" =>
               { // print
                 // expression tokens
                 let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
@@ -772,7 +777,8 @@ impl Method
                   print!("");
                 }
                 io::stdout().flush().unwrap(); // forced withdrawal of old
-              } else if tokenData == "sleep" 
+              }
+              "sleep" =>
               { // sleep
                 // expression tokens
                 let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
@@ -788,7 +794,8 @@ impl Method
                     }
                   } // else -> skip
                 }   // else -> skip
-              } else if tokenData == "exec" 
+              }
+              "exec" =>
               { // exec
                 // expression tokens
                 let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
@@ -814,10 +821,12 @@ impl Method
                     }
                   } // else -> skip
                 }   // else -> skip
-              } else if tokenData == "exit" 
+              }
+              "exit" =>
               { // exit
                 _exitCode = true;
-              } else 
+              }
+              _ =>
               { // custom method
                 result = false;
               }
@@ -853,16 +862,9 @@ impl Method
                     for (l, parameter) in parameters.iter().enumerate() 
                     {
                       let mut memoryCell = memoryCellList.value[l].write().unwrap(); // todo: type
+                      let expr = self.memoryCellExpression(&mut vec![parameter.clone()]).getData();
                       memoryCell.value.setData( 
-                        {
-                          if let Some(parameterData) = parameter.getData() 
-                          {
-                            Some( parameterData.to_string() )
-                          } else 
-                          { // error
-                            None
-                          }
-                        }
+                        expr
                       );
                     }
                   }
