@@ -99,11 +99,11 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
   // next return
   match (rational, dot, negative) 
   { //   rational,  dot,  negative
-    (true, _, _)     => Token::new(TokenType::Rational, result.clone()),
-    (_, true, true)  => Token::new(TokenType::Float,    result.clone()),
-    (_, true, false) => Token::new(TokenType::UFloat,   result.clone()),
-    (_, false, true) => Token::new(TokenType::Int,      result.clone()),
-    _                => Token::new(TokenType::UInt,     result.clone()),
+    (true, _, _)     => Token::new( TokenType::Rational, Some(result.clone()) ),
+    (_, true, true)  => Token::new( TokenType::Float,    Some(result.clone()) ),
+    (_, true, false) => Token::new( TokenType::UFloat,   Some(result.clone()) ),
+    (_, false, true) => Token::new( TokenType::Int,      Some(result.clone()) ),
+    _                => Token::new( TokenType::UInt,     Some(result.clone()) ),
   }
 }
 
@@ -147,10 +147,10 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
   // next return
   match &result[..] 
   {
-    "true"     => Token::new(TokenType::Bool, String::from("1")),
-    "false"    => Token::new(TokenType::Bool, String::from("0")),
+    "true"     => Token::new( TokenType::Bool, Some(String::from("1")) ),
+    "false"    => Token::new( TokenType::Bool, Some(String::from("0")) ),
     "loop"     => Token::newEmpty(TokenType::Loop),
-    _          => Token::new(TokenType::Word, result.clone()),
+    _          => Token::new( TokenType::Word, Some(result.clone()) ),
   }
 }
 
@@ -232,14 +232,14 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
       Token::newEmpty(TokenType::None)
     } else 
     {
-      Token::new(TokenType::Char, result.clone())
+      Token::new( TokenType::Char, Some(result.clone()) )
     }
   } else if byte1 == b'"' 
   {
-    Token::new(TokenType::String, result.clone())
+    Token::new( TokenType::String, Some(result.clone()) )
   } else if byte1 == b'`' 
   {
-    Token::new(TokenType::RawString, result.clone())
+    Token::new( TokenType::RawString, Some(result.clone()) )
   } else 
   {
     Token::newEmpty(TokenType::None)
@@ -360,7 +360,7 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
     b'.' => { increment(1); Token::newEmpty(TokenType::Dot) }
     b'?' => { increment(1); Token::newEmpty(TokenType::Question) }
     b'~' => { increment(1); Token::newEmpty(TokenType::Tilde) }
-    _ => Token::new(TokenType::None, String::new()),
+    _ => Token::new( TokenType::None, None ),
   }
 }
 
@@ -559,7 +559,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
         '┃'
       };
 
-    if !token.getData().is_empty() 
+    if let Some(tokenData) = token.getData()
     {
     // single quote
       if *token.getDataType() == TokenType::Char || *token.getDataType() == TokenType::FormattedChar {
@@ -568,7 +568,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           lineIdentString,
           c,
           identString,
-          token.getData(),
+          tokenData,
           token.getDataType().to_string()
         ));
     // double quote
@@ -579,7 +579,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           lineIdentString,
           c,
           identString,
-          token.getData(),
+          tokenData,
           token.getDataType().to_string()
         ));
     // back quote
@@ -590,7 +590,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           lineIdentString,
           c,
           identString,
-          token.getData(),
+          tokenData,
           token.getDataType().to_string()
         ));
     // basic
@@ -600,7 +600,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           lineIdentString,
           c,
           identString,
-          token.getData(),
+          tokenData,
           token.getDataType().to_string()
         ));
       }
@@ -673,7 +673,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   while index < bufferLength 
   {
     let byte: u8 = buffer[index]; // current char
-    
+
     // indent
     if byte == b' ' && index+1 < bufferLength && buffer[index+1] == b' ' && readLineIdent 
     {
@@ -747,7 +747,8 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
         {
           let backTokenIndex = lineTokens.len()-1;
           // if formatted quotes
-          if *lineTokens[backTokenIndex].getDataType() == TokenType::Word && lineTokens[backTokenIndex].getData() == "f" 
+          if *lineTokens[backTokenIndex].getDataType() == TokenType::Word && 
+             lineTokens[backTokenIndex].getData().unwrap_or( String::new() ) == "f" 
           {
             if *token.getDataType() == TokenType::RawString { token.setDataType( TokenType::FormattedRawString ); } else
             if *token.getDataType() == TokenType::String    { token.setDataType( TokenType::FormattedString );    } else

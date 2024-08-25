@@ -300,7 +300,17 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
         let method = methodLink.read().unwrap();
         let mut conditionTokens = condition.tokens.clone(); // todo: no clone ? fix its please
         conditionTokens.remove(0);
-        conditionTruth = method.memoryCellExpression(&mut conditionTokens).getData() == "true";
+        conditionTruth = 
+          {
+            let expressionResult = method.memoryCellExpression(&mut conditionTokens).getData(); // todo: type
+            if let Some(expressionResult) = expressionResult 
+            {
+              expressionResult == "true"
+            } else 
+            {
+              false
+            }
+          }
       }
       if conditionTruth 
       {
@@ -371,6 +381,11 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
   return false;
 }
 // define methods [function / procedure]
+//   min = 1, max = 4 tokens:
+//   name
+//   name(param)
+//   name -> Type
+//   name(param) -> Type
 unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool 
 {
   let line = lineLink.read().unwrap(); // todo: add type
@@ -381,8 +396,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
   //
   let mut parameters: Option< Vec<Token> > = None;
   if *lineTokens[0].getDataType() == TokenType::Word && line.lines.len() > 0 
-  {
-    // if there are parameters
+  { // if there are parameters
     let mut newMethodResultType: Option<TokenType> = None;
     if lineTokensLength > 1 && *lineTokens[1].getDataType() == TokenType::CircleBracketBegin 
     {
@@ -390,62 +404,69 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
       if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
         parameters = Some( method.getMethodParameters(&mut lineTokens) );
       }
-
+      // if result
       if lineTokensLength > 3 && *lineTokens[2].getDataType() == TokenType::Pointer && 
          *lineTokens[3].getDataType() == TokenType::Word 
       {
-        newMethodResultType = Some( getMethodResultType(lineTokens[3].getData().to_string()) );
-      }
-    // if no
+        if let Some(lineTokenData) = lineTokens[3].getData() 
+        {
+          newMethodResultType = Some( getMethodResultType(lineTokenData) );
+        }
+      } // else -> skip
+    // if there are no parameters
     } else 
-    {
+    { // if result
       if lineTokensLength > 2 && *lineTokens[1].getDataType() == TokenType::Pointer && 
          *lineTokens[2].getDataType() == TokenType::Word 
       {
-        newMethodResultType = Some( getMethodResultType(lineTokens[2].getData().to_string()) );
-      }
-    }
+        if let Some(lineTokenData) = lineTokens[2].getData() 
+        {
+          newMethodResultType = Some( getMethodResultType(lineTokenData) );
+        }
+      } // else -> skip
+    }   // else -> skip
 
-    // todo:
-    // min = 1, max = 4 tokens:
-    // name
-    // name(param)
-    // name -> Type
-    // name(param) -> Type
-    let mut newMethodBuffer = // todo: add type
-      Method::new(
-        lineTokens[0].getData().to_string(),
-        line.lines.clone(),
-        Some(methodLink.clone())
-      );
-    if let Some(newMethodResultType) = newMethodResultType 
+    // create new method
+    if let Some(newMethodName) = lineTokens[0].getData() 
     {
-      newMethodBuffer.result = Some( Token::newEmpty(newMethodResultType.clone()) );
-    }
-    // add parameters
-    if let Some(parameters) = parameters 
-    {
-      for parameter in parameters 
-      {
-        newMethodBuffer.pushMemoryCell(
-          MemoryCell::new(
-            parameter.getData().to_string(),
-            MemoryCellMode::LockedFinal,
-            TokenType::Array,
-            Token::newEmpty( parameter.getDataType().clone() )
-          )
+      let mut newMethodBuffer = // todo: add type
+        Method::new(
+          newMethodName,
+          line.lines.clone(),
+          Some(methodLink.clone())
         );
+      if let Some(newMethodResultType) = newMethodResultType 
+      {
+        newMethodBuffer.result = Some( Token::newEmpty(newMethodResultType.clone()) );
       }
+      // add parameters
+      if let Some(parameters) = parameters 
+      {
+        for parameter in parameters 
+        {
+          if let Some(parameterData) = parameter.getData() 
+          {
+            newMethodBuffer.pushMemoryCell(
+              MemoryCell::new(
+                parameterData,
+                MemoryCellMode::LockedFinal,
+                TokenType::Array,
+                Token::newEmpty( parameter.getDataType().clone() )
+              )
+            );
+          }
+        }
+      }
+      // add
+      let mut parentMethod = methodLink.write().unwrap(); // todo: check correct work | add type
+      parentMethod.methods.push(
+        Arc::new(
+        RwLock::new(
+          newMethodBuffer
+        ))
+      );
+      return true;
     }
-    // add
-    let mut parentMethod = methodLink.write().unwrap(); // todo: check correct work | add type
-    parentMethod.methods.push(
-      Arc::new(
-      RwLock::new(
-        newMethodBuffer
-      ))
-    );
-    return true;
   }
 
   return false;
@@ -565,9 +586,9 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
   let mut            j: usize           = 0;
   let mut       goNext: bool            = true;
 
-  let mut   nameBuffer: String         = String::new();
-  let mut   modeBuffer: MemoryCellMode = MemoryCellMode::LockedFinal;
-  let mut modeReceived: bool           = false;
+  let mut   nameBuffer: Option< String > = None;
+  let mut   modeBuffer: MemoryCellMode   = MemoryCellMode::LockedFinal;
+  let mut modeReceived: bool             = false;
 
   let mut   typeBuffer: TokenType = TokenType::None;
   let mut typeReceived: bool      = false;
@@ -585,7 +606,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
       // check mode
       if !modeReceived 
       {
-        nameBuffer = token.getData().to_string();
+        nameBuffer = token.getData();
         // variableName~~
         if j+2 < tokensLength && *tokens[j+2].getDataType() == TokenType::Tilde 
         {
@@ -649,7 +670,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
     else { goNext = true; }
   }
   //
-  if !nameBuffer.is_empty() 
+  if let Some(nameBuffer) = nameBuffer 
   {
     // if searched in methods
     if let Some(memoryCellLink) = method.getMemoryCellByName(&nameBuffer) 
@@ -673,7 +694,7 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
               nameBuffer,
               modeBuffer,
               TokenType::Array,
-              Token::newNesting( valueBuffer )
+              Token::newNesting( Some(value) )
             )
           );
         }
@@ -831,7 +852,9 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
         MemoryCellMode::LockedFinal,
         TokenType::UInt,
         Token::newNesting(
-          Some( vec![Token::new(TokenType::UInt, _argc.to_string())] )
+          Some( vec![
+            Token::new( TokenType::UInt, Some(_argc.to_string()) )
+          ] )
         )
       )
     );
@@ -840,7 +863,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     for a in &_argv 
     {
       argv.push(
-        Token::new(TokenType::String, String::from(a))
+        Token::new( TokenType::String, Some(String::from(a)) )
       );
     }
     main.pushMemoryCell(

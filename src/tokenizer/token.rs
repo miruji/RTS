@@ -191,8 +191,8 @@ impl ToString for TokenType
 #[derive(Clone)]
 pub struct Token 
 {
-  data:     String,     // todo: option !!!
-  dataType: TokenType,  // todo: option !!!
+        data: Option< String >,
+    dataType: TokenType,             // todo: option !!!
   pub tokens: Option< Vec<Token> >,
 }
 impl Token 
@@ -201,9 +201,9 @@ impl Token
   {
     Token 
     {
-      data: String::new(),
-      dataType: TokenType:: None,
-      tokens: None,
+          data: None,
+      dataType: TokenType::None,
+        tokens: None,
     }
   }
   pub fn newEmpty(
@@ -212,34 +212,34 @@ impl Token
   {
     Token 
     {
-      data:   String::new(),
+          data: None,
       dataType,
-      tokens: None,
+         tokens: None,
     }
   }
   pub fn new(
     dataType: TokenType,
-    data:     String
+    data:     Option< String >
   ) -> Self 
   {
     Token 
     {
-      data,
+          data,
       dataType,
-      tokens: None,
+        tokens: None,
     }
   }
   pub fn newFull(
     dataType: TokenType,
-    data:     String,
+    data:     Option< String >,
     tokens:   Option< Vec<Token> >
   ) -> Self 
   {
     Token 
     {
-      data,
+          data,
       dataType,
-      tokens,
+        tokens,
     }
   }
   pub fn newNesting(
@@ -248,9 +248,9 @@ impl Token
   {
     Token 
     {
-      data:     String::new(),
+          data: None,
       dataType: TokenType::None,
-      tokens,
+        tokens,
     }
   }
 
@@ -275,11 +275,14 @@ impl Token
   // convert data
   fn convertData(&mut self) -> ()
   {
-    if self.data.chars().nth(0) == Some('-') 
+    if let Some(ref mut data) = self.data 
     {
-      if self.dataType == TokenType::UInt || self.dataType == TokenType::UFloat 
+      if data.chars().nth(0) == Some('-') 
       {
-        self.data = self.data[1..].to_string()
+        if self.dataType == TokenType::UInt || self.dataType == TokenType::UFloat 
+        {
+          *data = data[1..].to_string()
+        }
       }
     }
   }
@@ -297,12 +300,12 @@ impl Token
   }
 
   //
-  pub fn getData(&self) -> &str 
+  pub fn getData(&self) -> Option< String >
   {
-    &self.data
+    self.data.clone()
   }
   //
-  pub fn setData(&mut self, newData: String) -> ()
+  pub fn setData(&mut self, newData: Option< String >) -> ()
   {
     self.data = newData;
     self.convertData();
@@ -312,13 +315,25 @@ impl fmt::Display for Token
 { // todo: debug only ?
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result 
   {
-    write!(f, "{}", self.data)
+    if let Some(data) = &self.data 
+    {
+      write!(f, "{}", data)
+    } else 
+    {
+      write!(f, " ")
+    }
   }
 }
 impl fmt::Debug for Token 
 { // todo: debug only ?
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
   {
-    write!(f, "{}", self.data)
+    if let Some(data) = &self.data 
+    {
+      write!(f, "{}", data)
+    } else 
+    {
+      write!(f, " ")
+    }
   }
 }

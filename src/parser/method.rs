@@ -172,53 +172,64 @@ impl Method
   // update value
   fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
   {
-    if let Some(memoryCellLink) = self.getMemoryCellByName( value[index].getData() ) 
+    if let Some(memoryCellName) = value[index].getData() 
     {
-      let memoryCell = memoryCellLink.read().unwrap();
-      if index+1 < *length && *value[index+1].getDataType() == TokenType::SquareBracketBegin 
+      if let Some(memoryCellLink) = self.getMemoryCellByName( &memoryCellName ) 
       {
-        let arrayIndex: Result<usize, _> = // todo: rewrite, (if no UInt type) ...
-          if let Some(ref mut tokens) = value[index + 1].tokens.as_mut() 
-          {
-            self.memoryCellExpression(tokens)
-              .getData()
-              .parse::<usize>()
-          } else 
-          {
-            // Handle error case
-            Ok(0)
-          };
-
-        value.remove(index+1);
-        *length -= 1;
-        match arrayIndex 
+        //
+        let memoryCell = memoryCellLink.read().unwrap();
+        if index+1 < *length && *value[index+1].getDataType() == TokenType::SquareBracketBegin 
         {
-          Ok(idx) => 
-          {
-            if let Some(memoryCellTokens) = &memoryCell.value.tokens 
+          let arrayIndex: Result<usize, _> = // todo: rewrite, (if no UInt type) ...
+            if let Some(ref mut tokens) = value[index+1].tokens.as_mut()
             {
-              value[index].setData    ( memoryCellTokens[idx].getData().to_string() );
-              value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
+              if let Some(expressionData) = self.memoryCellExpression(tokens).getData() 
+              {
+                expressionData.parse::<usize>()
+              } else 
+              { // error -> skip
+                Ok(0)
+              }
             } else 
             { // error -> skip
-              value[index].setData    ( String::new() );
+              Ok(0)
+            };
+
+          value.remove(index+1);
+          *length -= 1;
+          match arrayIndex 
+          {
+            Ok(idx) => 
+            {
+              if let Some(memoryCellTokens) = &memoryCell.value.tokens 
+              {
+                value[index].setData    ( memoryCellTokens[idx].getData() );
+                value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
+              } else 
+              { // error -> skip
+                value[index].setData    ( None );
+                value[index].setDataType( TokenType::None );
+              }
+            }
+            Err(_) => 
+            { // error -> skip
+              value[index].setData    ( None );
               value[index].setDataType( TokenType::None );
             }
           }
-          Err(_) => 
-          { // error -> skip
-            value[index].setData    ( String::new() );
-            value[index].setDataType( TokenType::None );
-          }
+        } else
+        {
+          value[index].setData    ( memoryCell.value.getData() );
+          value[index].setDataType( memoryCell.value.getDataType().clone() );
         }
       } else 
-      {
-        value[index].setData    ( memoryCell.value.getData().to_string() );
-        value[index].setDataType( memoryCell.value.getDataType().clone() );
+      { // error -> skip
+        value[index].setData    ( None );
+        value[index].setDataType( TokenType::None );
       }
     } else 
     { // error -> skip
-      value[index].setData    ( String::new() );
+      value[index].setData    ( None );
       value[index].setDataType( TokenType::None );
     }
   }
@@ -251,7 +262,10 @@ impl Method
           let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
           let expressionLine     = expressionLineLink.read().unwrap();
           let mut expressionBufferTokens: Vec<Token> = expressionLine.tokens.clone();
-          result += self.memoryCellExpression(&mut expressionBufferTokens).getData();
+          if let Some(expressionData) = self.memoryCellExpression(&mut expressionBufferTokens).getData() 
+          {
+            result += &expressionData;
+          }
         }
         expressionBuffer = String::new();
       } else 
@@ -284,12 +298,13 @@ impl Method
           expressionBuffer.push( token.clone() );
         }
 
-        let mut parameterBuffer: Token = Token::new(TokenType::None, expressionBuffer[0].getData().to_string());
+        let mut parameterBuffer: Token = Token::new(TokenType::None, expressionBuffer[0].getData());
         if expressionBuffer.len() == 3 
         {
-          parameterBuffer.setDataType( 
-            getMethodResultType( expressionBuffer[2].getData().to_string() ) 
-          );
+          if let Some(expressionData) = expressionBuffer[2].getData() 
+          {
+            parameterBuffer.setDataType(getMethodResultType(expressionData));
+          }
         }
         result.push( parameterBuffer );
 
@@ -352,8 +367,11 @@ impl Method
            *value[0].getDataType() == TokenType::FormattedString    ||
            *value[0].getDataType() == TokenType::FormattedChar 
         { 
-          let newData = self.formatQuote(value[0].getData().to_string());
-          value[0].setData(newData);
+          if let Some(mut valueData) = value[0].getData() 
+          { 
+            let newData: String = self.formatQuote(valueData);
+            value[0].setData( Some(newData) );
+          }
         }
         return value[0].clone();
       }
@@ -370,147 +388,173 @@ impl Method
           // function
           if i+1 < valueLength && *value[i+1].getDataType() == TokenType::CircleBracketBegin 
           {
-            let functionName: String = value[i].getData().to_string();
             // todo: uint float ufloat ...
-            if functionName == "int" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              // 
-              if expressions.len() > 0 
-              {
-                value[i]            = expressions[0].clone();
-                value[i].setDataType( TokenType::Int );
-              } else 
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "char" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              // 
-              if expressions.len() > 0 
-              {
-                value[i] = expressions[0].clone();
-
-                let newData = (value[i].getData().parse::<u8>().unwrap() as char).to_string();
-                value[i].setData(newData);
-
-                value[i].setDataType( TokenType::Char );
-              } else 
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "str" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              // 
-              if expressions.len() > 0 
-              {
-                value[i]            = expressions[0].clone();
-                value[i].setDataType( TokenType::String );
-              } else
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "type" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              // 
-              if expressions.len() > 0 
-              {
-                value[i].setData    ( expressions[0].getDataType().to_string() );
-                value[i].setDataType( TokenType::String );
-              } else 
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
-              }
-              valueLength -= 1;
-              continue;
-            } else
-            if functionName == "input" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              //
-              if expressions.len() > 0 
-              {
-                print!("{}",expressions[0].getData());
-                io::stdout().flush().unwrap(); // forced withdrawal of old
-              }
-
-              value[i].setData( String::new() );
-              io::stdin().read_line(&mut value[i].getData().to_string()).expect("Input error"); // todo: delete error
-
-              let trimmedData = value[i].getData().trim_end().to_string();
-              value[i].setData( trimmedData );
-
-              value[i].setDataType( TokenType::String );
-
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "randUInt" 
-            {
-              // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-              // 
-              if expressions.len() > 1 
-              {
-                let mut rng = rand::thread_rng();
-                let min: usize = expressions[0].getData().parse::<usize>().unwrap_or(0);
-                let max: usize = expressions[1].getData().parse::<usize>().unwrap_or(0);
-                let randomNumber: usize = rng.gen_range(min..=max);
-
-                value[i].setData    ( randomNumber.to_string() );
-                value[i].setDataType( TokenType::UInt );
-              } else 
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
-              }
-
-              valueLength -= 1;
-              continue;
-            } else 
-            {
-              let mut lineBuffer = Line::newEmpty();
-              lineBuffer.tokens  = value.clone();
-              unsafe{ self.methodCall( Arc::new(RwLock::new(lineBuffer)) ); }
-
-              // todo: rewrite
-              if let Some(methodLink) = self.getMethodByName(value[0].getData()) 
-              {
-                let method = methodLink.read().unwrap();
-                if let Some(result) = &method.result 
-                {
-                  value[i].setData    ( result.getData().to_string() );
-                  value[i].setDataType( result.getDataType().clone() );
+            // todo: replace if -> match
+            if let Some(functionName) = value[i].getData() 
+            { // begin of list of functions
+              if functionName == "int" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+                { // functional
+                  value[i].setData    ( Some( expressionData ) );
+                  value[i].setDataType( TokenType::Int );
                 } else 
-                {
-                  value[i].setData    ( String::new() );
+                { // error -> skip
+                  value[i].setData    ( None );
                   value[i].setDataType( TokenType::None );
                 }
+                valueLength -= 1;
+                continue;
               } else 
-              {
-                value[i].setData    ( String::new() );
-                value[i].setDataType( TokenType::None );
+              if functionName == "char" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+                { // functional
+                  value[i] = expressions[0].clone();
+
+                  let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
+                  value[i].setData( Some(newData) );
+
+                  value[i].setDataType( TokenType::Char );
+                } else 
+                { // error -> skip
+                  value[i].setData    ( None );
+                  value[i].setDataType( TokenType::None );
+                }
+                valueLength -= 1;
+                continue;
+              } else 
+              if functionName == "str" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+                { // functional
+                  value[i].setData    ( Some( expressionData ) );
+                  value[i].setDataType( TokenType::String );
+                } else
+                { // error -> skip
+                  value[i].setData    ( None );
+                  value[i].setDataType( TokenType::None );
+                }
+                valueLength -= 1;
+                continue;
+              } else 
+              if functionName == "type" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+                if expressions.len() > 0
+                { // functional
+                  value[i].setData    ( Some( expressions[0].getDataType().to_string() ) );
+                  value[i].setDataType( TokenType::String );
+                } else 
+                { // error -> skip
+                  value[i].setData    ( None );
+                  value[i].setDataType( TokenType::None );
+                }
+                valueLength -= 1;
+                continue;
+              } else
+              if functionName == "input" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+
+                // functional
+                if expressions.len() > 0 
+                {
+                  if let Some(expressionData) = expressions[0].getData() 
+                  {
+                    print!("{}",expressionData);
+                    io::stdout().flush().unwrap(); // forced withdrawal of old
+                  } // else -> skip
+                }   // else -> skip
+
+                value[i].setData( None );
+
+                if let Some(mut valueData) = value[i].getData() {
+                  io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
+                  value[i].setData( 
+                    Some( valueData.trim_end().to_string() )
+                  );
+                } else 
+                { // error -> skip
+                  value[i].setData( 
+                    None
+                  );
+                }
+
+                value[i].setDataType( TokenType::String );
+
+                valueLength -= 1;
+                continue;
+              } else 
+              if functionName == "randUInt" 
+              { // get expressions
+                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+                if expressions.len() > 1 
+                { // functional
+                  let min: usize = 
+                    if let Some(expressionData) = expressions[0].getData() {
+                      expressionData.parse::<usize>().unwrap_or(0)
+                    } else 
+                    {
+                      0
+                    };
+                  let max: usize = 
+                    if let Some(expressionData) = expressions[1].getData() {
+                      expressionData.parse::<usize>().unwrap_or(0)
+                    } else 
+                    {
+                      0
+                    };
+
+                  let randomNumber: usize = 
+                    if min != max 
+                    {
+                      rand::thread_rng().gen_range(min..=max)
+                    } else 
+                    {
+                      0
+                    };
+
+                  value[i].setData    ( Some( randomNumber.to_string() ) );
+                  value[i].setDataType( TokenType::UInt );
+                } else 
+                { // error -> skip
+                  value[i].setData    ( None );
+                  value[i].setDataType( TokenType::None );
+                }
+
+                valueLength -= 1;
+                continue;
+              } else 
+              { // custom method result
+                let mut lineBuffer = Line::newEmpty();
+                lineBuffer.tokens  = value.clone();
+                unsafe{ self.methodCall( Arc::new(RwLock::new(lineBuffer)) ); }
+
+                if let Some(methodName) = value[0].getData() 
+                { // get method name
+                  if let Some(methodLink) = self.getMethodByName(&methodName) 
+                  { // get method
+                    let method = methodLink.read().unwrap();
+                    if let Some(result) = &method.result 
+                    { // functional
+                      value[i].setData    ( result.getData() );
+                      value[i].setDataType( result.getDataType().clone() );
+                    } else 
+                    { // error -> skip
+                      value[i].setData    ( None );
+                      value[i].setDataType( TokenType::None );
+                    }
+                  } else 
+                  { // error -> skip
+                    value[i].setData    ( None );
+                    value[i].setDataType( TokenType::None );
+                  }
+                }
+                // end of list of functions
               }
 
               value.remove(i+1);
@@ -665,133 +709,167 @@ impl Method
       if line.tokens.len() > 1 && *line.tokens[1].getDataType() == TokenType::CircleBracketBegin 
       { // check lower first char
         let token: &Token = &line.tokens[0];
-        if token.getData().starts_with(|c: char| c.is_lowercase()) 
-        {
-          // todo: multi-param
-          // basic methods
-          let mut result = true;
+        if let Some(tokenData) = token.getData() {
+          if tokenData.starts_with(|c: char| c.is_lowercase()) 
           {
-            if token.getData() == "go" 
-            { // go block up
-              if let Some(parentLink) = &line.parent 
-              {
-                if let Some(methodParent) = &self.parent 
-                {
-                    // todo: check expressionValue
-                    searchCondition(parentLink.clone(), methodParent.clone());
-                }
-              }
-            } else if token.getData() == "ex" 
-            { // exit block up
-              println!("ex");
-            } else if token.getData() == "println" 
-            { // println
-              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-              if let Some(mut expressionValue) = expressionValue 
-              {
-                println!("{}",formatPrint(
-                  &self.memoryCellExpression(&mut expressionValue)
-                    .getData().to_string()
-                ));
-              } else 
-              {
-                println!();
-              }
-              io::stdout().flush().unwrap(); // forced withdrawal of old
-            } else if token.getData() == "print" 
-            { // print
-              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-              if let Some(mut expressionValue) = expressionValue 
-              {
-                print!("{}",formatPrint(
-                  &self.memoryCellExpression(&mut expressionValue)
-                    .getData().to_string()
-                ));
-              } else 
-              {
-                print!("");
-              }
-              io::stdout().flush().unwrap(); // forced withdrawal of old
-            } else if token.getData() == "sleep" 
-            { // sleep
-              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-              if let Some(mut expressionValue) = expressionValue 
-              {
-                let value =  &self.memoryCellExpression(&mut expressionValue).getData().to_string();
-                let valueNumber = value.parse::<u64>().unwrap_or(0);
-                sleep(Duration::from_millis(valueNumber));
-              } // else skip
-            } else if token.getData() == "exec" 
-            { // exec
-              let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-              if let Some(mut expressionValue) = expressionValue 
-              {
-                let expression: String              = self.memoryCellExpression(&mut expressionValue).getData().to_string();
-                let mut  parts: SplitWhitespace<'_> = expression.split_whitespace();
-
-                let command: &str      = parts.next().expect("No command found in expression"); // todo: 
-                let    args: Vec<&str> = parts.collect();
-
-                let output: Output = 
-                  Command::new(command)
-                    .args(&args)
-                    .output()
-                    .expect("Failed to execute process"); // todo: 
-                let outputString: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
-                if !outputString.is_empty() 
-                {
-                  print!("{}", outputString);
-                }
-              } // else skip
-            } else if token.getData() == "exit" 
-            { // exit
-              _exitCode = true;
-            } else 
-            { // custom method
-              result = false;
-            }
-          }
-          // custom methods
-          if !result 
-          {
-            if let Some(calledMethodLink) = self.getMethodByName(token.getData()) 
+            // todo: multi-param
+            // basic methods
+            let mut result = true;
             {
-              //
-              let mut   lineIndexBuffer: usize = 0;
-              let mut linesLengthBuffer: usize = 
+              if tokenData == "go" 
+              { // go block up
+                if let Some(parentLink) = &line.parent 
                 {
-                  let calledMethod = calledMethodLink.read().unwrap(); // todo: type
-                  calledMethod.lines.len()
-                };
-              // set parameters
-              // todo: merge with up method
-              {
-                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                let mut parameters:      Option< Vec<Token> > = 
-                  if let Some(mut expressionValue) = expressionValue
+                  if let Some(methodParent) = &self.parent 
                   {
-                    Some( self.getMethodParameters(&mut expressionValue) )
-                  } else 
-                  {
-                    None
-                  };
-                if let Some(parameters) = parameters 
-                {
-                  let calledMethod = calledMethodLink.read().unwrap(); // todo: type
-                  let mut memoryCellList = calledMethod.memoryCellList.write().unwrap(); // todo: type
-                  for (l, parameter) in parameters.iter().enumerate() 
-                  {
-                    let mut memoryCell = memoryCellList.value[l].write().unwrap(); // todo: type
-                    memoryCell.value.setData( parameter.getData().to_string() );
+                      // todo: check expressionValue
+                      searchCondition(parentLink.clone(), methodParent.clone());
                   }
                 }
+              } else if tokenData == "ex" 
+              { // exit block up
+                println!("ex");
+              } else if tokenData == "println" 
+              { // println
+                // expression tokens
+                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                if let Some(mut expressionValue) = expressionValue 
+                { // expression value
+                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
+                  if let Some(expressionValue) = expressionValue 
+                  { // functional
+                    println!("{}",formatPrint(&expressionValue));
+                  } else 
+                  { // else -> skip
+                    println!();
+                  }
+                } else 
+                { // else -> skip
+                  println!();
+                }
+                io::stdout().flush().unwrap(); // forced withdrawal of old
+              } else if tokenData == "print" 
+              { // print
+                // expression tokens
+                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                if let Some(mut expressionValue) = expressionValue 
+                { // expression value
+                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
+                  if let Some(expressionValue) = expressionValue 
+                  { // functional
+                    print!("{}",formatPrint(&expressionValue));
+                  } else 
+                  { // else -> skip
+                    print!("");
+                  }
+                } else 
+                { // else -> skip
+                  print!("");
+                }
+                io::stdout().flush().unwrap(); // forced withdrawal of old
+              } else if tokenData == "sleep" 
+              { // sleep
+                // expression tokens
+                let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                if let Some(mut expressionTokens) = expressionTokens 
+                { // expression value
+                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
+                  if let Some(expressionValue) = expressionValue 
+                  { // functional
+                    let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or(0);
+                    if valueNumber > 0 
+                    {
+                      sleep( Duration::from_millis(valueNumber) );
+                    }
+                  } // else -> skip
+                }   // else -> skip
+              } else if tokenData == "exec" 
+              { // exec
+                // expression tokens
+                let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                if let Some(mut expressionTokens) = expressionTokens 
+                { // expression value
+                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
+                  if let Some(expressionValue) = expressionValue 
+                  { // functional
+                    let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
+
+                    let command: &str      = parts.next().expect("No command found in expression"); // todo: 
+                    let    args: Vec<&str> = parts.collect();
+
+                    let output: Output = 
+                      Command::new(command)
+                        .args(&args)
+                        .output()
+                        .expect("Failed to execute process"); // todo: 
+                    let outputString: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+                    if !outputString.is_empty() 
+                    {
+                      print!("{}", outputString);
+                    }
+                  } // else -> skip
+                }   // else -> skip
+              } else if tokenData == "exit" 
+              { // exit
+                _exitCode = true;
+              } else 
+              { // custom method
+                result = false;
               }
-              // run
-              readLines(calledMethodLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
-              return true;
             }
+            // custom methods
+            if !result 
+            {
+              if let Some(calledMethodLink) = self.getMethodByName(&tokenData) 
+              {
+                //
+                let mut   lineIndexBuffer: usize = 0;
+                let mut linesLengthBuffer: usize = 
+                  {
+                    let calledMethod = calledMethodLink.read().unwrap(); // todo: type
+                    calledMethod.lines.len()
+                  };
+                // set parameters
+                // todo: merge with up method
+                {
+                  let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                  let mut parameters:      Option< Vec<Token> > = 
+                    if let Some(mut expressionValue) = expressionValue
+                    {
+                      Some( self.getMethodParameters(&mut expressionValue) )
+                    } else 
+                    {
+                      None
+                    };
+                  if let Some(parameters) = parameters 
+                  {
+                    let calledMethod = calledMethodLink.read().unwrap(); // todo: type
+                    let mut memoryCellList = calledMethod.memoryCellList.write().unwrap(); // todo: type
+                    for (l, parameter) in parameters.iter().enumerate() 
+                    {
+                      let mut memoryCell = memoryCellList.value[l].write().unwrap(); // todo: type
+                      memoryCell.value.setData( 
+                        {
+                          if let Some(parameterData) = parameter.getData() 
+                          {
+                            Some( parameterData.to_string() )
+                          } else 
+                          { // error
+                            None
+                          }
+                        }
+                      );
+                    }
+                  }
+                }
+                // run
+                readLines(calledMethodLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
+                return true;
+              }
+            }
+            return result;
           }
-          return result;
+          //
         }
         //
       }
