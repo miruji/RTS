@@ -1,5 +1,9 @@
 
-files = ["./tests/method/ab.rt","./tests/cycle/array.rt","./tests/cycle/colorNumbers.rt","./tests/cycle/numbers.rt"]
+files =
+  "./tests/method/ab.rt"
+  "./tests/cycle/array.rt"
+  "./tests/cycle/colorNumbers.rt"
+  "./tests/cycle/numbers.rt"
 
 l = 0
 ? l < len(files)

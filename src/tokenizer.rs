@@ -388,7 +388,7 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &T
   let mut l = 0; // index buffer
   while l < length 
   {
-    let tokenType: &TokenType = &tokens[l].getDataType().unwrap_or(TokenType::None);
+    let tokenType: &TokenType = &tokens[l].getDataType().unwrap_or_default();
     if tokenType == beginType 
     {
       brackets.push(l);
@@ -520,7 +520,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
       }
       // ? delete comment
       lastTokenIndex = line.tokens.len()-1;
-      if line.tokens[lastTokenIndex].getDataType().unwrap_or(TokenType::None) == TokenType::Comment {
+      if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment {
         line.tokens.remove(lastTokenIndex);
         if line.tokens.is_empty() { // go to delete empty line
           deleteLine = true;        //
@@ -561,39 +561,39 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
     if let Some(tokenData) = token.getData()
     {
     // single quote
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::Char || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedChar {
+      if token.getDataType().unwrap_or_default() == TokenType::Char || 
+         token.getDataType().unwrap_or_default() == TokenType::FormattedChar {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or(TokenType::None).to_string()
+          token.getDataType().unwrap_or_default().to_string()
         ));
     // double quote
       } else
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::String || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedString {
+      if token.getDataType().unwrap_or_default() == TokenType::String || 
+         token.getDataType().unwrap_or_default() == TokenType::FormattedString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or(TokenType::None).to_string()
+          token.getDataType().unwrap_or_default().to_string()
         ));
     // back quote
       } else
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::RawString || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::FormattedRawString {
+      if token.getDataType().unwrap_or_default() == TokenType::RawString || 
+         token.getDataType().unwrap_or_default() == TokenType::FormattedRawString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
           lineIdentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or(TokenType::None).to_string()
+          token.getDataType().unwrap_or_default().to_string()
         ));
     // basic
       } else {
@@ -603,7 +603,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or(TokenType::None).to_string()
+          token.getDataType().unwrap_or_default().to_string()
         ));
       }
     // type only
@@ -613,7 +613,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
         lineIdentString,
         c,
         identString,
-        token.getDataType().unwrap_or(TokenType::None).to_string()
+        token.getDataType().unwrap_or_default().to_string()
       );
     }
     if let Some(tokens) = &token.tokens
@@ -746,32 +746,38 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       {
         let mut token: Token = getQuotes(&buffer, &mut index);
         if token.getDataType() != None 
-        {
-          let backTokenIndex = lineTokens.len()-1;
-          // if formatted quotes
-          if lineTokens[backTokenIndex].getDataType().unwrap_or(TokenType::None) == TokenType::Word && 
-             lineTokens[backTokenIndex].getData().unwrap_or( String::new() ) == "f" 
+        { // if formatted quotes
+          let lineTokensLength: usize = lineTokens.len();
+          if lineTokensLength > 0 
           {
-            if token.getDataType().unwrap_or(TokenType::None) == TokenType::RawString 
-            {
-             token.setDataType( Some(TokenType::FormattedRawString) ); 
-            } else
-            if token.getDataType().unwrap_or(TokenType::None) == TokenType::String 
-            { 
-              token.setDataType( Some(TokenType::FormattedString) ); 
-            } else
-            if token.getDataType().unwrap_or(TokenType::None) == TokenType::Char 
-            { 
-              token.setDataType( Some(TokenType::FormattedChar) ); 
-            }
-            lineTokens[backTokenIndex] = token.clone(); // todo: remove copy please
-          // basic quotes
+              let backToken = &lineTokens[lineTokensLength-1];
+              if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
+                 backToken.getData().unwrap_or_default() == "f" 
+              {
+                let newDataType: TokenType = token.getDataType().unwrap_or_default();
+                if newDataType == TokenType::RawString 
+                {
+                 token.setDataType( Some(TokenType::FormattedRawString) ); 
+                } else
+                if newDataType == TokenType::String 
+                { 
+                  token.setDataType( Some(TokenType::FormattedString) ); 
+                } else
+                if newDataType == TokenType::Char 
+                { 
+                  token.setDataType( Some(TokenType::FormattedChar) ); 
+                }
+                lineTokens[lineTokensLength-1] = token; // replace the last token in place
+              } else 
+              { // basic quote
+                lineTokens.push(token);
+              }
           } else 
-          {
-            lineTokens.push(token.clone()); // todo: remove copy please
+          { // basic quote
+            lineTokens.push(token);
           }
         } else 
-        {
+        { // skip
           index += 1;
         }
       } else

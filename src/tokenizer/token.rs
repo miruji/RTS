@@ -183,6 +183,13 @@ impl ToString for TokenType
     }
   }
 }
+impl Default for TokenType 
+{
+  fn default() -> Self 
+  {
+    TokenType::None
+  }
+}
 
 #[derive(Clone)]
 pub struct Token 

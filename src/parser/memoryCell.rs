@@ -3,6 +3,7 @@
 */
 
 use crate::tokenizer::token::*;
+use crate::tokenizer::line::*;
 
 // MemoryCellMode
 #[derive(PartialEq)]
@@ -35,7 +36,7 @@ pub struct MemoryCell
   pub      name: String,         // unique name
   pub      mode: MemoryCellMode, // mode
   pub valueType: TokenType,      // type         todo: store in value | option please
-  pub     value: Token           // value        todo: option please
+  pub     value: Token,          // value        todo: option please
 }
 impl MemoryCell 
 {

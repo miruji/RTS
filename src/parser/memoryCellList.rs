@@ -42,8 +42,8 @@ pub fn getMemoryCellByName(memoryCellListLink: Arc<RwLock<MemoryCellList>>, name
 pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token 
 {
   // get values of types
-  let leftTokenData:     String    = leftToken.getData().unwrap_or( String::new() );
-  let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or(TokenType::None);
+  let leftTokenData:     String    = leftToken.getData().unwrap_or_default();
+  let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or_default();
   let leftValue = match leftTokenDataType
   {
     TokenType::Int => 
@@ -90,8 +90,8 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
     },
     _ => Value::UInt(0),
   };
-  let rightTokenData:     String    = rightToken.getData().unwrap_or( String::new() );
-  let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or(TokenType::None);
+  let rightTokenData:     String    = rightToken.getData().unwrap_or_default();
+  let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or_default();
   let rightValue = match rightTokenDataType {
     TokenType::Int    => 
     { 

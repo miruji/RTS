@@ -183,7 +183,7 @@ impl Method
       {
         let memoryCell = memoryCellLink.read().unwrap(); // todo: type
         if index+1 < *length && 
-           value[index+1].getDataType().unwrap_or(TokenType::None) == TokenType::SquareBracketBegin 
+           value[index+1].getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
         { // array
           let arrayIndex = value[index+1] // todo: type
             .tokens
@@ -292,9 +292,9 @@ impl Method
     let mut expressionBuffer = Vec::new(); // buffer of current expression
     for (l, token) in value.iter().enumerate() 
     { // read tokens
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::Comma || l+1 == value.len() 
+      if token.getDataType().unwrap_or_default() == TokenType::Comma || l+1 == value.len() 
       { // comma or line end
-        if token.getDataType().unwrap_or(TokenType::None) != TokenType::Comma 
+        if token.getDataType().unwrap_or_default() != TokenType::Comma 
         {
           expressionBuffer.push( token.clone() );
         }
@@ -330,9 +330,9 @@ impl Method
         let mut expressionBuffer: Vec<Token> = Vec::new(); // buffer of current expression
         for (l, token) in tokens.iter().enumerate() 
         { // read tokens
-          if token.getDataType().unwrap_or(TokenType::None) == TokenType::Comma || l+1 == tokens.len() 
+          if token.getDataType().unwrap_or_default() == TokenType::Comma || l+1 == tokens.len() 
           { // comma or line end
-            if token.getDataType().unwrap_or(TokenType::None) != TokenType::Comma 
+            if token.getDataType().unwrap_or_default() != TokenType::Comma 
             {
               expressionBuffer.push( token.clone() );
             }
@@ -358,15 +358,15 @@ impl Method
     // 1 number
     if valueLength == 1 
     {
-      if value[0].getDataType().unwrap_or(TokenType::None) != TokenType::CircleBracketBegin 
+      if value[0].getDataType().unwrap_or_default() != TokenType::CircleBracketBegin 
       {
-        if value[0].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
+        if value[0].getDataType().unwrap_or_default() == TokenType::Word 
         { 
           self.replaceMemoryCellByName(value, &mut valueLength, 0);
         } else 
-        if value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedRawString ||
-           value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedString    ||
-           value[0].getDataType().unwrap_or(TokenType::None) == TokenType::FormattedChar 
+        if value[0].getDataType().unwrap_or_default() == TokenType::FormattedRawString ||
+           value[0].getDataType().unwrap_or_default() == TokenType::FormattedString    ||
+           value[0].getDataType().unwrap_or_default() == TokenType::FormattedChar 
         { 
           if let Some(mut valueData) = value[0].getData() 
           { 
@@ -384,9 +384,9 @@ impl Method
     // MemoryCell & function
     while i < valueLength 
     {
-      if value[i].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
+      if value[i].getDataType().unwrap_or_default() == TokenType::Word 
       { // function call
-        if i+1 < valueLength && value[i+1].getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
+        if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
         {
           // todo: uint float ufloat ...
           // todo: replace if -> match
@@ -446,7 +446,7 @@ impl Method
               let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if expressions.len() > 0
               { // functional
-                value[i].setData    ( Some(expressions[0].getDataType().unwrap_or(TokenType::None).to_string()) );
+                value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
                 value[i].setDataType( Some(TokenType::String) );
               } else 
               { // error -> skip
@@ -529,14 +529,14 @@ impl Method
               { // functional
                 let min: usize = 
                   if let Some(expressionData) = expressions[0].getData() {
-                    expressionData.parse::<usize>().unwrap_or(0)
+                    expressionData.parse::<usize>().unwrap_or_default()
                   } else 
                   {
                     0
                   };
                 let max: usize = 
                   if let Some(expressionData) = expressions[1].getData() {
-                    expressionData.parse::<usize>().unwrap_or(0)
+                    expressionData.parse::<usize>().unwrap_or_default()
                   } else 
                   {
                     0
@@ -566,7 +566,7 @@ impl Method
               let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if expressions.len() > 0
               { // functional
-                if expressions[0].getDataType().unwrap_or(TokenType::None) == TokenType::Array 
+                if expressions[0].getDataType().unwrap_or_default() == TokenType::Array 
                 {
                   if let Some(memoryCellName) = expressions[0].getData() 
                   {
@@ -575,7 +575,7 @@ impl Method
                       let memoryCell = memoryCellLink.read().unwrap(); // todo: type
                       value[i].setData(Some(
                         memoryCell.value.tokens
-                          .clone().unwrap_or(vec![])
+                          .clone().unwrap_or_default()
                           .len().to_string()
                       ));
                     } else 
@@ -647,7 +647,7 @@ impl Method
     while i < valueLength 
     {
       token = value[i].clone();
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
+      if token.getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
       {
         value[i] = 
           if let Some(mut tokenTokens) = token.tokens.clone() 
@@ -675,15 +675,15 @@ impl Method
 
       token = value[i].clone();
       if i+1 < valueLength && 
-        (token.getDataType().unwrap_or(TokenType::None) == TokenType::Inclusion           || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::Joint               || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::Equals              || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::NotEquals           ||
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::GreaterThan         || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::LessThan            ||
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::GreaterThanOrEquals || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::LessThanOrEquals) {
-        value[i-1] = calculate(&token.getDataType().unwrap_or(TokenType::None), &value[i-1], &value[i+1]);
+        (token.getDataType().unwrap_or_default() == TokenType::Inclusion           || 
+         token.getDataType().unwrap_or_default() == TokenType::Joint               || 
+         token.getDataType().unwrap_or_default() == TokenType::Equals              || 
+         token.getDataType().unwrap_or_default() == TokenType::NotEquals           ||
+         token.getDataType().unwrap_or_default() == TokenType::GreaterThan         || 
+         token.getDataType().unwrap_or_default() == TokenType::LessThan            ||
+         token.getDataType().unwrap_or_default() == TokenType::GreaterThanOrEquals || 
+         token.getDataType().unwrap_or_default() == TokenType::LessThanOrEquals) {
+        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
         
         value.remove(i); // remove op
         value.remove(i); // remove right value
@@ -709,10 +709,10 @@ impl Method
 
       token = value[i].clone();
       if i+1 < valueLength && 
-        (token.getDataType().unwrap_or(TokenType::None) == TokenType::Multiply || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::Divide) 
+        (token.getDataType().unwrap_or_default() == TokenType::Multiply || 
+         token.getDataType().unwrap_or_default() == TokenType::Divide) 
       {
-        value[i-1] = calculate(&token.getDataType().unwrap_or(TokenType::None), &value[i-1], &value[i+1]);
+        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
         value.remove(i); // remove op
         value.remove(i); // remove right value
@@ -739,10 +739,10 @@ impl Method
       token = value[i].clone();
       // + and -
       if i+1 < valueLength && 
-        (token.getDataType().unwrap_or(TokenType::None) == TokenType::Plus || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::Minus) 
+        (token.getDataType().unwrap_or_default() == TokenType::Plus || 
+         token.getDataType().unwrap_or_default() == TokenType::Minus) 
       {
-        value[i-1] = calculate(&token.getDataType().unwrap_or(TokenType::None), &value[i-1], &value[i+1]);
+        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
         value.remove(i); // remove op
         value.remove(i); // remove right value
@@ -750,8 +750,8 @@ impl Method
         continue;
       } else
       // value -value2
-      if token.getDataType().unwrap_or(TokenType::None) == TokenType::Int || 
-         token.getDataType().unwrap_or(TokenType::None) == TokenType::Float 
+      if token.getDataType().unwrap_or_default() == TokenType::Int || 
+         token.getDataType().unwrap_or_default() == TokenType::Float 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
@@ -778,9 +778,9 @@ impl Method
   pub unsafe fn procedureCall(&self, lineLink: Arc<RwLock<Line>>) -> bool 
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
-    if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or(TokenType::None) == TokenType::Word
+    if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::Word
     { // add method call
-      if line.tokens.get(1).and_then(|t| t.getDataType()).unwrap_or(TokenType::None) == TokenType::CircleBracketBegin
+      if line.tokens.get(1).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::CircleBracketBegin
       { // check lower first char
         let token: &Token = &line.tokens[0];
         if let Some(tokenData) = token.getData() 
@@ -861,7 +861,7 @@ impl Method
                   let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
-                    let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or(0);
+                    let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
                     if valueNumber > 0 
                     {
                       sleep( Duration::from_millis(valueNumber) );
@@ -908,10 +908,9 @@ impl Method
                     let mut memoryCellList = calledMethod.memoryCellList.write().unwrap(); // todo: type
                     for (l, parameter) in parameters.iter().enumerate() 
                     {
-                      let mut memoryCell = memoryCellList.value[l].write().unwrap(); // todo: type
-                      let expr = self.memoryCellExpression(&mut vec![parameter.clone()]).getData();
+                      let mut memoryCell: RwLockWriteGuard<'_, MemoryCell> = memoryCellList.value[l].write().unwrap(); // todo: type
                       memoryCell.value.setData( 
-                        expr
+                        self.memoryCellExpression(&mut vec![parameter.clone()]).getData()
                       );
                     }
                   }
