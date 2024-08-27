@@ -170,67 +170,61 @@ impl Method
   }
 
   // update value
-  fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
-  {
+  fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
+    fn setNone(value: &mut Vec<Token>, index: usize) 
+    { // error -> skip
+      value[index].setData    (None);
+      value[index].setDataType(None);
+    }
+
     if let Some(memoryCellName) = value[index].getData() 
     {
-      if let Some(memoryCellLink) = self.getMemoryCellByName( &memoryCellName ) 
+      if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
       {
-        //
         let memoryCell = memoryCellLink.read().unwrap();
-        if index+1 < *length && value[index+1].getDataType().unwrap_or(TokenType::None) == TokenType::SquareBracketBegin 
+        if index+1 < *length && 
+           value[index+1].getDataType().unwrap_or(TokenType::None) == TokenType::SquareBracketBegin 
         {
-          let arrayIndex: Result<usize, _> = // todo: rewrite, (if no UInt type) ...
-            if let Some(ref mut tokens) = value[index+1].tokens.as_mut()
+          let arrayIndex = value[index+1]
+            .tokens
+            .as_mut()
+            .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
+
+          value.remove(index + 1);
+          *length -= 1;
+
+          if let Some(idx) = arrayIndex 
+          {
+            if let Some(memoryCellTokens) = &memoryCell.value.tokens 
             {
-              if let Some(expressionData) = self.memoryCellExpression(tokens).getData() 
+              if idx < memoryCellTokens.len() 
               {
-                expressionData.parse::<usize>()
+                value[index].setData(memoryCellTokens[idx].getData());
+                value[index].setDataType(memoryCellTokens[idx].getDataType().clone());
               } else 
-              { // error -> skip
-                Ok(0)
+              {
+                setNone(value, index);
               }
             } else 
-            { // error -> skip
-              Ok(0)
-            };
-
-          value.remove(index+1);
-          *length -= 1;
-          match arrayIndex 
-          {
-            Ok(idx) => 
             {
-              if let Some(memoryCellTokens) = &memoryCell.value.tokens 
-              {
-                value[index].setData    ( memoryCellTokens[idx].getData() );
-                value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
-              } else 
-              { // error -> skip
-                value[index].setData    ( None );
-                value[index].setDataType( None );
-              }
+              setNone(value, index);
             }
-            Err(_) => 
-            { // error -> skip
-              value[index].setData    ( None );
-              value[index].setDataType( None );
-            }
+          } else 
+          {
+            setNone(value, index);
           }
-        } else
+        } else 
         {
-          value[index].setData    ( memoryCell.value.getData() );
-          value[index].setDataType( memoryCell.value.getDataType().clone() );
+          value[index].setData(memoryCell.value.getData());
+          value[index].setDataType(memoryCell.value.getDataType().clone());
         }
       } else 
-      { // error -> skip
-        value[index].setData    ( None );
-        value[index].setDataType( None );
+      {
+        setNone(value, index);
       }
     } else 
-    { // error -> skip
-      value[index].setData    ( None );
-      value[index].setDataType( None );
+    {
+      setNone(value, index);
     }
   }
 
@@ -564,7 +558,7 @@ impl Method
           // array & basic cell
           } else 
           {
-              self.replaceMemoryCellByName(value, &mut valueLength, i);
+            self.replaceMemoryCellByName(value, &mut valueLength, i);
           }
         }
 

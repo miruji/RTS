@@ -80,12 +80,10 @@ pub enum TokenType
   Array,    // Array
 
   Bool,      // Bool
-  Joint,     // & (and)
+  Joint,     // & (and)Joint
   Disjoint,  // ^
   Inclusion, // | (or)
   Exclusion, // ! (not)
-  
-  Loop, // loop
 
   Custom(String),
 }
@@ -180,8 +178,6 @@ impl ToString for TokenType
       TokenType::Disjoint  => String::from("Disjoint"),  // ^
       TokenType::Inclusion => String::from("Inclusion"), // | (or)
       TokenType::Exclusion => String::from("Exclusion"), // ! (not)
-
-      TokenType::Loop => String::from("loop"), // while
 
       TokenType::Custom(value) => value.clone(),
     }

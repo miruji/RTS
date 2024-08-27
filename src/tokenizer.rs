@@ -149,7 +149,6 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
   {
     "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
     "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
-    "loop"     => Token::newEmpty( Some(TokenType::Loop) ),
     _          => Token::new( Some(TokenType::Word), Some(result.clone()) ),
   }
 }

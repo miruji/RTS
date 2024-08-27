@@ -1,0 +1,11 @@
+
+files = ["./testes/cycle/array.rt","./testes/cycle/colorNumbers.rt","./testes/cycle/numbers.rt"]
+
+l = 0
+? l < 3
+  file = f"./rts -rf {files[l]}"
+  println(file)
+  exec(file)
+  prinln(l)
+  l += 1
+  go(1)

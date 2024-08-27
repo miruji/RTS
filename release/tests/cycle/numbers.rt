@@ -22,7 +22,7 @@ cycle
 
 # main loop for 1000 times
 b = 0
-? b < 1000
+? b < 256
   cycle()
   b += 1
   go(1)

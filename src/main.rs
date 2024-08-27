@@ -125,7 +125,6 @@ fn main() -> io::Result<()>
         {
           _argc = valuesLength-1;
           _argv = values.clone();
-          _argv.remove(0); // remove file name
           _filePath = values[0].clone();
         }
 
