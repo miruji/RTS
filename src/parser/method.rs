@@ -17,9 +17,9 @@ use crate::parser::searchCondition;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use std::{io, io::Write};
+use std::{io, io::Write, io::BufReader, io::BufRead};
 use std::{borrow::Cow, str::SplitWhitespace};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::thread::sleep;
 use std::time::Duration;
 use rand::Rng;
@@ -377,195 +377,224 @@ impl Method
     // MemoryCell & function
     while i < valueLength 
     {
-        if value[i].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
+      if value[i].getDataType().unwrap_or(TokenType::None) == TokenType::Word 
+      { // function call
+        if i+1 < valueLength && value[i+1].getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
         {
-          // function
-          if i+1 < valueLength && value[i+1].getDataType().unwrap_or(TokenType::None) == TokenType::CircleBracketBegin 
-          {
-            // todo: uint float ufloat ...
-            // todo: replace if -> match
-            if let Some(functionName) = value[i].getData() 
-            { // begin of list of functions
-              if functionName == "int" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-                { // functional
-                  value[i].setData    ( Some(expressionData) );
-                  value[i].setDataType( Some(TokenType::Int) );
-                } else 
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-                valueLength -= 1;
-                continue;
+          // todo: uint float ufloat ...
+          // todo: replace if -> match
+          if let Some(functionName) = value[i].getData() 
+          { // begin of list of functions
+            if functionName == "int" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+              { // functional
+                value[i].setData    ( Some(expressionData) );
+                value[i].setDataType( Some(TokenType::Int) );
               } else 
-              if functionName == "char" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-                { // functional
-                  value[i] = expressions[0].clone();
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else 
+            if functionName == "char" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+              { // functional
+                value[i] = expressions[0].clone();
 
-                  let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
-                  value[i].setData( Some(newData) );
+                let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
+                value[i].setData( Some(newData) );
 
-                  value[i].setDataType( Some(TokenType::Char) );
-                } else 
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-                valueLength -= 1;
-                continue;
+                value[i].setDataType( Some(TokenType::Char) );
               } else 
-              if functionName == "str" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-                if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-                { // functional
-                  value[i].setData    ( Some(expressionData) );
-                  value[i].setDataType( Some(TokenType::String ) );
-                } else
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-                valueLength -= 1;
-                continue;
-              } else 
-              if functionName == "type" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-                if expressions.len() > 0
-                { // functional
-                  value[i].setData    ( Some(expressions[0].getDataType().unwrap_or(TokenType::None).to_string()) );
-                  value[i].setDataType( Some(TokenType::String) );
-                } else 
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-                valueLength -= 1;
-                continue;
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else 
+            if functionName == "str" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+              { // functional
+                value[i].setData    ( Some(expressionData) );
+                value[i].setDataType( Some(TokenType::String ) );
               } else
-              if functionName == "input" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-
-                // functional
-                if expressions.len() > 0 
-                {
-                  if let Some(expressionData) = expressions[0].getData() 
-                  {
-                    print!("{}",expressionData);
-                    io::stdout().flush().unwrap(); // forced withdrawal of old
-                  } // else -> skip
-                }   // else -> skip
-
-                value[i].setData( None );
-
-                if let Some(mut valueData) = value[i].getData() {
-                  io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
-                  value[i].setData( 
-                    Some( valueData.trim_end().to_string() )
-                  );
-                } else 
-                { // error -> skip
-                  value[i].setData( 
-                    None
-                  );
-                }
-
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else 
+            if functionName == "type" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if expressions.len() > 0
+              { // functional
+                value[i].setData    ( Some(expressions[0].getDataType().unwrap_or(TokenType::None).to_string()) );
                 value[i].setDataType( Some(TokenType::String) );
-
-                valueLength -= 1;
-                continue;
               } else 
-              if functionName == "randUInt" 
-              { // get expressions
-                let expressions: Vec<Token> = self.getExpressionParameters(value, i);
-                if expressions.len() > 1 
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else
+            if functionName == "input" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+
+              // functional
+              if expressions.len() > 0 
+              {
+                if let Some(expressionData) = expressions[0].getData() 
+                {
+                  print!("{}",expressionData);
+                  io::stdout().flush().unwrap(); // forced withdrawal of old
+                } // else -> skip
+              }   // else -> skip
+
+              value[i].setData( None );
+
+              if let Some(mut valueData) = value[i].getData() {
+                io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
+                value[i].setData( 
+                  Some( valueData.trim_end().to_string() )
+                );
+              } else 
+              { // error -> skip
+                value[i].setData( 
+                  None
+                );
+              }
+
+              value[i].setDataType( Some(TokenType::String) );
+
+              valueLength -= 1;
+              continue;
+            } else 
+            if functionName == "exec"
+            { // execute
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if expressions.len() > 0 
+              { // functional
+                let expressionValue: Option< String > = expressions[0].getData();
+                if let Some(expressionValue) = expressionValue 
                 { // functional
-                  let min: usize = 
-                    if let Some(expressionData) = expressions[0].getData() {
-                      expressionData.parse::<usize>().unwrap_or(0)
-                    } else 
-                    {
-                      0
-                    };
-                  let max: usize = 
-                    if let Some(expressionData) = expressions[1].getData() {
-                      expressionData.parse::<usize>().unwrap_or(0)
-                    } else 
-                    {
-                      0
-                    };
+                  let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
 
-                  let randomNumber: usize = 
-                    if min < max 
-                    {
-                      rand::thread_rng().gen_range(min..=max)
-                    } else 
-                    {
-                      0
-                    };
+                  let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
+                  let    args: Vec<&str> = parts.collect();
 
-                  value[i].setData    ( Some(randomNumber.to_string()) );
-                  value[i].setDataType( Some(TokenType::UInt) );
+                  let output: Output = 
+                    Command::new(command)
+                      .args(&args)
+                      .output()
+                      .expect("Failed to execute process"); // todo: no errors
+                  let outputString = String::from_utf8_lossy(&output.stdout).to_string();
+                  if !outputString.is_empty() 
+                  { // result
+                    value[i].setData(Some(outputString));
+                    value[i].setDataType(Some(TokenType::String));
+                  }
                 } else 
                 { // error -> skip
                   value[i].setData    ( None );
                   value[i].setDataType( None );
                 }
-
                 valueLength -= 1;
                 continue;
-              } else 
-              { // custom method result
-                let mut lineBuffer = Line::newEmpty();
-                lineBuffer.tokens  = value.clone();
-                unsafe{ self.methodCall( Arc::new(RwLock::new(lineBuffer)) ); }
+              }
+            }
+            if functionName == "randUInt" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              if expressions.len() > 1 
+              { // functional
+                let min: usize = 
+                  if let Some(expressionData) = expressions[0].getData() {
+                    expressionData.parse::<usize>().unwrap_or(0)
+                  } else 
+                  {
+                    0
+                  };
+                let max: usize = 
+                  if let Some(expressionData) = expressions[1].getData() {
+                    expressionData.parse::<usize>().unwrap_or(0)
+                  } else 
+                  {
+                    0
+                  };
 
-                if let Some(methodName) = value[0].getData() 
-                { // get method name
-                  if let Some(methodLink) = self.getMethodByName(&methodName) 
-                  { // get method
-                    let method = methodLink.read().unwrap();
-                    if let Some(result) = &method.result 
-                    { // functional
-                      value[i].setData    ( result.getData() );
-                      value[i].setDataType( result.getDataType().clone() );
-                    } else 
-                    { // error -> skip
-                      value[i].setData    ( None );
-                      value[i].setDataType( None );
-                    }
+                let randomNumber: usize = 
+                  if min < max 
+                  {
+                    rand::thread_rng().gen_range(min..=max)
+                  } else 
+                  {
+                    0
+                  };
+
+                value[i].setData    ( Some(randomNumber.to_string()) );
+                value[i].setDataType( Some(TokenType::UInt) );
+              } else 
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else 
+            { // custom method result
+              let mut lineBuffer = Line::newEmpty();
+              lineBuffer.tokens  = value.clone();
+              unsafe{ self.procedureCall( Arc::new(RwLock::new(lineBuffer)) ); }
+
+              if let Some(methodName) = value[0].getData() 
+              { // get method name
+                if let Some(methodLink) = self.getMethodByName(&methodName) 
+                { // get method
+                  let method = methodLink.read().unwrap();
+                  if let Some(result) = &method.result 
+                  { // functional
+                    value[i].setData    ( result.getData() );
+                    value[i].setDataType( result.getDataType().clone() );
                   } else 
                   { // error -> skip
                     value[i].setData    ( None );
                     value[i].setDataType( None );
                   }
+                } else 
+                { // error -> skip
+                  value[i].setData    ( None );
+                  value[i].setDataType( None );
                 }
-                // end of list of functions
               }
-
-              value.remove(i+1);
-              valueLength -= 1;
-              continue;
+              // end of list of functions
             }
-          // array & basic cell
-          } else 
-          {
-            self.replaceMemoryCellByName(value, &mut valueLength, i);
+            value.remove(i+1);
+            valueLength -= 1;
+            continue;
           }
+        } else 
+        { // array & basic cell
+          self.replaceMemoryCellByName(value, &mut valueLength, i);
         }
-
-        if valueLength == 1 {
-            break;
-        }
-        i += 1;
+      }
+      if valueLength == 1 
+      {
+        break;
+      }
+      i += 1;
     }
     // bracket
     i = 0;
@@ -696,12 +725,11 @@ impl Method
     }
   }
 
-  /* search methods call
+  /* search procedure call
      e:
-       methodCall(parameters)
+       procedureCall(parameters)
   */
-  // todo: rename to procedureCall
-  pub unsafe fn methodCall(&self, lineLink: Arc<RwLock<Line>>) -> bool 
+  pub unsafe fn procedureCall(&self, lineLink: Arc<RwLock<Line>>) -> bool 
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
     if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or(TokenType::None) == TokenType::Word
@@ -772,6 +800,12 @@ impl Method
                 }
                 io::stdout().flush().unwrap(); // forced withdrawal of old
               }
+              "exec" =>
+              { // execute
+                // run function
+                self.memoryCellExpression(&mut line.tokens.clone()).getData();
+                // else -> skip
+              }
               "sleep" =>
               { // sleep
                 // expression tokens
@@ -785,33 +819,6 @@ impl Method
                     if valueNumber > 0 
                     {
                       sleep( Duration::from_millis(valueNumber) );
-                    }
-                  } // else -> skip
-                }   // else -> skip
-              }
-              "exec" =>
-              { // exec
-                // expression tokens
-                let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                if let Some(mut expressionTokens) = expressionTokens 
-                { // expression value
-                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
-                  if let Some(expressionValue) = expressionValue 
-                  { // functional
-                    let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
-
-                    let command: &str      = parts.next().expect("No command found in expression"); // todo: 
-                    let    args: Vec<&str> = parts.collect();
-
-                    let output: Output = 
-                      Command::new(command)
-                        .args(&args)
-                        .output()
-                        .expect("Failed to execute process"); // todo: 
-                    let outputString: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
-                    if !outputString.is_empty() 
-                    {
-                      print!("{}", outputString);
                     }
                   } // else -> skip
                 }   // else -> skip

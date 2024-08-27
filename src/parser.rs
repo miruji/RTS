@@ -930,7 +930,7 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: *mut usize, 
         if !searchReturn(lineLink.clone(), methodLink.clone()) 
         { // search methods calls
           let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
-          if !method.methodCall(lineLink.clone()) 
+          if !method.procedureCall(lineLink.clone()) 
           { // search memory cells
             searchMemoryCell(lineLink, methodLink.clone());
           }

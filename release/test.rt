@@ -1,11 +1,11 @@
-
-files = ["./testes/cycle/array.rt","./testes/cycle/colorNumbers.rt","./testes/cycle/numbers.rt"]
+#
+files = ["./tests/method/ab.rt","./tests/cycle/array.rt","./tests/cycle/colorNumbers.rt","./tests/cycle/numbers.rt"]
 
 l = 0
-? l < 3
+? l < 4
   file = f"./rts -rf {files[l]}"
-  println(file)
+  print(f"[{file}] ")
   exec(file)
-  prinln(l)
+  println("[OK]")
   l += 1
   go(1)
