@@ -1,8 +1,8 @@
-#
+
 files = ["./tests/method/ab.rt","./tests/cycle/array.rt","./tests/cycle/colorNumbers.rt","./tests/cycle/numbers.rt"]
 
 l = 0
-? l < 4
+? l < len(files)
   file = f"./rts -rf {files[l]}"
   print(f"[{file}] ")
   exec(file)

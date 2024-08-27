@@ -17,9 +17,9 @@ use crate::parser::searchCondition;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use std::{io, io::Write, io::BufReader, io::BufRead};
+use std::{io, io::Write};
 use std::{borrow::Cow, str::SplitWhitespace};
-use std::process::{Command, Output, Stdio};
+use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
 use rand::Rng;
@@ -181,11 +181,11 @@ impl Method
     {
       if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
       {
-        let memoryCell = memoryCellLink.read().unwrap();
+        let memoryCell = memoryCellLink.read().unwrap(); // todo: type
         if index+1 < *length && 
            value[index+1].getDataType().unwrap_or(TokenType::None) == TokenType::SquareBracketBegin 
-        {
-          let arrayIndex = value[index+1]
+        { // array
+          let arrayIndex = value[index+1] // todo: type
             .tokens
             .as_mut()
             .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
@@ -214,9 +214,16 @@ impl Method
             setNone(value, index);
           }
         } else 
-        {
-          value[index].setData(memoryCell.value.getData());
-          value[index].setDataType(memoryCell.value.getDataType().clone());
+        { // basic cell
+          if memoryCell.valueType != TokenType::Array 
+          {
+            value[index].setData    ( memoryCell.value.getData() );
+            value[index].setDataType( memoryCell.value.getDataType().clone() );
+          } else 
+          {
+            value[index].setData    ( Some(memoryCellName) );
+            value[index].setDataType( Some(TokenType::Array) );
+          }
         }
       } else 
       {
@@ -311,8 +318,8 @@ impl Method
     result
   }
 
-  // get expression parameters
-  fn getExpressionParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  // get function parameters
+  fn getFunctionParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
 
@@ -387,7 +394,7 @@ impl Method
           { // begin of list of functions
             if functionName == "int" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i].setData    ( Some(expressionData) );
@@ -402,7 +409,7 @@ impl Method
             } else 
             if functionName == "char" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i] = expressions[0].clone();
@@ -421,7 +428,7 @@ impl Method
             } else 
             if functionName == "str" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i].setData    ( Some(expressionData) );
@@ -436,7 +443,7 @@ impl Method
             } else 
             if functionName == "type" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if expressions.len() > 0
               { // functional
                 value[i].setData    ( Some(expressions[0].getDataType().unwrap_or(TokenType::None).to_string()) );
@@ -451,7 +458,7 @@ impl Method
             } else
             if functionName == "input" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
 
               // functional
               if expressions.len() > 0 
@@ -484,7 +491,7 @@ impl Method
             } else 
             if functionName == "exec"
             { // execute
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if expressions.len() > 0 
               { // functional
                 let expressionValue: Option< String > = expressions[0].getData();
@@ -517,7 +524,7 @@ impl Method
             }
             if functionName == "randUInt" 
             { // get expressions
-              let expressions: Vec<Token> = self.getExpressionParameters(value, i);
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
               if expressions.len() > 1 
               { // functional
                 let min: usize = 
@@ -554,6 +561,45 @@ impl Method
               valueLength -= 1;
               continue;
             } else 
+            if functionName == "len" 
+            { // get expressions
+              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              if expressions.len() > 0
+              { // functional
+                if expressions[0].getDataType().unwrap_or(TokenType::None) == TokenType::Array 
+                {
+                  if let Some(memoryCellName) = expressions[0].getData() 
+                  {
+                    if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
+                    {
+                      let memoryCell = memoryCellLink.read().unwrap(); // todo: type
+                      value[i].setData(Some(
+                        memoryCell.value.tokens
+                          .clone().unwrap_or(vec![])
+                          .len().to_string()
+                      ));
+                    } else 
+                    { // error -> skip
+                      value[i].setData( Some(String::from("0")) );
+                    }
+                  } else 
+                  { // error -> skip
+                    value[i].setData( Some(String::from("0")) );
+                  }
+                } else 
+                { // get basic cell len
+                  // todo:
+                  value[i].setData  ( Some(String::from("0")) );
+                }
+                value[i].setDataType( Some(TokenType::UInt) );
+              } else 
+              { // error -> skip
+                value[i].setData    ( None );
+                value[i].setDataType( None );
+              }
+              valueLength -= 1;
+              continue;
+            } else
             { // custom method result
               let mut lineBuffer = Line::newEmpty();
               lineBuffer.tokens  = value.clone();
