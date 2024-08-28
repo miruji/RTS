@@ -1,21 +1,3 @@
-#
-  loop
-  
-  kinds and declarate:
-  ?
-    next lines
-    go(1)
-  
-  ? true
-    next lines
-    go(1)
-  
-  ? a = 10
-    next lines
-    go(1)
-  
-  ? a = 10, a < 10, i++
-    next lines
 
 a = # final Array
   10

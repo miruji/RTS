@@ -450,8 +450,8 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
             MemoryCell::new(
               parameter.getData().unwrap_or_default(),
               MemoryCellMode::LockedFinal,
-              parameter.getDataType().unwrap_or_default(),
-              Token::newEmpty( None )
+              parameter.getDataType().unwrap_or_default(),  // todo: please delete this line
+              Token::newEmpty( None )                       //       and move here !!!
             )
           );
         }
@@ -677,34 +677,15 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
     } else 
     if let Some(ref value) = valueBuffer 
     { // if no searched, then create new MemoryCell and equal right value
-      // memoryCellName - op - value
-      if value.len() > 0 && value[0].getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
-      { // array
-        if let Some(mut value) = value[0].tokens.clone() 
-        {
-          value.retain(|token| token.getDataType().unwrap_or_default() != TokenType::Comma);
-          method.pushMemoryCell(
-            MemoryCell::new(
-              nameBuffer,
-              modeBuffer,
-              TokenType::Array,
-              Token::newNesting( Some(value) )
-            )
-          );
-        }
-        return true;
-      } else 
-      { // basic cell
-        method.pushMemoryCell(
-          MemoryCell::new(
-            nameBuffer,
-            modeBuffer,
-            typeBuffer,
-            Token::newNesting( valueBuffer )
-          )
-        );
-        return true;
-      }
+      method.pushMemoryCell(
+        MemoryCell::new(
+          nameBuffer,
+          modeBuffer,
+          typeBuffer,
+          Token::newNesting( valueBuffer )
+        )
+      );
+      return true;
     } else 
     if line.lines.len() > 0
     { // nesting
