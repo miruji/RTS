@@ -355,9 +355,9 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
   // e:  = value
 unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool 
 {
-  let line = lineLink.read().unwrap();
+  let line = lineLink.read().unwrap(); // todo: type
   let mut lineTokens: Vec<Token> = line.tokens.clone();
-  let mut method = methodLink.write().unwrap();
+  let mut method = methodLink.write().unwrap(); // todo: type
 
   if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Equals 
   {
@@ -367,7 +367,8 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
       if let Some(methodResult) = &method.result 
       {
         methodResult.getDataType().clone()
-      } else {
+      } else 
+      {
         Some(TokenType::None)
       };
     method.result = Some(method.memoryCellExpression(&mut lineTokens));
@@ -445,17 +446,14 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
       {
         for parameter in parameters 
         {
-          if let Some(parameterData) = parameter.getData() 
-          {
-            newMethodBuffer.pushMemoryCell(
-              MemoryCell::new(
-                parameterData,
-                MemoryCellMode::LockedFinal,
-                TokenType::Array,
-                Token::newEmpty( parameter.getDataType() )
-              )
-            );
-          }
+          newMethodBuffer.pushMemoryCell(
+            MemoryCell::new(
+              parameter.getData().unwrap_or_default(),
+              MemoryCellMode::LockedFinal,
+              parameter.getDataType().unwrap_or_default(),
+              Token::newEmpty( None )
+            )
+          );
         }
       }
       // add
@@ -715,7 +713,9 @@ unsafe fn searchMemoryCell(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<M
       for line in &line.lines 
       {
         let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-        memoryCellNesting.push( line.tokens[0].clone() );
+        memoryCellNesting.push( 
+          Token::newNesting( Some(line.tokens.clone()) )
+        );
       }
       // new memoryCell
       method.pushMemoryCell(

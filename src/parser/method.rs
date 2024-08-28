@@ -101,10 +101,9 @@ impl Method
 
   // push memoryCell to self memoryCellList
   pub fn pushMemoryCell(&self, mut memoryCell: MemoryCell) -> ()
-  {
-    // basic
+  { 
     if memoryCell.valueType != TokenType::Array 
-    {
+    { // basic
       memoryCell.value =
         if let Some(mut memoryCellTokens) = memoryCell.value.tokens.clone()
         {
@@ -112,17 +111,31 @@ impl Method
         } else 
         { // error
           Token::newEmpty(None)
+        };
+    } else 
+    { // array
+      if let Some(ref mut memoryCellTokens) = memoryCell.value.tokens
+      {
+        for nesting in &mut *memoryCellTokens 
+        {
+          *nesting = if let Some(ref mut nestingTokens) = nesting.tokens 
+          {
+            self.memoryCellExpression(nestingTokens)
+          } else 
+          {
+            Token::newEmpty(None)
+          };
         }
+      } // error
     }
-    // array
+    // add to memoryCellList
     let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = self.memoryCellList.write().unwrap();
     memoryCellList.value.push( Arc::new(RwLock::new(memoryCell)) );
   }
 
   // get memory cell by name
   pub fn getMemoryCellByName(&self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> 
-  {
-    // search in self
+  { // search in self
     if let Some(memoryCell) = getMemoryCellByName(self.memoryCellList.clone(), memoryCellName) 
     {
       return Some(memoryCell);
@@ -190,17 +203,17 @@ impl Method
             .as_mut()
             .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
 
-          value.remove(index + 1);
+          value.remove(index+1);
           *length -= 1;
 
           if let Some(idx) = arrayIndex 
-          {
+          { // array
             if let Some(memoryCellTokens) = &memoryCell.value.tokens 
             {
               if idx < memoryCellTokens.len() 
               {
-                value[index].setData(memoryCellTokens[idx].getData());
-                value[index].setDataType(memoryCellTokens[idx].getDataType().clone());
+                value[index].setData    ( memoryCellTokens[idx].getData() );
+                value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
               } else 
               {
                 setNone(value, index);
@@ -214,13 +227,13 @@ impl Method
             setNone(value, index);
           }
         } else 
-        { // basic cell
+        { 
           if memoryCell.valueType != TokenType::Array 
-          {
+          { // basic cell
             value[index].setData    ( memoryCell.value.getData() );
             value[index].setDataType( memoryCell.value.getDataType().clone() );
           } else 
-          {
+          { // array name
             value[index].setData    ( Some(memoryCellName) );
             value[index].setDataType( Some(TokenType::Array) );
           }
@@ -912,6 +925,8 @@ impl Method
                       memoryCell.value.setData( 
                         self.memoryCellExpression(&mut vec![parameter.clone()]).getData()
                       );
+                      let memoryCellType: Option<TokenType> = Some(memoryCell.valueType.clone());
+                      memoryCell.value.setDataType( memoryCellType ); // todo: rewrite, use memoryCell.value.dataType, delete memoryCell.valueType
                     }
                   }
                 }
