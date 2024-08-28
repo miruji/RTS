@@ -368,19 +368,19 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
 // 1 () no tokens childrens -> 
 // 2 [] tokens childrens 1  ->
 // 3 {} tokens childres 1+2
-unsafe fn bracketNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &TokenType, endType: &TokenType) -> ()
+unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   for token in tokens.iter_mut() 
   {
     if let Some(ref mut tokens) = token.tokens 
     {
-      bracketNesting(tokens, index, beginType, endType);
+      bracketNesting(tokens, beginType, endType);
     }
   }
-  blockNesting(tokens, index, beginType, endType);
+  blockNesting(tokens, beginType, endType);
 }
 // block nasting [begin token -> end token]
-unsafe fn blockNesting(tokens: &mut Vec<Token>, index: &mut usize, beginType: &TokenType, endType: &TokenType) -> ()
+unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   let mut brackets: Vec::<usize> = Vec::new();
   let mut   length: usize        = tokens.len();
@@ -690,22 +690,21 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
         // bracket nesting
         bracketNesting(
           &mut lineTokens,
-          &mut index,
           &TokenType::CircleBracketBegin, 
           &TokenType::CircleBracketEnd
         );
         bracketNesting(
           &mut lineTokens,
-          &mut index,
           &TokenType::SquareBracketBegin, 
           &TokenType::SquareBracketEnd
         );
+        /*
         bracketNesting(
           &mut lineTokens,
-          &mut index,
           &TokenType::FigureBracketBegin, 
           &TokenType::FigureBracketEnd
         );
+        */
 
         // add new line
         linesLinks.push( 

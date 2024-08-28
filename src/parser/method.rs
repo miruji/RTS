@@ -18,7 +18,7 @@ use crate::parser::searchCondition;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use std::{io, io::Write};
-use std::{borrow::Cow, str::SplitWhitespace};
+use std::{str::SplitWhitespace};
 use std::process::{Command, Output};
 use std::thread::sleep;
 use std::time::Duration;
@@ -197,14 +197,15 @@ impl Method
     {
       if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
       {
-        let memoryCell = memoryCellLink.read().unwrap(); // todo: type
+        let memoryCell: RwLockReadGuard<'_, MemoryCell> = memoryCellLink.read().unwrap();
         if index+1 < *length && 
            value[index+1].getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
         { // array
-          let arrayIndex = value[index+1] // todo: type
-            .tokens
-            .as_mut()
-            .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
+          let arrayIndex: Option<usize> = 
+            value[index+1]
+              .tokens
+              .as_mut()
+              .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
 
           value.remove(index+1);
           *length -= 1;
@@ -276,9 +277,9 @@ impl Method
         expressionBuffer += "\n";
         unsafe
         { 
-          let expressionLineLink = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0]; // todo: type
-          let expressionLine     = expressionLineLink.read().unwrap();                            // todo: type
-          let mut expressionBufferTokens: Vec<Token> = expressionLine.tokens.clone();
+          let     expressionLineLink:     &Arc<RwLock< Line >>      = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
+          let     expressionLine:         RwLockReadGuard<'_, Line> = expressionLineLink.read().unwrap();
+          let mut expressionBufferTokens: Vec<Token>                = expressionLine.tokens.clone();
           if let Some(expressionData) = self.memoryCellExpression(&mut expressionBufferTokens).getData() 
           {
             result += &expressionData;
@@ -384,7 +385,7 @@ impl Method
            value[0].getDataType().unwrap_or_default() == TokenType::FormattedString    ||
            value[0].getDataType().unwrap_or_default() == TokenType::FormattedChar 
         { 
-          if let Some(mut valueData) = value[0].getData() 
+          if let Some(valueData) = value[0].getData() 
           { 
             let newData: String = self.formatQuote(valueData);
             value[0].setData( Some(newData) );
@@ -588,7 +589,7 @@ impl Method
                   {
                     if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
                     {
-                      let memoryCell = memoryCellLink.read().unwrap(); // todo: type
+                      let memoryCell: RwLockReadGuard<'_, MemoryCell> = memoryCellLink.read().unwrap();
                       value[i].setData(Some(
                         memoryCell.value.tokens
                           .clone().unwrap_or_default()
@@ -825,7 +826,7 @@ impl Method
               "println" =>
               { // println
                 // expression tokens
-                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionValue) = expressionValue 
                 { // expression value
                   let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
@@ -845,7 +846,7 @@ impl Method
               "print" =>
               { // print
                 // expression tokens
-                let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionValue) = expressionValue 
                 { // expression value
                   let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
@@ -871,7 +872,7 @@ impl Method
               "sleep" =>
               { // sleep
                 // expression tokens
-                let mut expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                let expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionTokens) = expressionTokens 
                 { // expression value
                   let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
@@ -903,14 +904,14 @@ impl Method
                 let mut   lineIndexBuffer: usize = 0;
                 let mut linesLengthBuffer: usize = 
                   {
-                    let calledMethod = calledMethodLink.read().unwrap(); // todo: type
+                    let calledMethod: RwLockReadGuard<'_, Method> = calledMethodLink.read().unwrap();
                     calledMethod.lines.len()
                   };
                 // set parameters
                 // todo: merge with up method
                 {
-                  let mut expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                  let mut parameters:      Option< Vec<Token> > = 
+                  let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+                  let parameters:      Option< Vec<Token> > = 
                     if let Some(mut expressionValue) = expressionValue
                     {
                       Some( self.getMethodParameters(&mut expressionValue) )
@@ -920,11 +921,11 @@ impl Method
                     };
                   if let Some(parameters) = parameters 
                   {
-                    let calledMethod = calledMethodLink.read().unwrap(); // todo: type
-                    let mut memoryCellList = calledMethod.memoryCellList.write().unwrap(); // todo: type
+                    let calledMethod:   RwLockReadGuard<'_, Method>         = calledMethodLink.read().unwrap();
+                    let memoryCellList: RwLockReadGuard<'_, MemoryCellList> = calledMethod.memoryCellList.read().unwrap();
                     for (l, parameter) in parameters.iter().enumerate() 
                     {
-                      let mut memoryCell: RwLockWriteGuard<'_, MemoryCell> = memoryCellList.value[l].write().unwrap(); // todo: type
+                      let mut memoryCell: RwLockWriteGuard<'_, MemoryCell> = memoryCellList.value[l].write().unwrap();
                       memoryCell.value.setData( 
                         self.memoryCellExpression(&mut vec![parameter.clone()]).getData()
                       );

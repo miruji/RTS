@@ -14,9 +14,7 @@ pub mod memoryCellList; use crate::parser::memoryCellList::*;
 pub mod value;
 pub mod uf64;
 pub mod class;  use crate::parser::class::*;
-pub mod r#enum; use crate::parser::r#enum::*;
 pub mod method; use crate::parser::method::*;
-pub mod list;   use crate::parser::list::*;
 
 use crate::tokenizer::*;
 use crate::tokenizer::token::*;
@@ -260,8 +258,8 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
   // todo: delete lineIndex and use methodLink.lines ?
   let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
   { // get conditions
-    let      method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
-    let       lines: &Vec< Arc<RwLock<Line>> >   = &method.lines;
+    let method:      RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+    let lines:       &Vec< Arc<RwLock<Line>> >   = &method.lines;
     let linesLength: usize                       = lines.len();
     { // search bottom lines
       let mut i: usize =
@@ -293,17 +291,17 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
   let mut conditionTruth: bool = false;
   for conditionLink in &mut conditions 
   {
-    let condition = conditionLink.read().unwrap(); // todo: type
+    let condition: RwLockReadGuard<'_, Line> = conditionLink.read().unwrap();
     // if elif
     if condition.tokens.len() != 0 
     {
       { // check condition truth and unlock mcl
-        let method = methodLink.read().unwrap(); // todo: type
-        let mut conditionTokens = condition.tokens.clone(); // todo: no clone ? fix its please
+        let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
+        let mut conditionTokens: Vec<Token> = condition.tokens.clone(); // todo: no clone ? fix its please
         conditionTokens.remove(0);
         conditionTruth = 
           {
-            let expressionResult = method.memoryCellExpression(&mut conditionTokens).getData(); // todo: type
+            let expressionResult: Option<String> = method.memoryCellExpression(&mut conditionTokens).getData();
             if let Some(expressionResult) = expressionResult 
             {
               expressionResult == "true"
@@ -314,11 +312,10 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
           }
       }
       if conditionTruth 
-      {
-        // new temporary method
+      { // new temporary method
         let mut conditionLinesLength: usize = condition.lines.len();
         let mut conditionLineIndex:   usize = 0;
-        let method = // todo: type
+        let method: Arc<RwLock<Method>> =
           Arc::new(
           RwLock::new(
             Method::new(
@@ -333,11 +330,10 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
     // else
     } else
     if !conditionTruth 
-    {
-      // new temporary method
+    { // new temporary method
       let mut conditionLinesLength: usize = condition.lines.len();
       let mut conditionLineIndex:   usize = 0;
-      let method = // todo: type
+      let method: Arc<RwLock<Method>> =
         Arc::new(
         RwLock::new(
           Method::new(
@@ -356,15 +352,15 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
   // e:  = value
 unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool 
 {
-  let line = lineLink.read().unwrap(); // todo: type
-  let mut lineTokens: Vec<Token> = line.tokens.clone();
-  let mut method = methodLink.write().unwrap(); // todo: type
+  let     line:       RwLockReadGuard<'_, Line>    = lineLink.read().unwrap();
+  let mut lineTokens: Vec<Token>                   = line.tokens.clone();
+  let mut method:     RwLockWriteGuard<'_, Method> = methodLink.write().unwrap();
 
   if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Equals 
   {
     lineTokens.remove(0);
 
-    let methodResultType = 
+    let methodResultType: Option<TokenType> = 
       if let Some(methodResult) = &method.result 
       {
         methodResult.getDataType().clone()
@@ -390,10 +386,9 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
 //   name(param) -> Type
 unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Method>>) -> bool 
 {
-  let line = lineLink.read().unwrap(); // todo: add type
-
-  let lineTokens: &Vec<Token> = &line.tokens;
-  let lineTokensLength: usize = lineTokens.len();
+  let line:             RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
+  let lineTokens:       &Vec<Token>               = &line.tokens;
+  let lineTokensLength: usize                     = lineTokens.len();
 
   //
   let mut parameters: Option< Vec<Token> > = None;
@@ -406,7 +401,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     } else 
     if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
     {
-      let method = methodLink.read().unwrap();
+      let method: RwLockReadGuard<'_, Method> = methodLink.read().unwrap();
       if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
         parameters = Some( method.getMethodParameters(&mut lineTokens) );
       }
@@ -435,7 +430,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
     // create new method
     if let Some(newMethodName) = lineTokens[0].getData() 
     {
-      let mut newMethodBuffer = // todo: add type
+      let mut newMethodBuffer: Method = 
         Method::new(
           newMethodName,
           line.lines.clone(),
@@ -458,7 +453,7 @@ unsafe fn searchMethod(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Metho
         }
       }
       // add
-      let mut parentMethod = methodLink.write().unwrap(); // todo: check correct work | add type
+      let mut parentMethod: RwLockWriteGuard<'_, Method> = methodLink.write().unwrap(); // todo: check correct work
       parentMethod.methods.push(
         Arc::new(
         RwLock::new(
@@ -914,11 +909,6 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: *mut usize, 
         continue;
       }
     }
-/*
-      // save line now for logger
-      // todo: delete its pls
-      replaceSavedLine( method.lines[*lineIndex].clone() );
-*/
     // search conditions
     if !searchCondition(lineLink.clone(), methodLink.clone()) 
     { // search methods
@@ -934,8 +924,6 @@ pub unsafe fn readLines(methodLink: Arc<RwLock<Method>>, lineIndex: *mut usize, 
         }
       }
     }
-
-    //
     { // todo: rewrite this part
       let method = methodLink.read().unwrap();
       if method.lines.len() < *linesLength 

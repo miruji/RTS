@@ -200,15 +200,6 @@ pub struct Token
 }
 impl Token 
 {
-  pub const fn newStatic() -> Self 
-  {
-    Token 
-    {
-          data: None,
-      dataType: None,
-        tokens: None,
-    }
-  }
   pub fn newEmpty(
     dataType: Option< TokenType >
   ) -> Self 
@@ -230,19 +221,6 @@ impl Token
           data,
       dataType,
         tokens: None,
-    }
-  }
-  pub fn newFull(
-    dataType: Option< TokenType >,
-    data:     Option< String >,
-    tokens:   Option< Vec<Token> >
-  ) -> Self 
-  {
-    Token 
-    {
-          data,
-      dataType,
-        tokens,
     }
   }
   pub fn newNesting(

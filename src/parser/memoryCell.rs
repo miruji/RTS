@@ -3,7 +3,6 @@
 */
 
 use crate::tokenizer::token::*;
-use crate::tokenizer::line::*;
 
 // MemoryCellMode
 #[derive(PartialEq)]

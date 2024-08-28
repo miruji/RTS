@@ -2,7 +2,6 @@
   line
 */
 
-use crate::logger::*;
 use crate::tokenizer::token::*;
 
 use std::sync::{Arc, RwLock};
