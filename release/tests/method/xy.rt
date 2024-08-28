@@ -1,0 +1,7 @@
+
+xy(x: UInt, y: Int) -> String
+  print(f"{x}:{type(x)} {y}:{type(y)} ")
+  = str(x - y)
+
+result = xy(25, 30)
+println(f"= {result}:{type(result)}") # -5

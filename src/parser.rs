@@ -309,7 +309,6 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
               expressionResult == "true"
             } else 
             {
-              println!("= false");
               false
             }
           }
