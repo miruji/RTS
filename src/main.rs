@@ -123,7 +123,7 @@ fn main() -> io::Result<()>
       { // run file
         unsafe
         {
-          _argc = valuesLength-1;
+          _argc = valuesLength;
           _argv = values.clone();
           _filePath = values[0].clone();
         }

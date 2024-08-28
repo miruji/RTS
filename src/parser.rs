@@ -287,17 +287,18 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
     }
     // if no conditions
     if conditions.len() == 0 { return false; }
+    else { _lineIndex += conditions.len()-1; }
   }
   // read conditions
   let mut conditionTruth: bool = false;
   for conditionLink in &mut conditions 
   {
-    let condition = conditionLink.read().unwrap();
+    let condition = conditionLink.read().unwrap(); // todo: type
     // if elif
     if condition.tokens.len() != 0 
     {
       { // check condition truth and unlock mcl
-        let method = methodLink.read().unwrap();
+        let method = methodLink.read().unwrap(); // todo: type
         let mut conditionTokens = condition.tokens.clone(); // todo: no clone ? fix its please
         conditionTokens.remove(0);
         conditionTruth = 
@@ -308,6 +309,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
               expressionResult == "true"
             } else 
             {
+              println!("= false");
               false
             }
           }
@@ -317,7 +319,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
         // new temporary method
         let mut conditionLinesLength: usize = condition.lines.len();
         let mut conditionLineIndex:   usize = 0;
-        let method = 
+        let method = // todo: type
           Arc::new(
           RwLock::new(
             Method::new(
@@ -336,7 +338,7 @@ unsafe fn searchCondition(lineLink: Arc<RwLock<Line>>, methodLink: Arc<RwLock<Me
       // new temporary method
       let mut conditionLinesLength: usize = condition.lines.len();
       let mut conditionLineIndex:   usize = 0;
-      let method = 
+      let method = // todo: type
         Arc::new(
         RwLock::new(
           Method::new(
@@ -726,8 +728,8 @@ lazy_static!
 }
 
 // parse lines
-static mut _lineIndex:   usize                    = 0;
-static mut _linesLength: usize                    = 0;
+static mut _lineIndex:   usize = 0;
+static mut _linesLength: usize = 0;
 
 pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 {

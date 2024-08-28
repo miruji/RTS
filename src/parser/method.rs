@@ -117,14 +117,17 @@ impl Method
       if let Some(ref mut memoryCellTokens) = memoryCell.value.tokens
       {
         for nesting in &mut *memoryCellTokens 
-        {
-          *nesting = if let Some(ref mut nestingTokens) = nesting.tokens 
+        { // nesting
+          if nesting.tokens.is_some()
           {
-            self.memoryCellExpression(nestingTokens)
-          } else 
-          {
-            Token::newEmpty(None)
-          };
+            *nesting = if let Some(ref mut nestingTokens) = nesting.tokens
+            {
+              self.memoryCellExpression(nestingTokens)
+            } else 
+            {
+              Token::newEmpty(None)
+            };
+          }
         }
       } // error
     }
@@ -523,8 +526,8 @@ impl Method
                   let outputString = String::from_utf8_lossy(&output.stdout).to_string();
                   if !outputString.is_empty() 
                   { // result
-                    value[i].setData(Some(outputString));
-                    value[i].setDataType(Some(TokenType::String));
+                    value[i].setData    ( Some(outputString) );
+                    value[i].setDataType( Some(TokenType::String) );
                   }
                 } else 
                 { // error -> skip
