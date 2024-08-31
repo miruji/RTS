@@ -119,16 +119,16 @@ pub fn formatPrint(string: &str) -> String
               { // cbg
                 _i += 4;
                 _result.push_str(&format!(
-                    "{}",
-                    Bg(Reset)
+                  "{}",
+                  Bg(Reset)
                 ));
                 continue;
               } else 
               { // cb
                 _i += 3;
                 _result.push_str(&format!(
-                    "{}",
-                    style::NoBold
+                  "{}",
+                  style::NoBold
                 ));
                 continue;
               }
@@ -139,15 +139,18 @@ pub fn formatPrint(string: &str) -> String
               { // cfg
                 _i += 4;
                 _result.push_str(&format!(
-                    "{}",
-                    Fg(Reset)
+                  "{}",
+                  Fg(Reset)
                 ));
                 continue;
               }
             } else 
             { // clear all
               _i += 2;
-              _result.push_str( &format!("{}",style::Reset) );
+              _result.push_str(&format!(
+                "{}",
+                style::Reset
+              ));
               continue;
             }
           },

@@ -1,4 +1,7 @@
 
+clear()
+println("\bRTS Tests\cb")
+
 files =
   "./tests/method/ab.rt"
   "./tests/method/xy.rt"
@@ -10,8 +13,8 @@ files =
 l = 0
 ? l < len(files)
   file = f"./rts -rf {files[l]}"
-  print(f"[{file}] ")
-  exec(file)
-  println("[OK]")
+  print(f"  [{file}] ")
+  exec(file) # todo: result: Array<(UInt, String)> = exec(file)
+  println("[\fg(#01cd00)\bOK\c]")
   l += 1
   go(1)

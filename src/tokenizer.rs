@@ -475,8 +475,19 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
         }
         // push nesting
         let mut currentLine = linesLinks[index].write().unwrap();
-        currentLine.lines.push(nestingLineLink); // nesting
-        lineNesting(&mut currentLine.lines);     // cycle
+        match &mut currentLine.lines 
+        {
+          Some(lineLines) => 
+          { 
+            lineLines.push(nestingLineLink); // nesting
+            lineNesting(lineLines);          // cycle
+          },
+          None => 
+          { 
+            currentLine.lines = Some(vec![nestingLineLink]);  // nesting
+            lineNesting(currentLine.lines.as_mut().unwrap()); // cycle
+          }
+        }
       } else {
         index += 1; // next line < current line => skip
         nextIndex = index+1;
@@ -487,14 +498,17 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
   }
 }
 // get new line nesting nums
-fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) {
-    for (i, lineLink) in linesLinks.iter().enumerate() {
-        let mut line = lineLink.write().unwrap();
-        line.index = i;
-        if line.lines.len() > 0 {
-            setLineNestingNums(&mut line.lines);
-        }
+fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) 
+{
+  for (i, lineLink) in linesLinks.iter().enumerate() 
+  {
+    let mut line = lineLink.write().unwrap();
+    line.index = i;
+    if let Some(ref mut lineLines) = line.lines
+    {
+      setLineNestingNums(lineLines);
     }
+  }
 }
 
 // delete DoubleComment
@@ -510,9 +524,9 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
     { // interrupt
       // get line and check lines len
       let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
-      if !line.lines.is_empty() 
+      if let Some(ref mut lineLines) = line.lines
       {
-        deleteDoubleComment(&mut line.lines, index);
+        deleteDoubleComment(lineLines, index);
       }
       // skip separator
       if line.tokens.is_empty() {
@@ -643,10 +657,10 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
     }
 
     outputTokens(&line.tokens, indent, 1);
-    if (&line.lines).len() > 0 
+    if let Some(lineLines) = &line.lines
     {
       log("parserHeader", &format!("{}┗ Lines",identStr2));
-      outputLines(&line.lines, indent+1);
+      outputLines(lineLines, indent+1);
     }
   }
   //
@@ -713,7 +727,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
               tokens: lineTokens.clone(),
               indent: lineIdent,
               index:  0,
-              lines:  Vec::new(),
+              lines:  None,
               parent: None
             }
           ))

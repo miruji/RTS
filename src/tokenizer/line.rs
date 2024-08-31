@@ -15,9 +15,8 @@ pub struct Line {
                                                  // todo: Option
   pub        index: usize,                       // index
                                                  // todo: Option
-  pub        lines: Vec< Arc<RwLock<Line>> >,    // child lines
-                                                 // todo: Option
-  pub       parent: Option< Arc<RwLock<Line>> >  // parent link
+  pub        lines: Option< Vec< Arc<RwLock<Line>> > >, // child lines
+  pub       parent: Option< Arc<RwLock<Line>> >         // parent link
 }
 impl Line 
 {
@@ -28,7 +27,7 @@ impl Line
       tokens: Vec::new(),
       indent: 0,
        index: 0,
-       lines: Vec::new(),
+       lines: None,
       parent: None
     }
   }

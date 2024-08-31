@@ -49,13 +49,12 @@ pub struct Method
                                                      // todo: Option
   pub          lines: Vec< Arc<RwLock<Line>> >,      // nesting lines
                                                      // todo: Option
-  pub     parameters: Vec<Token>,                    // parameters
-                                                     // todo: Option< Arc<RwLock<Token>> >
+  pub     parameters: Option< Vec<Token> >,          // parameters
   pub         result: Option<Token>,                 // result type
       // if result type = None, => procedure
       // else => function
-  pub memoryCellList: Arc<RwLock<MemoryCellList>>,   // todo: option< Arc<RwLock<MemoryCellList>> > ?
-  pub        methods:    Vec< Arc<RwLock<Method>> >,
+  pub memoryCellList: Option< Arc<RwLock<MemoryCellList>> >,
+  pub        methods: Option< Vec< Arc<RwLock<Method>> > >,
   pub         parent: Option< Arc<RwLock<Method>> >,
 }
 impl Method 
@@ -71,10 +70,10 @@ impl Method
     {
                 name,
                lines,
-          parameters: Vec::new(),
+          parameters: None,
               result: None,
-      memoryCellList: Arc::new(RwLock::new(MemoryCellList::new())),
-             methods: Vec::new(),
+      memoryCellList: None,
+             methods: None,
               parent
     }
   }
@@ -82,12 +81,15 @@ impl Method
   // get method by name
   pub fn getMethodByName(&self, name: &str) -> Option<Arc<RwLock<Method>>> 
   {
-    for childMethodLink in &self.methods 
+    if let Some(someMethods) = &self.methods 
     {
-      let childMethod = childMethodLink.read().unwrap();
-      if name == childMethod.name 
+      for childMethodLink in someMethods 
       {
-        return Some(childMethodLink.clone());
+        let childMethod: RwLockReadGuard<'_, Method> = childMethodLink.read().unwrap();
+        if name == childMethod.name 
+        {
+          return Some(childMethodLink.clone());
+        }
       }
     }
 
@@ -100,7 +102,7 @@ impl Method
   }
 
   // push memoryCell to self memoryCellList
-  pub fn pushMemoryCell(&self, mut memoryCell: MemoryCell) -> ()
+  pub fn pushMemoryCell(&mut self, mut memoryCell: MemoryCell) -> ()
   { 
     if memoryCell.valueType != TokenType::Array 
     { // basic
@@ -132,21 +134,23 @@ impl Method
       } // error
     }
     // add to memoryCellList
-    let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = self.memoryCellList.write().unwrap();
+    let memoryCellListLink: Arc<RwLock<MemoryCellList>>          = self.getMemoryCellList();
+    let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = memoryCellListLink.write().unwrap();
     memoryCellList.value.push( Arc::new(RwLock::new(memoryCell)) );
   }
 
   // get memory cell by name
-  pub fn getMemoryCellByName(&self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> 
+  pub fn getMemoryCellByName(&mut self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> 
   { // search in self
-    if let Some(memoryCell) = getMemoryCellByName(self.memoryCellList.clone(), memoryCellName) 
+    let memoryCellListLink: Arc<RwLock<MemoryCellList>> = self.getMemoryCellList();
+    if let Some(memoryCell) = getMemoryCellByName(memoryCellListLink, memoryCellName) 
     {
       return Some(memoryCell);
     }
     // search in parent
     if let Some(parentLink) = &self.parent 
     {
-      let parent: RwLockReadGuard<'_, Method> = parentLink.read().unwrap();
+      let mut parent: RwLockWriteGuard<'_, Method> = parentLink.write().unwrap();
       return parent.getMemoryCellByName(memoryCellName);
     }
     //
@@ -154,7 +158,7 @@ impl Method
   }
 
   // memory cell op
-  pub fn memoryCellOp(&self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) -> ()
+  pub fn memoryCellOp(&mut self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) -> ()
   {
     if op != TokenType::Equals         &&
        op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
@@ -186,7 +190,7 @@ impl Method
   }
 
   // update value
-  fn replaceMemoryCellByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
+  fn replaceMemoryCellByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
     fn setNone(value: &mut Vec<Token>, index: usize) 
     { // error -> skip
       value[index].setData    (None);
@@ -253,7 +257,7 @@ impl Method
   }
 
   // format quote
-  fn formatQuote(&self, quote: String) -> String 
+  fn formatQuote(&mut self, quote: String) -> String 
   {
     let mut result:           String    = String::new();
     let mut expressionBuffer: String    = String::new();
@@ -336,7 +340,7 @@ impl Method
   }
 
   // get function parameters
-  fn getFunctionParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  fn getFunctionParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
 
@@ -368,7 +372,7 @@ impl Method
   }
 
   // expression
-  pub fn memoryCellExpression(&self, value: &mut Vec<Token>) -> Token 
+  pub fn memoryCellExpression(&mut self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len();
 
@@ -788,11 +792,20 @@ impl Method
     }
   }
 
+  pub fn getMemoryCellList(&mut self) -> Arc<RwLock<MemoryCellList>> 
+  {
+    if self.memoryCellList.is_none() 
+    {
+      self.memoryCellList = Some(Arc::new(RwLock::new(MemoryCellList::new())));
+    }
+    self.memoryCellList.clone().unwrap()
+  }
+
   /* search procedure call
      e:
        procedureCall(parameters)
   */
-  pub unsafe fn procedureCall(&self, lineLink: Arc<RwLock<Line>>) -> bool 
+  pub unsafe fn procedureCall(&mut self, lineLink: Arc<RwLock<Line>>) -> bool 
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
     if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::Word
@@ -869,6 +882,12 @@ impl Method
                 self.memoryCellExpression(&mut line.tokens.clone()).getData();
                 // else -> skip
               }
+              "clear" =>
+              { // clear
+                Command::new("clear")
+                  .status()
+                  .expect("Failed to clear console"); // todo: move to functions ?
+              }
               "sleep" =>
               { // sleep
                 // expression tokens
@@ -921,8 +940,11 @@ impl Method
                     };
                   if let Some(parameters) = parameters 
                   {
-                    let calledMethod:   RwLockReadGuard<'_, Method>         = calledMethodLink.read().unwrap();
-                    let memoryCellList: RwLockReadGuard<'_, MemoryCellList> = calledMethod.memoryCellList.read().unwrap();
+                    let memoryCellListLink: Arc<RwLock<MemoryCellList>> = 
+                      {
+                        calledMethodLink.write().unwrap().getMemoryCellList()
+                      };
+                    let memoryCellList:     RwLockReadGuard<'_, MemoryCellList> = memoryCellListLink.read().unwrap();
                     for (l, parameter) in parameters.iter().enumerate() 
                     {
                       let mut memoryCell: RwLockWriteGuard<'_, MemoryCell> = memoryCellList.value[l].write().unwrap();
