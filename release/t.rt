@@ -1,0 +1,34 @@
+
+#
+  a =
+    111
+
+  b
+    222
+
+  println(a)
+  println(b)
+
+c
+  222
+  println(333)
+
+a
+  111
+
+d
+  444
+  println(20)
+
+e(input: UInt) -> Int
+  println(input)
+  -10
+  = -20
+
+println(a)
+println( c[0] )
+c[1]
+d()
+println( d[0] )
+println(e[1])
+println(e(111111))

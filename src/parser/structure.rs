@@ -8,12 +8,10 @@ use crate::_exitCode;
 use crate::tokenizer::line::*;
 use crate::tokenizer::token::*;
 
-use crate::parser::memoryCellList::*;
-use crate::parser::memoryCell::*;
-
 use crate::parser::readTokens;
 use crate::parser::readLines;
-use crate::parser::searchCondition;
+use crate::parser::value::*;
+use crate::parser::uf64::*;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -24,8 +22,189 @@ use std::thread::sleep;
 use std::time::Duration;
 use rand::Rng;
 
-// get method result type
-pub fn getMethodResultType(word: String) -> TokenType 
+// calculate value
+pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token 
+{
+  // get values of types
+  let leftTokenData:     String    = leftToken.getData().unwrap_or_default();
+  let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or_default();
+  let leftValue = match leftTokenDataType
+  {
+    TokenType::Int => 
+    {
+      leftTokenData.parse::<i64>()
+        .map(Value::Int)
+        .unwrap_or(Value::Int(0))
+    },
+    TokenType::UInt => 
+    {
+      leftTokenData.parse::<u64>()
+        .map(Value::UInt)
+        .unwrap_or(Value::UInt(0))
+    },
+    TokenType::Float => 
+    {
+      leftTokenData.parse::<f64>()
+        .map(Value::Float)
+        .unwrap_or(Value::Float(0.0))
+    },
+    TokenType::UFloat => 
+    {
+      leftTokenData.parse::<f64>()
+        .map(uf64::from)
+        .map(Value::UFloat)
+        .unwrap_or(Value::UFloat(uf64::from(0.0)))
+    },
+    TokenType::Char => 
+    {
+      leftTokenData.parse::<char>()
+        .map(|x| Value::Char(x))
+        .unwrap_or(Value::Char('\0'))
+    },
+    TokenType::String => 
+    {
+      leftTokenData.parse::<String>()
+        .map(|x| Value::String(x))
+        .unwrap_or(Value::String("".to_string()))
+    },
+    TokenType::Bool => 
+    {
+      if leftTokenData == "1" { Value::UInt(1) } 
+      else                    { Value::UInt(0)}
+    },
+    _ => Value::UInt(0),
+  };
+  let rightTokenData:     String    = rightToken.getData().unwrap_or_default();
+  let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or_default();
+  let rightValue = match rightTokenDataType {
+    TokenType::Int    => 
+    { 
+      rightTokenData.parse::<i64>()
+        .map(Value::Int)
+        .unwrap_or(Value::Int(0)) 
+    },
+    TokenType::UInt   => 
+    { 
+      rightTokenData.parse::<u64>()
+        .map(Value::UInt)
+        .unwrap_or(Value::UInt(0)) 
+    },
+    TokenType::Float  => 
+    { 
+      rightTokenData.parse::<f64>()
+        .map(Value::Float)
+        .unwrap_or(Value::Float(0.0)) 
+    },
+    TokenType::UFloat => 
+    { 
+      rightTokenData.parse::<f64>()
+        .map(uf64::from)
+        .map(Value::UFloat)
+        .unwrap_or(Value::UFloat(uf64::from(0.0))) 
+    },
+    TokenType::Char   => 
+    { 
+      rightTokenData.parse::<char>()
+        .map(|x| Value::Char(x))
+        .unwrap_or(Value::Char('\0')) 
+    },
+    TokenType::String => 
+    { 
+      rightTokenData.parse::<String>()
+        .map(|x| Value::String(x))
+        .unwrap_or(Value::String("".to_string())) 
+    },
+    TokenType::Bool   => 
+    { 
+      if rightTokenData == "1" { Value::UInt(1) } 
+      else                     { Value::UInt(0) } 
+    },
+    _ => Value::UInt(0),
+  };
+  // calculate and set pre-result type
+  let mut resultType: TokenType = TokenType::UInt;
+  let resultValue: String = match *op 
+  {
+    TokenType::Plus     => (leftValue + rightValue).to_string(),
+    TokenType::Minus    => (leftValue - rightValue).to_string(),
+    TokenType::Multiply => (leftValue * rightValue).to_string(),
+    TokenType::Divide   => (leftValue / rightValue).to_string(),
+    TokenType::Inclusion           => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue.toBool() || rightValue.toBool()).to_string() 
+    }
+    TokenType::Joint               => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue.toBool() && rightValue.toBool()).to_string() 
+    }
+    TokenType::Equals              => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue == rightValue).to_string() 
+    }
+    TokenType::NotEquals           => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue != rightValue).to_string() 
+    }
+    TokenType::GreaterThan         => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue > rightValue).to_string() 
+    }
+    TokenType::LessThan            => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue < rightValue).to_string() 
+    }
+    TokenType::GreaterThanOrEquals => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue >= rightValue).to_string() 
+    }
+    TokenType::LessThanOrEquals    => 
+    { 
+      resultType = TokenType::Bool; 
+      (leftValue <= rightValue).to_string() 
+    }
+    _ => "0".to_string(),
+  };
+  // set result type
+  if resultType != TokenType::Bool 
+  {
+    if leftTokenDataType == TokenType::String || rightTokenDataType == TokenType::String 
+    {
+      resultType = TokenType::String;
+    } else
+    if (leftTokenDataType == TokenType::Int   || leftTokenDataType == TokenType::UInt) && // todo: ?
+        rightTokenDataType == TokenType::Char 
+    {
+      resultType = leftTokenDataType.clone();
+    } else
+    if leftTokenDataType == TokenType::Char 
+    {
+      resultType = TokenType::Char;
+    } else
+    if leftTokenDataType == TokenType::Float  || rightTokenDataType == TokenType::Float 
+    {
+      resultType = TokenType::Float;
+    } else
+    if leftTokenDataType == TokenType::UFloat || rightTokenDataType == TokenType::UFloat 
+    {
+      resultType = TokenType::UFloat;
+    } else
+    if leftTokenDataType == TokenType::Int    || rightTokenDataType == TokenType::Int 
+    {
+      resultType = TokenType::Int;
+    }
+  }
+  return Token::new( Some(resultType), Some(resultValue) );
+}
+
+// get structure result type
+pub fn getStructureResultType(word: String) -> TokenType 
 {
   match word.as_str() 
   {
@@ -43,7 +222,7 @@ pub fn getMethodResultType(word: String) -> TokenType
   }
 }
 
-pub struct Method 
+pub struct Structure 
 {
   pub           name: String,                        // unique name
                                                      // todo: Option
@@ -53,61 +232,74 @@ pub struct Method
   pub         result: Option<Token>,                 // result type
       // if result type = None, => procedure
       // else => function
-  pub memoryCellList: Option< Arc<RwLock<MemoryCellList>> >,
-  pub        methods: Option< Vec< Arc<RwLock<Method>> > >,
-  pub         parent: Option< Arc<RwLock<Method>> >,
+  pub     structures: Option< Vec< Arc<RwLock<Structure>> > >,
+  pub         parent: Option< Arc<RwLock<Structure>> >,
 }
-impl Method 
+impl Structure 
 {
   pub fn new
   (
       name: String,
      lines: Vec< Arc<RwLock<Line>> >,
-    parent: Option< Arc<RwLock<Method>> >,
+    parent: Option< Arc<RwLock<Structure>> >,
   ) -> Self 
   {
-    Method 
+    Structure 
     {
                 name,
                lines,
-          parameters: None,
+          parameters: None, // todo: remove
               result: None,
-      memoryCellList: None,
-             methods: None,
+          structures: None,
               parent
     }
   }
 
-  // get method by name
-  pub fn getMethodByName(&self, name: &str) -> Option<Arc<RwLock<Method>>> 
+  // get Structure by name
+  pub fn getStructureByName(&self, name: &str) -> Option<Arc<RwLock<Structure>>> 
   {
-    if let Some(someMethods) = &self.methods 
+    if let Some(someStructures) = &self.structures 
     {
-      for childMethodLink in someMethods 
+      for childStructureLink in someStructures 
       {
-        let childMethod: RwLockReadGuard<'_, Method> = childMethodLink.read().unwrap();
-        if name == childMethod.name 
+        let childStructure: RwLockReadGuard<'_, Structure> = childStructureLink.read().unwrap();
+        if name == childStructure.name 
         {
-          return Some(childMethodLink.clone());
+          return Some(childStructureLink.clone());
         }
       }
     }
-
-    // check the parent method if it exists
+    // check the parent structure if it exists
     if let Some(parentLink) = &self.parent 
     {
-      let parentMethod: RwLockReadGuard<'_, Method> = parentLink.read().unwrap();
-      parentMethod.getMethodByName(name)
+      if let Ok(parentStructure) = parentLink.try_read() 
+      {
+        parentStructure.getStructureByName(name)
+      } else 
+      {
+        None
+      }
     } else { None }
   }
 
   // push memoryCell to self memoryCellList
-  pub fn pushMemoryCell(&mut self, mut memoryCell: MemoryCell) -> ()
+  pub fn pushMemoryCell(&mut self, mut structure: Structure) -> ()
   { 
-    if memoryCell.valueType != TokenType::Array 
+    // if self.structures == None, create new
+    if self.structures.is_none() 
+    {
+      self.structures = Some(vec!());
+    }
+    // add new structure
+    if let Some(ref mut structures) = self.structures 
+    {
+      structures.push( Arc::new(RwLock::new(structure)) );
+    }
+    /*
+    if structure.valueType != TokenType::Array 
     { // basic
-      memoryCell.value =
-        if let Some(mut memoryCellTokens) = memoryCell.value.tokens.clone()
+      structure.value =
+        if let Some(mut memoryCellTokens) = structure.value.tokens.clone()
         {
           self.memoryCellExpression(&mut memoryCellTokens)
         } else 
@@ -116,7 +308,7 @@ impl Method
         };
     } else 
     { // array
-      if let Some(ref mut memoryCellTokens) = memoryCell.value.tokens
+      if let Some(ref mut memoryCellTokens) = structure.value.tokens
       {
         for nesting in &mut *memoryCellTokens 
         { // nesting
@@ -137,9 +329,11 @@ impl Method
     let memoryCellListLink: Arc<RwLock<MemoryCellList>>          = self.getMemoryCellList();
     let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = memoryCellListLink.write().unwrap();
     memoryCellList.value.push( Arc::new(RwLock::new(memoryCell)) );
+    */
   }
 
   // get memory cell by name
+  /*
   pub fn getMemoryCellByName(&mut self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> 
   { // search in self
     let memoryCellListLink: Arc<RwLock<MemoryCellList>> = self.getMemoryCellList();
@@ -150,14 +344,16 @@ impl Method
     // search in parent
     if let Some(parentLink) = &self.parent 
     {
-      let mut parent: RwLockWriteGuard<'_, Method> = parentLink.write().unwrap();
+      let mut parent: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
       return parent.getMemoryCellByName(memoryCellName);
     }
     //
     None
   }
+  */
 
   // memory cell op
+  /*
   pub fn memoryCellOp(&mut self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) -> ()
   {
     if op != TokenType::Equals         &&
@@ -188,20 +384,21 @@ impl Method
       if op == TokenType::DivideEquals   { memoryCell.value = calculate(&TokenType::Divide,   &leftValue, &rightValue); }
     }
   }
+  */
 
   // update value
-  fn replaceMemoryCellByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
+  fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
     fn setNone(value: &mut Vec<Token>, index: usize) 
     { // error -> skip
       value[index].setData    (None);
       value[index].setDataType(None);
     }
 
-    if let Some(memoryCellName) = value[index].getData() 
+    if let Some(structureName) = value[index].getData()  // todo: use getStructureByName()
     {
-      if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
+      if let Some(structureLink) = self.getStructureByName(&structureName) 
       {
-        let memoryCell: RwLockReadGuard<'_, MemoryCell> = memoryCellLink.read().unwrap();
+        let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
         if index+1 < *length && 
            value[index+1].getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
         { // array
@@ -209,40 +406,42 @@ impl Method
             value[index+1]
               .tokens
               .as_mut()
-              .and_then(|tokens| self.memoryCellExpression(tokens).getData()?.parse::<usize>().ok());
-
+              .and_then(|tokens| self.expression(tokens).getData()?.parse::<usize>().ok());
           value.remove(index+1);
           *length -= 1;
 
           if let Some(idx) = arrayIndex 
-          { // array
-            if let Some(memoryCellTokens) = &memoryCell.value.tokens 
-            {
-              if idx < memoryCellTokens.len() 
-              {
-                value[index].setData    ( memoryCellTokens[idx].getData() );
-                value[index].setDataType( memoryCellTokens[idx].getDataType().clone() );
-              } else 
-              {
-                setNone(value, index);
-              }
-            } else 
-            {
-              setNone(value, index);
-            }
+          { // n-line structure
+            // todo: fix memoryCell nesting
+            let result = self.expression(&mut structure.lines[idx].write().unwrap().tokens); // todo: type
+            value[index].setData    ( result.getData().clone() );
+            value[index].setDataType( result.getDataType().clone() );
           } else 
           {
             setNone(value, index);
           }
         } else 
         { 
-          if memoryCell.valueType != TokenType::Array 
-          { // basic cell
-            value[index].setData    ( memoryCell.value.getData() );
-            value[index].setDataType( memoryCell.value.getDataType().clone() );
+          if structure.lines.len() == 1 
+          { // first-line structure
+            let result = self.expression(&mut structure.lines[0].write().unwrap().tokens); // todo: type
+            value[index].setData    ( result.getData().clone() );
+            value[index].setDataType( result.getDataType().clone() );
           } else 
-          { // array name
-            value[index].setData    ( Some(memoryCellName) );
+          if structure.lines.len() > 1 
+          { // array structure
+            let mut linesResult = Vec::new(); // todo: type
+            for line in &structure.lines 
+            {
+              linesResult.push(
+                self.expression(&mut line.write().unwrap().tokens)
+              );
+            }
+            value[index] = Token::newNesting( Some(linesResult) );
+            value[index].setDataType( Some(TokenType::Array) );
+          } else
+          { // empty structure
+            value[index].setData    ( Some(structureName) );
             value[index].setDataType( Some(TokenType::Array) );
           }
         }
@@ -284,7 +483,7 @@ impl Method
           let     expressionLineLink:     &Arc<RwLock< Line >>      = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
           let     expressionLine:         RwLockReadGuard<'_, Line> = expressionLineLink.read().unwrap();
           let mut expressionBufferTokens: Vec<Token>                = expressionLine.tokens.clone();
-          if let Some(expressionData) = self.memoryCellExpression(&mut expressionBufferTokens).getData() 
+          if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
           {
             result += &expressionData;
           }
@@ -305,8 +504,8 @@ impl Method
     result
   }
 
-  // get method parameters
-  pub fn getMethodParameters(&self, value: &mut Vec<Token>) -> Vec<Token> 
+  // get structure parameters
+  pub fn getStructureParameters(&self, value: &mut Vec<Token>) -> Vec<Token> 
   {
     let mut result = Vec::new();
 
@@ -324,7 +523,7 @@ impl Method
         {
           if let Some(expressionData) = expressionBuffer[2].getData() 
           {
-            expressionBuffer[0].setDataType( Some(getMethodResultType(expressionData)) );
+            expressionBuffer[0].setDataType( Some(getStructureResultType(expressionData)) );
           }
         }
         result.push( expressionBuffer[0].clone() );
@@ -357,7 +556,7 @@ impl Method
             {
               expressionBuffer.push( token.clone() );
             }
-            result.push( self.memoryCellExpression(&mut expressionBuffer) );
+            result.push( self.expression(&mut expressionBuffer) );
             expressionBuffer.clear();
           } else 
           { // push new expression token
@@ -372,7 +571,7 @@ impl Method
   }
 
   // expression
-  pub fn memoryCellExpression(&mut self, value: &mut Vec<Token>) -> Token 
+  pub fn expression(&mut self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len();
 
@@ -383,7 +582,7 @@ impl Method
       {
         if value[0].getDataType().unwrap_or_default() == TokenType::Word 
         { 
-          self.replaceMemoryCellByName(value, &mut valueLength, 0);
+          self.replaceStructureByName(value, &mut valueLength, 0);
         } else 
         if value[0].getDataType().unwrap_or_default() == TokenType::FormattedRawString ||
            value[0].getDataType().unwrap_or_default() == TokenType::FormattedString    ||
@@ -591,14 +790,16 @@ impl Method
                 {
                   if let Some(memoryCellName) = expressions[0].getData() 
                   {
-                    if let Some(memoryCellLink) = self.getMemoryCellByName(&memoryCellName) 
+                    if let Some(memoryCellLink) = self.getStructureByName(&memoryCellName) 
                     {
-                      let memoryCell: RwLockReadGuard<'_, MemoryCell> = memoryCellLink.read().unwrap();
+                      let memoryCell: RwLockReadGuard<'_, Structure> = memoryCellLink.read().unwrap();
+                      /*
                       value[i].setData(Some(
                         memoryCell.value.tokens
                           .clone().unwrap_or_default()
                           .len().to_string()
                       ));
+                      */
                     } else 
                     { // error -> skip
                       value[i].setData( Some(String::from("0")) );
@@ -621,17 +822,17 @@ impl Method
               valueLength -= 1;
               continue;
             } else
-            { // custom method result
+            { // custom structure result
               let mut lineBuffer = Line::newEmpty();
               lineBuffer.tokens  = value.clone();
               unsafe{ self.procedureCall( Arc::new(RwLock::new(lineBuffer)) ); }
 
-              if let Some(methodName) = value[0].getData() 
-              { // get method name
-                if let Some(methodLink) = self.getMethodByName(&methodName) 
-                { // get method
-                  let method = methodLink.read().unwrap();
-                  if let Some(result) = &method.result 
+              if let Some(structureName) = value[0].getData() 
+              { // get structure name
+                if let Some(structureLink) = self.getStructureByName(&structureName) 
+                { // get structure
+                  let structure = structureLink.read().unwrap();
+                  if let Some(result) = &structure.result 
                   { // functional
                     value[i].setData    ( result.getData() );
                     value[i].setDataType( result.getDataType().clone() );
@@ -654,7 +855,7 @@ impl Method
           }
         } else 
         { // array & basic cell
-          self.replaceMemoryCellByName(value, &mut valueLength, i);
+          self.replaceStructureByName(value, &mut valueLength, i);
         }
       }
       if valueLength == 1 
@@ -673,7 +874,7 @@ impl Method
         value[i] = 
           if let Some(mut tokenTokens) = token.tokens.clone() 
           {
-            self.memoryCellExpression(&mut tokenTokens)
+            self.expression(&mut tokenTokens)
           } else
           {
             Token::newEmpty(None)
@@ -792,15 +993,6 @@ impl Method
     }
   }
 
-  pub fn getMemoryCellList(&mut self) -> Arc<RwLock<MemoryCellList>> 
-  {
-    if self.memoryCellList.is_none() 
-    {
-      self.memoryCellList = Some(Arc::new(RwLock::new(MemoryCellList::new())));
-    }
-    self.memoryCellList.clone().unwrap()
-  }
-
   /* search procedure call
      e:
        procedureCall(parameters)
@@ -809,7 +1001,7 @@ impl Method
   {
     let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
     if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::Word
-    { // add method call
+    { // add structure call
       if line.tokens.get(1).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::CircleBracketBegin
       { // check lower first char
         let token: &Token = &line.tokens[0];
@@ -818,17 +1010,17 @@ impl Method
           if tokenData.starts_with(|c: char| c.is_lowercase()) 
           {
             // todo: multi-param
-            // basic methods
+            // basic structures
             let mut result = true;
             match tokenData.as_str() {
               "go" =>
               { // go block up
                 if let Some(parentLink) = &line.parent 
                 {
-                  if let Some(methodParent) = &self.parent 
+                  if let Some(structureParent) = &self.parent 
                   {
-                      // todo: check expressionValue
-                      searchCondition(parentLink.clone(), methodParent.clone());
+                    // todo: check expressionValue
+                    //searchCondition(parentLink.clone(), structureParent.clone());
                   }
                 }
               }
@@ -842,7 +1034,7 @@ impl Method
                 let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionValue) = expressionValue 
                 { // expression value
-                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
+                  let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
                     println!("{}",formatPrint(&expressionValue));
@@ -862,7 +1054,7 @@ impl Method
                 let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionValue) = expressionValue 
                 { // expression value
-                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionValue).getData();
+                  let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
                     print!("{}",formatPrint(&expressionValue));
@@ -879,7 +1071,7 @@ impl Method
               "exec" =>
               { // execute
                 // run function
-                self.memoryCellExpression(&mut line.tokens.clone()).getData();
+                self.expression(&mut line.tokens.clone()).getData();
                 // else -> skip
               }
               "clear" =>
@@ -894,7 +1086,7 @@ impl Method
                 let expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                 if let Some(mut expressionTokens) = expressionTokens 
                 { // expression value
-                  let expressionValue: Option< String > = self.memoryCellExpression(&mut expressionTokens).getData();
+                  let expressionValue: Option< String > = self.expression(&mut expressionTokens).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
                     let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
@@ -910,54 +1102,72 @@ impl Method
                 _exitCode = true;
               }
               _ =>
-              { // custom method
+              { // custom structure
                 result = false;
               }
             }
-            // custom methods
+            // custom structures
             if !result 
             {
-              if let Some(calledMethodLink) = self.getMethodByName(&tokenData) 
+              if let Some(calledStructureLink) = self.getStructureByName(&tokenData) 
               {
                 //
-                let mut   lineIndexBuffer: usize = 0;
-                let mut linesLengthBuffer: usize = 
-                  {
-                    let calledMethod: RwLockReadGuard<'_, Method> = calledMethodLink.read().unwrap();
-                    calledMethod.lines.len()
-                  };
                 // set parameters
-                // todo: merge with up method
+                // todo: merge with up structure
                 {
                   let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
                   let parameters:      Option< Vec<Token> > = 
                     if let Some(mut expressionValue) = expressionValue
                     {
-                      Some( self.getMethodParameters(&mut expressionValue) )
+//                      println!("2: expressionValue {:?}",expressionValue);
+                      Some( self.getStructureParameters(&mut expressionValue) )
                     } else 
                     {
                       None
                     };
                   if let Some(parameters) = parameters 
                   {
-                    let memoryCellListLink: Arc<RwLock<MemoryCellList>> = 
-                      {
-                        calledMethodLink.write().unwrap().getMemoryCellList()
-                      };
-                    let memoryCellList:     RwLockReadGuard<'_, MemoryCellList> = memoryCellListLink.read().unwrap();
+                    let calledStructure: RwLockWriteGuard<'_, Structure> = calledStructureLink.write().unwrap();
                     for (l, parameter) in parameters.iter().enumerate() 
                     {
-                      let mut memoryCell: RwLockWriteGuard<'_, MemoryCell> = memoryCellList.value[l].write().unwrap();
-                      memoryCell.value.setData( 
-                        self.memoryCellExpression(&mut vec![parameter.clone()]).getData()
-                      );
-                      let memoryCellType: Option<TokenType> = Some(memoryCell.valueType.clone());
-                      memoryCell.value.setDataType( memoryCellType ); // todo: rewrite, use memoryCell.value.dataType, delete memoryCell.valueType
+//                      println!("2: call parameter [{}]:[{}]",parameter,parameter.getDataType().unwrap_or_default().to_string());
+                      if let Some(calledStructureStructures) = &calledStructure.structures
+                      {
+//                        println!("  calledStructure.structures.len [{}]",calledStructureStructures.len());
+                        let parameterResult = self.expression(&mut vec![parameter.clone()]); // todo: type
+//                        println!("  parameterResult [{}]",parameterResult);
+                        if let Some(parameterStructure) = calledStructureStructures.get(l) 
+                        {
+                          let mut parameterStructure = parameterStructure.write().unwrap(); // todo: type
+//                          println!("    parameterStructure [{}]",parameterStructure.name);
+                          // add new structure
+                          parameterStructure.lines = 
+                            vec![
+                              Arc::new(
+                              RwLock::new(
+                                Line {
+                                  tokens: vec![parameterResult],
+                                  indent: 0,
+                                  index:  0,
+                                  lines:  None,
+                                  parent: None
+                                }
+                              ))
+                            ];
+                        }
+                      }
+                      //
                     }
                   }
                 }
                 // run
-                readLines(calledMethodLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
+                let mut lineIndexBuffer:   usize = 0;
+                let mut linesLengthBuffer: usize = // todo: remove this, use calledStructure.lines.len() in readLines()
+                  {
+                    let calledStructure: RwLockReadGuard<'_, Structure> = calledStructureLink.read().unwrap();
+                    calledStructure.lines.len()
+                  };
+                readLines(calledStructureLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
                 return true;
               }
             }

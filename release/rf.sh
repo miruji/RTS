@@ -24,7 +24,7 @@ done
 # build
 ./build.sh $1 $debug
 if [ $? -ne 0 ]; then
-  echo "rf: Skipped"
+  echo "[rf] Skipped"
   exit 1
 fi
 

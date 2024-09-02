@@ -8,7 +8,7 @@ clear
 
 # build file
 cd ../
-echo -n "build: "
+echo -n "[build] "
 # x86-64
 if [ "$1" == "64" ]; then
 	builded=true
@@ -64,7 +64,7 @@ elif [ "$1" == "32" ]; then
 	ls &>> ./log
 	rm -f  ./log  # remove log
 fi
-echo "Everything is fine linux-x86-$1"
+echo "Everything is fine [linux-x86-$1]"
 #
 outputPath="target/release/rts"
 if [ "$1" == "32" ]; then

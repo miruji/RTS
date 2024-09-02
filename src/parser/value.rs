@@ -139,7 +139,16 @@ impl std::ops::Sub for Value
       (Value::Int(x), Value::UFloat(y)) => Value::Float(x as f64 -f64::from(y)),
       (Value::Int(x), Value::Char(y))   => Value::Int  (x- y as i64),
       // UInt
-      (Value::UInt(x), Value::UInt(y))   => Value::UInt  (x-y),
+      (Value::UInt(x), Value::UInt(y))   => 
+      {
+        if y > x 
+        {
+          Value::UInt(0)
+        } else 
+        {
+          Value::UInt(x-y)
+        }
+      },
       (Value::UInt(x), Value::Int(y))    => Value::Int   (x as i64 -y),
       (Value::UInt(x), Value::Float(y))  => Value::Float (x as f64 -y),
       (Value::UInt(x), Value::UFloat(y)) => Value::UFloat(uf64::from(x) -y),

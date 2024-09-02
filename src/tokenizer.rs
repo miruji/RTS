@@ -132,7 +132,6 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
         };
 
     if isLetter(byte1) || 
-       (byte1 == b'-' && !result.is_empty() && isLetter(byte2)) ||
        (isDigit(byte1) && !result.is_empty()) 
     {
       result.push(byte1 as char);
