@@ -1,14 +1,4 @@
 
-#
-  a =
-    111
-
-  b
-    222
-
-  println(a)
-  println(b)
-
 c
   222
   println(333)
@@ -30,5 +20,14 @@ println( c[0] )
 c[1]
 d()
 println( d[0] )
-println(e[1])
-println(e(111111))
+println( e[1] )
+println( e(111111) )
+
+q 
+  2
+? q = 1
+  println("= 1")
+? q = 2
+  println("= 2")
+?
+  println("false!")
