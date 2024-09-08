@@ -69,6 +69,8 @@ pub enum TokenType
   Colon,   // :
   Pointer, // ->
   Tilde,   // ~
+
+  Link, // Link
 // words
   Int,      // Integer
   UInt,     // Unsigned integer
@@ -162,6 +164,8 @@ impl ToString for TokenType
       TokenType::Colon   => String::from(":"),  // :
       TokenType::Pointer => String::from("->"), // ->
       TokenType::Tilde   => String::from("~"),  // ~
+
+      TokenType::Link => String::from("Link"), // Link
       
       // words
       TokenType::Int      => String::from("Int"),      // Integer

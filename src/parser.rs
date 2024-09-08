@@ -96,7 +96,7 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<St
   return false;
 }
 //
-unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<Structure>>) -> bool 
+unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure>>) -> bool 
 {
   let line:             RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
   let lineTokens:       &Vec<Token>               = &line.tokens;
@@ -106,95 +106,159 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock
   let lineLines:       Vec< Arc<RwLock<Line>> > = line.lines.clone().unwrap_or(vec![]);
   let lineLinesLength: usize                    = lineLines.len();
 
-  if firstTokenType == TokenType::Word && lineLinesLength > 0
+  if firstTokenType == TokenType::Word
   { // if structure
-//    println!("[structure] {:?}",lineTokens);
-    if let Some(newStructureName) = lineTokens[0].getData() 
-    { // if there are parameters
-      let mut newStructureResultType: Option<TokenType> = None;
-      let mut parameters: Option< Vec<Token> > = None;
-      if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::Equals
-      {
-        return false;
-      } else 
-      if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-      {
-        let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-        if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
-          parameters = Some( structure.getStructureParameters(&mut lineTokens) ); // todo: no Word type, fix pls
-        }
-        // if result
-        if lineTokensLength > 3 && lineTokens[2].getDataType().unwrap_or_default() == TokenType::Pointer && 
-           lineTokens[3].getDataType().unwrap_or_default() == TokenType::Word 
+    if lineLinesLength > 0 
+    { // array structure
+      println!("[array structure] {:?}",lineTokens);
+      if let Some(newStructureName) = lineTokens[0].getData() 
+      { // if there are parameters
+        let mut newStructureResultType: Option<TokenType> = None;
+        let mut parameters: Option< Vec<Token> > = None;
+        if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::Equals
         {
-          if let Some(lineTokenData) = lineTokens[3].getData() 
-          {
-            newStructureResultType = Some( getStructureResultType(lineTokenData) );
+          return false;
+        } else 
+        if lineTokensLength > 1 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+        {
+          let structure: RwLockReadGuard<'_, Structure> = parentLink.read().unwrap();
+          if let Some(mut lineTokens) = lineTokens[1].tokens.clone() {
+            parameters = Some( structure.getStructureParameters(&mut lineTokens) ); // todo: no Word type, fix pls
           }
-        } // else -> skip
-      // if there are no parameters
-      } else 
-      { // if result
-        if lineTokensLength > 2 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::Pointer && 
-           lineTokens[2].getDataType().unwrap_or_default() == TokenType::Word 
-        {
-          if let Some(lineTokenData) = lineTokens[2].getData() 
+          // if result
+          if lineTokensLength > 3 && lineTokens[2].getDataType().unwrap_or_default() == TokenType::Pointer && 
+             lineTokens[3].getDataType().unwrap_or_default() == TokenType::Word 
           {
-            newStructureResultType = Some( getStructureResultType(lineTokenData) );
-          }
-        } // else -> skip
-      }   // else -> skip
-      // new structure
-      let mut newStructure: Structure = 
-        Structure::new(
-          newStructureName,
-          lineLines,
-          Some(structureLink.clone())
-        );
-      // new structure modificators
-      newStructure.result = Some( Token::newEmpty(newStructureResultType.clone()) );
-      if let Some(parameters) = &parameters 
-      { // add parameters
-        for parameter in parameters 
-        {
-          newStructure.pushMemoryCell(
-            Structure::new(
-              parameter.getData().unwrap_or_default(),
-              vec![], // todo: add option, pls 
-              None,
-            )
+            if let Some(lineTokenData) = lineTokens[3].getData() 
+            {
+              newStructureResultType = Some( getStructureResultType(lineTokenData) );
+            }
+          } // else -> skip
+        // if there are no parameters
+        } else 
+        { // if result
+          if lineTokensLength > 2 && lineTokens[1].getDataType().unwrap_or_default() == TokenType::Pointer && 
+             lineTokens[2].getDataType().unwrap_or_default() == TokenType::Word 
+          {
+            if let Some(lineTokenData) = lineTokens[2].getData() 
+            {
+              newStructureResultType = Some( getStructureResultType(lineTokenData) );
+            }
+          } // else -> skip
+        }   // else -> skip
+        // new structure
+        let mut newStructure: Structure = 
+          Structure::new(
+            newStructureName,
+            lineLines,
+            Some(parentLink.clone())
           );
+        // new structure modificators
+        newStructure.result = Some( Token::newEmpty(newStructureResultType.clone()) );
+        if let Some(parameters) = &parameters 
+        { // add parameters
+          for parameter in parameters 
+          {
+            newStructure.pushStructure(
+              Structure::new(
+                parameter.getData().unwrap_or_default(),
+                vec![], // todo: add option, pls 
+                None,
+              )
+            );
+          }
         }
-      }
-      // get parent
-      let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-      if let Some(ref mut structureStructures) = structure.structures 
-      { // if exists
-        structureStructures.push(
+        // create new structure link
+        let newStructure: Arc<RwLock<Structure>> =
           Arc::new(RwLock::new(
             newStructure
-          ))
-        );
-      } else 
-      { // if no exists
-        structure.structures = 
-          Some(vec![
-            Arc::new(RwLock::new(
+          ));
+        {
+          let mut conditionLinesLength: usize = lineLinesLength;
+          let mut conditionLineIndex:   usize = 0;
+          readLines(newStructure.clone(), &mut conditionLineIndex, &mut conditionLinesLength, true);
+        }
+        // get parent
+        let mut parent: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
+        if let Some(ref mut parentStructures) = parent.structures 
+        { // if exists
+          parentStructures.push(
+            newStructure
+          );
+        } else 
+        { // if no exists
+          parent.structures = 
+            Some(vec![
               newStructure
-            ))
-          ]);
+            ]);
+        }
+        return true;
       }
-      return true;
+    } else 
+    { // check op
+      let mut opType: TokenType = TokenType::None;
+      let mut opPos:  usize     = 0;
+      for (l, lineToken) in lineTokens.iter().enumerate()
+      {
+        opType = lineToken.getDataType().unwrap_or_default().clone();
+        if checkMemoryCellMathOperator(opType.clone()) 
+        {
+          opPos = l+1;
+          break;
+        }
+      }
+      if lineTokensLength > 1 && opPos > 1
+      { // line structure
+        println!("[line structure]");
+        if let Some(structureName) = lineTokens[0].getData() 
+        {
+          let leftValue  = Some( lineTokens[1..opPos-1].to_vec() ); // todo: type
+          let rightValue = Some( lineTokens[opPos..(lineTokensLength)].to_vec() ); // todo: type
+          println!("  [structureName] [{}] [{:?}]",structureName,rightValue);
+          let mut structure: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
+          if let Some(parentLink) = structure.getStructureByName(&structureName) 
+          { // if searched in structures
+            println!("  searched!!!");
+            structure.structureOp(
+              parentLink, 
+              opType, 
+              leftValue.unwrap_or(vec![]).clone(),
+              rightValue.unwrap_or(vec![]).clone()
+            );
+          } else 
+          { // if no searched, then create new Structure and equal right value
+            println!("  new!!!");
+            // new structure
+            structure.pushStructure(
+              Structure::new(
+                structureName,
+                vec![ Arc::new(RwLock::new( 
+                    Line {
+                      tokens: rightValue.unwrap_or(vec![]).clone(),
+                      indent: 0,
+                      index:  0,
+                      lines:  None,
+                      parent: None
+                    }
+                )) ],
+                None
+              )
+            );
+          }
+          return true;
+        }
+      }
+      //
     }
   } else 
   if firstTokenType == TokenType::Question && lineLinesLength > 0
   { // if condition
-//    println!("[condition]");
+    println!("[condition]");
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
-      let structure:      RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-      let lines:       &Vec< Arc<RwLock<Line>> >   = &structure.lines;
-      let linesLength: usize                       = lines.len();
+      let structure:   RwLockReadGuard<'_, Structure> = parentLink.read().unwrap();
+      let lines:       &Vec< Arc<RwLock<Line>> >      = &structure.lines;
+      let linesLength: usize                          = lines.len();
       { // search bottom lines
         let mut i: usize =
           {
@@ -231,7 +295,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock
       if condition.tokens.len() > 1 
       { // if elif
         { // check condition truth
-          let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
+          let mut structure: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
           let mut conditionTokens: Vec<Token> = condition.tokens.clone(); // todo: no clone ? fix its please
           conditionTokens.remove(0);
           conditionTruth = 
@@ -256,10 +320,10 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock
               Structure::new(
                 String::from("if-el"),
                 condition.lines.clone().unwrap_or(vec![]),
-                Some(structureLink.clone())
+                Some(parentLink.clone())
               )
             ));
-          readLines(structure, &mut conditionLineIndex, &mut conditionLinesLength);
+          readLines(structure, &mut conditionLineIndex, &mut conditionLinesLength, false);
           break; // end
         }
       // else
@@ -274,10 +338,10 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock
             Structure::new(
               String::from("else"),
               condition.lines.clone().unwrap_or(vec![]),
-              Some(structureLink.clone())
+              Some(parentLink.clone())
             )
           ));
-        readLines(structure, &mut conditionLineIndex, &mut conditionLinesLength);
+        readLines(structure, &mut conditionLineIndex, &mut conditionLinesLength, false);
         break; // end
       }
     }
@@ -317,7 +381,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     main.lines = tokenizerLinesLinks.clone();
     // argc
     /*
-    main.pushMemoryCell(
+    main.pushStructure(
       MemoryCell::new(
         String::from("argc"),
         MemoryCellMode::LockedFinal,
@@ -339,7 +403,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
       );
     }
     /*
-    main.pushMemoryCell(
+    main.pushStructure(
       Structure::new(
         String::from("argv"),
         //MemoryCellMode::LockedFinal,
@@ -368,7 +432,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
   {
     logSeparator("Interpretation");
   }
-  readLines(_main.clone(), addr_of_mut!(_lineIndex), addr_of_mut!(_linesLength));
+  readLines(_main.clone(), addr_of_mut!(_lineIndex), addr_of_mut!(_linesLength), false);
   // duration
   if unsafe{_debugMode} 
   {
@@ -378,7 +442,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     log("ok",&format!("Parser duration [{:?}]",duration));
   }
 }
-pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, linesLength: *mut usize) -> ()
+pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, linesLength: *mut usize, structuresRead: bool) -> ()
 {
   while _exitCode == false && *lineIndex < *linesLength 
   {
@@ -399,8 +463,11 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut u
     { // search return
       if !searchReturn(lineLink.clone(), structureLink.clone()) 
       { // expression
-        let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap(); // todo: remove it
-        structure.expression(&mut lineLink.write().unwrap().tokens);
+        if !structuresRead 
+        {
+          let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap(); // todo: remove it
+          structure.expression(&mut lineLink.write().unwrap().tokens);
+        }
       }
     }
     { // todo: rewrite this part

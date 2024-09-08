@@ -72,7 +72,8 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
       result.push(byte1 as char);
       savedIndex += 1;
     } else 
-    if byte1 == b'.' && !dot && isDigit(byte2) 
+    if byte1 == b'.' && !dot && isDigit(byte2) &&
+       savedIndex > 1 && buffer[*index-1] != b'.' // fixed for a.0.1
     { // UFloat
       if rational 
       {
@@ -110,29 +111,26 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
 // is letter ?
 fn isLetter(c: u8) -> bool 
 {
-  (c >= b'a' && c <= b'z') ||
-  (c >= b'A' && c <= b'Z')
+  (c|32)>=b'a'&&(c|32)<=b'z'
 }
 // get word token by buffer-index
 unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
   let mut result: String = String::new();
+  let mut isLink: bool = false;
 
   while savedIndex < bufferLength 
   {
     let byte1: u8 = buffer[savedIndex]; // current char
-    let byte2: u8 =                  // next char
-        if savedIndex+1 < bufferLength 
-        {
-          buffer[savedIndex+1]
-        } else 
-        {
-          b'\0'
-        };
 
-    if isLetter(byte1) || 
-       (isDigit(byte1) && !result.is_empty()) 
+    if (isDigit(byte1) || byte1 == b'.') && !result.is_empty()
+    {
+      result.push(byte1 as char);
+      savedIndex += 1;
+      isLink = true;
+    } else 
+    if isLetter(byte1)
     {
       result.push(byte1 as char);
       savedIndex += 1;
@@ -144,11 +142,17 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
 
   *index = savedIndex;
   // next return
-  match &result[..] 
+  if isLink 
   {
-    "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
-    "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
-    _          => Token::new( Some(TokenType::Word), Some(result.clone()) ),
+    Token::new( Some(TokenType::Link), Some(result.clone()) )
+  } else 
+  {
+    match &result[..] 
+    {
+      "true"     => Token::new( Some(TokenType::Bool), Some("1".to_string()) ),
+      "false"    => Token::new( Some(TokenType::Bool), Some("0".to_string()) ),
+      _          => Token::new( Some(TokenType::Word), Some(result) ),
+    }
   }
 }
 
@@ -554,9 +558,9 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
 }
 
 // output token and its tokens
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize) -> ()
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize) -> ()
 {
-  let lineIdentString: String = " ".repeat(lineIdent*2+1);
+  let lineIndentString: String = " ".repeat(lineIndent*2+1);
   let identString:     String = " ".repeat(indent*2+1);
 
   let tokenCount: usize = tokens.len();
@@ -578,7 +582,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
          token.getDataType().unwrap_or_default() == TokenType::FormattedChar {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
-          lineIdentString,
+          lineIndentString,
           c,
           identString,
           tokenData,
@@ -590,7 +594,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
          token.getDataType().unwrap_or_default() == TokenType::FormattedString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
-          lineIdentString,
+          lineIndentString,
           c,
           identString,
           tokenData,
@@ -602,7 +606,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
          token.getDataType().unwrap_or_default() == TokenType::FormattedRawString {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
-          lineIdentString,
+          lineIndentString,
           c,
           identString,
           tokenData,
@@ -612,7 +616,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
       } else {
         log("parserToken",&format!(
           "{}{}{}{}  |{}",
-          lineIdentString,
+          lineIndentString,
           c,
           identString,
           tokenData,
@@ -623,7 +627,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
     } else {
       println!(
         "{}{}{}{}",
-        lineIdentString,
+        lineIndentString,
         c,
         identString,
         token.getDataType().unwrap_or_default().to_string()
@@ -631,7 +635,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIdent: usize, indent: usize)
     }
     if let Some(tokens) = &token.tokens
     {
-      outputTokens(tokens, lineIdent, indent+1)
+      outputTokens(tokens, lineIndent, indent+1)
     }
     //
   }
@@ -677,26 +681,26 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
 
   let mut      index: usize = 0;
   let   bufferLength: usize = buffer.len();
-  let mut  lineIdent: usize = 0;
+  let mut lineIndent: usize = 0;
   let mut lineTokens: Vec<Token> = Vec::new();
 
   let startTime: Instant = Instant::now();
 
-  let mut linesLinks:    Vec< Arc<RwLock<Line>> > = Vec::new();
-  let mut readLineIdent: bool                     = true;
+  let mut linesLinks:     Vec< Arc<RwLock<Line>> > = Vec::new();
+  let mut readLineIndent: bool                     = true;
 
   while index < bufferLength 
   {
     let byte: u8 = buffer[index]; // current char
 
     // indent
-    if byte == b' ' && index+1 < bufferLength && buffer[index+1] == b' ' && readLineIdent 
+    if byte == b' ' && readLineIndent 
     {
-      index += 2;
-      lineIdent += 1;
+      index += 1;
+      lineIndent += 1;
     } else 
     {
-      readLineIdent = false;
+      readLineIndent = false;
       // get endline
       if byte == b'\n' || byte == b';' 
       {
@@ -724,16 +728,16 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
           Arc::new(RwLock::new( 
             Line {
               tokens: lineTokens.clone(),
-              indent: lineIdent,
+              indent: lineIndent,
               index:  0,
               lines:  None,
               parent: None
             }
           ))
         );
-        lineIdent = 0;
+        lineIndent = 0;
 
-        readLineIdent = true;
+        readLineIndent = true;
         lineTokens.clear();
         index += 1;
       } else

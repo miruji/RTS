@@ -1,33 +1,18 @@
 
-c
-  222
-  println(333)
-
 a
-  111
+  print(10)
+  20
+  c
+    15
+    print(15)
 
-d
-  444
-  println(20)
-
-e(input: UInt) -> Int
-  println(input)
-  -10
-  = -20
-
-println(a)
-println( c[0] )
-c[1]
-d()
-println( d[0] )
-println( e[1] )
-println( e(111111) )
-
-q 
-  2
-? q = 1
-  println("= 1")
-? q = 2
-  println("= 2")
-?
-  println("false!")
+#a   # todo:
+a.0  # link to print 10
+a.c.1
+#print( a.1 )  # 20
+#print( a.2 )  # 15
+#print( a.c )  # 15
+#print( a.2.0 ) # 15
+#print( a.c.0 ) # 15
+#a.c()
+#a.c.2 # link to print 15

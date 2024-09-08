@@ -283,7 +283,7 @@ impl Structure
   }
 
   // push memoryCell to self memoryCellList
-  pub fn pushMemoryCell(&mut self, mut structure: Structure) -> ()
+  pub fn pushStructure(&mut self, mut structure: Structure) -> ()
   { 
     // if self.structures == None, create new
     if self.structures.is_none() 
@@ -295,66 +295,33 @@ impl Structure
     {
       structures.push( Arc::new(RwLock::new(structure)) );
     }
-    /*
-    if structure.valueType != TokenType::Array 
-    { // basic
-      structure.value =
-        if let Some(mut memoryCellTokens) = structure.value.tokens.clone()
-        {
-          self.memoryCellExpression(&mut memoryCellTokens)
-        } else 
-        { // error
-          Token::newEmpty(None)
-        };
+  }
+
+  // get structure nesting
+  fn setStructureNesting(&self, structureNesting: &Vec<Token>, structureLines: &Vec< Arc<RwLock<Line>> >, newTokens: Vec<Token>) -> () 
+  {
+    println!("structureNesting [{}]",structureNesting.len());
+    if structureNesting.len()-1 > 1 
+    { // go next
+      let nextStructureNesting: &[Token] = &structureNesting[1..];
     } else 
-    { // array
-      if let Some(ref mut memoryCellTokens) = structure.value.tokens
+    {
+      let nestingNum: usize = 
+        structureNesting[0]
+          .getData().unwrap_or_default()
+          .parse::<usize>().unwrap_or_default();
+      if let Some(nestingLine) = structureLines.get( nestingNum ) 
       {
-        for nesting in &mut *memoryCellTokens 
-        { // nesting
-          if nesting.tokens.is_some()
-          {
-            *nesting = if let Some(ref mut nestingTokens) = nesting.tokens
-            {
-              self.memoryCellExpression(nestingTokens)
-            } else 
-            {
-              Token::newEmpty(None)
-            };
-          }
-        }
-      } // error
+        let mut nestingLine = nestingLine.write().unwrap(); // todo: type
+        println!("structureLines [{:?}]",nestingLine.tokens);
+        nestingLine.tokens = newTokens;
+      }
+
     }
-    // add to memoryCellList
-    let memoryCellListLink: Arc<RwLock<MemoryCellList>>          = self.getMemoryCellList();
-    let mut memoryCellList: RwLockWriteGuard<'_, MemoryCellList> = memoryCellListLink.write().unwrap();
-    memoryCellList.value.push( Arc::new(RwLock::new(memoryCell)) );
-    */
   }
 
-  // get memory cell by name
-  /*
-  pub fn getMemoryCellByName(&mut self, memoryCellName: &str) -> Option<Arc<RwLock<MemoryCell>>> 
-  { // search in self
-    let memoryCellListLink: Arc<RwLock<MemoryCellList>> = self.getMemoryCellList();
-    if let Some(memoryCell) = getMemoryCellByName(memoryCellListLink, memoryCellName) 
-    {
-      return Some(memoryCell);
-    }
-    // search in parent
-    if let Some(parentLink) = &self.parent 
-    {
-      let mut parent: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
-      return parent.getMemoryCellByName(memoryCellName);
-    }
-    //
-    None
-  }
-  */
-
-  // memory cell op
-  /*
-  pub fn memoryCellOp(&mut self, memoryCellLink: Arc<RwLock<MemoryCell>>, op: TokenType, opValue: Token) -> ()
+  // structure op
+  pub fn structureOp(&mut self, structureLink: Arc<RwLock<Structure>>, op: TokenType, leftValue: Vec<Token>, rightValue: Vec<Token>) -> ()
   {
     if op != TokenType::Equals         &&
        op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
@@ -362,29 +329,60 @@ impl Structure
       { return; }
 
     // calculate new values
+    /*
     let rightValue: Token = 
-      if let Some(mut opValueTokens) = opValue.tokens.clone() 
+      if let Some(mut opValueTokens) = rightValue.tokens.clone() 
       {
-        self.memoryCellExpression(&mut opValueTokens)
+        self.expression(&mut opValueTokens)
       } else 
       { // error
         Token::newEmpty(None)
       };
-    let mut memoryCell = memoryCellLink.write().unwrap();
+    */
+    let mut structure = structureLink.write().unwrap();
     // =
     if op == TokenType::Equals 
     {
-      memoryCell.value = rightValue;
+      println!("  Equals, leftValue {:?}",leftValue);
+      let mut structureNesting: Vec<Token> = Vec::new();
+      for value in leftValue 
+      {
+        if value.getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
+        {
+          if let Some(mut valueTokens) = value.tokens 
+          {
+            structureNesting.push( self.expression(&mut valueTokens) );
+          }
+        }
+      }
+      if structureNesting.len() > 0 
+      { // nesting
+        self.setStructureNesting(&structureNesting, &structure.lines, rightValue);
+      } else 
+      { // not nesting
+        structure.lines = 
+          vec![ 
+            Arc::new(RwLock::new( 
+              Line {
+                tokens: rightValue,
+                indent: 0,
+                index:  0,
+                lines:  None,
+                parent: None
+              }
+            ))
+          ];
+      }
     } else 
     { // += -= *= /=
-      let leftValue: Token = memoryCell.value.clone();
-      if op == TokenType::PlusEquals     { memoryCell.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
-      if op == TokenType::MinusEquals    { memoryCell.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
-      if op == TokenType::MultiplyEquals { memoryCell.value = calculate(&TokenType::Multiply, &leftValue, &rightValue); } else 
-      if op == TokenType::DivideEquals   { memoryCell.value = calculate(&TokenType::Divide,   &leftValue, &rightValue); }
+      println!("  Else");
+      //let leftValue: Token = structure.value.clone();
+      //if op == TokenType::PlusEquals     { structure.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
+      //if op == TokenType::MinusEquals    { structure.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
+      //if op == TokenType::MultiplyEquals { structure.value = calculate(&TokenType::Multiply, &leftValue, &rightValue); } else 
+      //if op == TokenType::DivideEquals   { structure.value = calculate(&TokenType::Divide,   &leftValue, &rightValue); }
     }
   }
-  */
 
   // update value
   fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
@@ -452,6 +450,38 @@ impl Structure
     } else 
     {
       setNone(value, index);
+    }
+  }
+
+  // get link expression
+  fn linkExpression(&mut self, link: &mut Vec<&str>) -> ()
+  {
+    println!("linkExpression [{:?}]",link);
+    match link[0].parse::<usize>() 
+    { // check type
+      Ok(lineNumber) => 
+      { // line num
+        println!("structure line [{}]", lineNumber);
+        if let Some(line) = self.lines.get(lineNumber) 
+        {
+          let line = line.read().unwrap(); // todo: type
+          println!("  line {:?}", line.tokens);
+          let mut lineTokens: Vec<Token> = line.tokens.clone();
+          drop(line);
+          self.expression(&mut lineTokens); // todo: get result
+        }
+      }
+      Err(_) => 
+      { // name
+        if let Some(structureLink) = self.getStructureByName(link[0]) 
+        {
+            let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
+            println!("structure.name [{}]", structure.name);
+
+            link.remove(0);
+            structure.linkExpression(link);
+        }
+      }
     }
   }
 
@@ -580,6 +610,11 @@ impl Structure
     {
       if value[0].getDataType().unwrap_or_default() != TokenType::CircleBracketBegin 
       {
+        if value[0].getDataType().unwrap_or_default() == TokenType::Link 
+        { 
+          let data = value[0].getData().unwrap_or_default(); // todo: type
+          self.linkExpression(&mut data.split('.').collect());
+        } else
         if value[0].getDataType().unwrap_or_default() == TokenType::Word 
         { 
           self.replaceStructureByName(value, &mut valueLength, 0);
@@ -1167,7 +1202,7 @@ impl Structure
                     let calledStructure: RwLockReadGuard<'_, Structure> = calledStructureLink.read().unwrap();
                     calledStructure.lines.len()
                   };
-                readLines(calledStructureLink, &mut lineIndexBuffer, &mut linesLengthBuffer);
+                readLines(calledStructureLink, &mut lineIndexBuffer, &mut linesLengthBuffer, false);
                 return true;
               }
             }
