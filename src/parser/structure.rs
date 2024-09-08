@@ -454,7 +454,7 @@ impl Structure
   }
 
   // get link expression
-  fn linkExpression(&mut self, link: &mut Vec<&str>) -> ()
+  fn linkExpression(&mut self, link: &mut Vec<&str>) -> String
   {
     println!("linkExpression [{:?}]",link);
     match link[0].parse::<usize>() 
@@ -468,21 +468,24 @@ impl Structure
           println!("  line {:?}", line.tokens);
           let mut lineTokens: Vec<Token> = line.tokens.clone();
           drop(line);
-          self.expression(&mut lineTokens); // todo: get result
+          let b = self.expression(&mut lineTokens).getData().unwrap_or_default();
+          println!("b [{}]",b);
+          return b;
         }
       }
       Err(_) => 
       { // name
         if let Some(structureLink) = self.getStructureByName(link[0]) 
         {
-            let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-            println!("structure.name [{}]", structure.name);
+          let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
+          println!("structure.name [{}]", structure.name);
 
-            link.remove(0);
-            structure.linkExpression(link);
+          link.remove(0);
+          return structure.linkExpression(link);
         }
       }
     }
+    String::new()
   }
 
   // format quote
@@ -613,7 +616,11 @@ impl Structure
         if value[0].getDataType().unwrap_or_default() == TokenType::Link 
         { 
           let data = value[0].getData().unwrap_or_default(); // todo: type
-          self.linkExpression(&mut data.split('.').collect());
+          let a = self.linkExpression(&mut data.split('.').collect());
+          println!("a [{}]",a);
+          value[0].setData(Some(
+            a
+          ));
         } else
         if value[0].getDataType().unwrap_or_default() == TokenType::Word 
         { 

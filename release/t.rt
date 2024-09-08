@@ -1,16 +1,16 @@
 
 a
-  print(10)
-  20
+  println(1)
+  2
   c
-    15
-    print(15)
+    3
+    println(4)
 
 #a   # todo:
 a.0  # link to print 10
 a.c.1
-#print( a.1 )  # 20
-#print( a.2 )  # 15
+println( a.1 )  # 20
+println( a.c.0 )  # 15
 #print( a.c )  # 15
 #print( a.2.0 ) # 15
 #print( a.c.0 ) # 15
