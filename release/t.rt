@@ -5,14 +5,26 @@ a
   c
     3
     println(4)
+    d
+      5
 
-#a   # todo:
-a.0  # link to print 10
-a.c.1
-println( a.1 )  # 20
-println( a.c.0 )  # 15
-#print( a.c )  # 15
-#print( a.2.0 ) # 15
-#print( a.c.0 ) # 15
+a
+a.0              # 1
+a.c.1            # 4
+println( a.1 )   # 2
+println( a.c.0 ) # 3
+
+b = 10
+e 
+  20
+println(b)
+println(e)
+
+println( a.2 )
+println( a.c )
+println( a.2.0 ) # 3
+println( a.c.0 ) # 3
+
+println( a.c.2 ) # 3
+
 #a.c()
-#a.c.2 # link to print 15

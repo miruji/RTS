@@ -227,19 +227,19 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             );
           } else 
           { // if no searched, then create new Structure and equal right value
-            println!("  new!!!");
+            println!("  new!");
             // new structure
             structure.pushStructure(
               Structure::new(
                 structureName,
                 vec![ Arc::new(RwLock::new( 
-                    Line {
-                      tokens: rightValue.unwrap_or(vec![]).clone(),
-                      indent: 0,
-                      index:  0,
-                      lines:  None,
-                      parent: None
-                    }
+                  Line {
+                    tokens: rightValue.unwrap_or(vec![]).clone(),
+                    indent: 0,
+                    index:  10,
+                    lines:  None,
+                    parent: None
+                  }
                 )) ],
                 None
               )
