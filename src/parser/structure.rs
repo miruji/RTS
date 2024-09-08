@@ -454,32 +454,52 @@ impl Structure
   }
 
   // get link expression
+  // todo: if func => return result
   fn linkExpression(&mut self, link: &mut Vec<&str>) -> String
   {
-    println!("linkExpression {:?}",link);
+//    println!("linkExpression {:?}",link);
     match link[0].parse::<usize>() 
     { // check type
       Ok(lineNumber) => 
       { // line num
-        println!("structure.line [{}]", lineNumber);
+//        println!("structure.line [{}]", lineNumber);
         if let Some(line) = self.lines.get(lineNumber) 
         { // get line of num and return result
           let line = line.read().unwrap(); // todo: type
-          println!("  line {:?}:[{}]", line.tokens,line.tokens.len());
+//          println!("  line {:?}:[{}]", line.tokens,line.tokens.len());
           let mut lineTokens: Vec<Token> = line.tokens.clone();
+          let lineHasLines: Option<usize> = 
+            if let Some(lineLines) = &line.lines 
+            {
+              Some(lineLines.len())
+            } else 
+            {
+              None
+            };
           drop(line);
-
-          let lineResult: String = self.expression(&mut lineTokens).getData().unwrap_or_default();
-          println!("  link.len [{}] lineResult [{}]",link.len(),lineResult);
+          let mut lineResult: &Token = 
+            if lineHasLines == None { 
+              &self.expression(&mut lineTokens.clone())
+            } else 
+            { // if empty
+              &lineTokens[0]
+            };
+//          println!("  link.len [{}] lineResult [{}]",link.len(),lineResult);
           if link.len() == 1 
           { // read end
-            return lineResult;
+            if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1
+            { 
+              return self.expression(&mut lineTokens).getData().unwrap_or_default();
+            } else 
+            {
+              return lineResult.getData().unwrap_or_default();
+            }
           } else 
           { // read next
-            if let Some(structureLink) = self.getStructureByName(&lineResult) 
+            if let Some(structureLink) = self.getStructureByName(&lineResult.getData().unwrap_or_default())
             {
               let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-              println!("  structure.name [{}]", structure.name);
+//              println!("  structure.name [{}]", structure.name);
               link.remove(0);
               return structure.linkExpression(link);
             }
@@ -491,7 +511,7 @@ impl Structure
         if let Some(structureLink) = self.getStructureByName(link[0]) 
         {
           let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-          println!("structure.name [{}]", structure.name);
+//          println!("structure.name [{}]", structure.name);
 
           link.remove(0);
           if link.len() != 0 
@@ -500,11 +520,11 @@ impl Structure
           } else 
           if structure.lines.len() == 1 
           { // single value
-            println!("  basic word!");
+//            println!("  basic word!");
             if let Some(line) = structure.lines.get(0) 
             { // get first line and return result
               let line = line.read().unwrap(); // todo: type
-              println!("  line {:?}:[{}] {}", line.tokens,line.tokens.len(),line.index);
+//              println!("  line {:?}:[{}] {}", line.tokens,line.tokens.len(),line.index);
               let mut lineTokens: Vec<Token> = line.tokens.clone();
               drop(line);
               return structure.expression(&mut lineTokens).getData().unwrap_or_default();

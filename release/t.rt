@@ -2,13 +2,13 @@
 a
   println(1)
   2
-  c
+  c() -> None
     3
     println(4)
     d
       5
 
-a
+a                # skip
 a.0              # 1
 a.c.1            # 4
 println( a.1 )   # 2
@@ -17,14 +17,15 @@ println( a.c.0 ) # 3
 b = 10
 e 
   20
-println(b)
-println(e)
+println(b)       # 10
+println(e)       # 20
 
-println( a.2 )
-println( a.c )
+println( a.2 )   # c
+println( a.c )   # c
 println( a.2.0 ) # 3
 println( a.c.0 ) # 3
 
-println( a.c.2 ) # 3
+println( a.c.2 ) # 5
+println( a.c.d ) # 5
 
 #a.c()

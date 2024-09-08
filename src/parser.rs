@@ -110,7 +110,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
   { // if structure
     if lineLinesLength > 0 
     { // array structure
-      println!("[array structure] {:?}",lineTokens);
+//      println!("[array structure] {:?}",lineTokens);
       if let Some(newStructureName) = lineTokens[0].getData() 
       { // if there are parameters
         let mut newStructureResultType: Option<TokenType> = None;
@@ -209,16 +209,16 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       }
       if lineTokensLength > 1 && opPos > 1
       { // line structure
-        println!("[line structure]");
+//        println!("[line structure]");
         if let Some(structureName) = lineTokens[0].getData() 
         {
           let leftValue  = Some( lineTokens[1..opPos-1].to_vec() ); // todo: type
           let rightValue = Some( lineTokens[opPos..(lineTokensLength)].to_vec() ); // todo: type
-          println!("  [structureName] [{}] [{:?}]",structureName,rightValue);
+//          println!("  [structureName] [{}] [{:?}]",structureName,rightValue);
           let mut structure: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
           if let Some(parentLink) = structure.getStructureByName(&structureName) 
           { // if searched in structures
-            println!("  searched!!!");
+//            println!("  searched!!!");
             structure.structureOp(
               parentLink, 
               opType, 
@@ -227,7 +227,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             );
           } else 
           { // if no searched, then create new Structure and equal right value
-            println!("  new!");
+//            println!("  new!");
             // new structure
             structure.pushStructure(
               Structure::new(
@@ -253,7 +253,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
   } else 
   if firstTokenType == TokenType::Question && lineLinesLength > 0
   { // if condition
-    println!("[condition]");
+//    println!("[condition]");
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
     { // get conditions
       let structure:   RwLockReadGuard<'_, Structure> = parentLink.read().unwrap();
@@ -291,7 +291,6 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
     for conditionLink in &mut conditions 
     {
       let condition: RwLockReadGuard<'_, Line> = conditionLink.read().unwrap();
-//      println!("  [condition.tokens] [{}]:{:?}",condition.tokens.len(),condition.tokens);
       if condition.tokens.len() > 1 
       { // if elif
         { // check condition truth
