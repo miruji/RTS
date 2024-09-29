@@ -300,7 +300,7 @@ impl Structure
   // get structure nesting
   fn setStructureNesting(&self, structureNesting: &Vec<Token>, structureLines: &Vec< Arc<RwLock<Line>> >, newTokens: Vec<Token>) -> () 
   {
-    println!("structureNesting [{}]",structureNesting.len());
+//    println!("structureNesting [{}]",structureNesting.len());
     if structureNesting.len()-1 > 1 
     { // go next
       let nextStructureNesting: &[Token] = &structureNesting[1..];
@@ -313,7 +313,7 @@ impl Structure
       if let Some(nestingLine) = structureLines.get( nestingNum ) 
       {
         let mut nestingLine = nestingLine.write().unwrap(); // todo: type
-        println!("structureLines [{:?}]",nestingLine.tokens);
+//        println!("structureLines [{:?}]",nestingLine.tokens);
         nestingLine.tokens = newTokens;
       }
 
@@ -343,7 +343,7 @@ impl Structure
     // =
     if op == TokenType::Equals 
     {
-      println!("  Equals, leftValue {:?}",leftValue);
+//      println!("  Equals, leftValue {:?}",leftValue);
       let mut structureNesting: Vec<Token> = Vec::new();
       for value in leftValue 
       {
@@ -455,7 +455,7 @@ impl Structure
 
   // get link expression
   // todo: if func => return result
-  fn linkExpression(&mut self, link: &mut Vec<&str>) -> String
+  fn linkExpression(&mut self, link: &mut Vec<&str>, parameters: Option< Vec<Token> >) -> Token
   {
 //    println!("linkExpression {:?}",link);
     match link[0].parse::<usize>() 
@@ -487,12 +487,12 @@ impl Structure
 //          println!("  link.len [{}] lineResult [{}]",link.len(),lineResult);
           if link.len() == 1 
           { // read end
-            if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1
+            if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1 
             { 
-              return self.expression(&mut lineTokens).getData().unwrap_or_default();
+              return self.expression(&mut lineTokens);
             } else 
             {
-              return lineResult.getData().unwrap_or_default();
+              return lineResult.clone();
             }
           } else 
           { // read next
@@ -501,13 +501,14 @@ impl Structure
               let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
 //              println!("  structure.name [{}]", structure.name);
               link.remove(0);
-              return structure.linkExpression(link);
+              return structure.linkExpression(link, parameters);
             }
           }
         }
       }
       Err(_) => 
       { // name
+//        println!("111 {}",link[0]);
         if let Some(structureLink) = self.getStructureByName(link[0]) 
         {
           let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
@@ -516,27 +517,44 @@ impl Structure
           link.remove(0);
           if link.len() != 0 
           { // has nesting
-            return structure.linkExpression(link);
+            return structure.linkExpression(link, parameters);
           } else 
           if structure.lines.len() == 1 
           { // single value
-//            println!("  basic word!");
             if let Some(line) = structure.lines.get(0) 
             { // get first line and return result
               let line = line.read().unwrap(); // todo: type
 //              println!("  line {:?}:[{}] {}", line.tokens,line.tokens.len(),line.index);
               let mut lineTokens: Vec<Token> = line.tokens.clone();
               drop(line);
-              return structure.expression(&mut lineTokens).getData().unwrap_or_default();
+              return structure.expression(&mut lineTokens);
             }
           } else 
-          { // basic word
-            return structure.name.clone();
+          { // name
+            if let Some(parameters) = parameters 
+            { // method
+//              println!("todo: method call {:?}",parameters);
+              let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
+              parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
+
+              let mut expressionTokens  = vec![
+                Token::new( Some(TokenType::Word), Some(structure.name.clone()) ),
+                parametersToken
+              ];
+//              println!("todo: method call {:?}",expressionTokens);
+              drop(structure);
+              unsafe{ 
+                return self.expression( &mut expressionTokens );
+              }
+            } else 
+            { // name only
+              return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
+            }
           }
         }
       }
     }
-    String::new()
+    Token::newEmpty( Some(TokenType::None) )
   }
 
   // format quote
@@ -623,7 +641,7 @@ impl Structure
   }
 
   // get function parameters
-  fn getFunctionParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  fn getCallParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
 
@@ -666,17 +684,23 @@ impl Structure
       {
         if value[0].getDataType().unwrap_or_default() == TokenType::Link 
         { 
-          let data = value[0].getData().unwrap_or_default(); // todo: type
-          value[0].setData(Some(
-            self.linkExpression(&mut data.split('.').collect())
-          ));
+          let data: String = value[0].getData().unwrap_or_default();
+          let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), None);
+          let linkType: TokenType = linkResult.getDataType().unwrap_or_default();
+          if linkType == TokenType::Word {
+            value[0].setDataType( Some(TokenType::Link) );
+          } else 
+          {
+            value[0].setDataType( linkResult.getDataType() );
+          }
+          value[0].setData( linkResult.getData() );
         } else
         if value[0].getDataType().unwrap_or_default() == TokenType::Word 
         { 
-          let data = value[0].getData().unwrap_or_default(); // todo: type
-          value[0].setData(Some(
-            self.linkExpression(&mut vec![&data])
-          ));
+          let data: String = value[0].getData().unwrap_or_default();
+          let linkResult: Token = self.linkExpression(&mut vec![&data], None);
+          value[0].setDataType( linkResult.getDataType() );
+          value[0].setData( linkResult.getData() );
         } else 
         if value[0].getDataType().unwrap_or_default() == TokenType::FormattedRawString ||
            value[0].getDataType().unwrap_or_default() == TokenType::FormattedString    ||
@@ -697,9 +721,9 @@ impl Structure
     let mut token: Token;
     // MemoryCell & function
     while i < valueLength 
-    {
+    { 
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
-      { // function call
+      { // if function call
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
         {
           // todo: uint float ufloat ...
@@ -708,7 +732,7 @@ impl Structure
           { // begin of list of functions
             if functionName == "int" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i].setData    ( Some(expressionData) );
@@ -723,7 +747,7 @@ impl Structure
             } else 
             if functionName == "char" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i] = expressions[0].clone();
@@ -742,7 +766,7 @@ impl Structure
             } else 
             if functionName == "str" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
               { // functional
                 value[i].setData    ( Some(expressionData) );
@@ -757,7 +781,7 @@ impl Structure
             } else 
             if functionName == "type" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if expressions.len() > 0
               { // functional
                 value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
@@ -772,7 +796,7 @@ impl Structure
             } else
             if functionName == "input" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
 
               // functional
               if expressions.len() > 0 
@@ -805,7 +829,7 @@ impl Structure
             } else 
             if functionName == "exec"
             { // execute
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if expressions.len() > 0 
               { // functional
                 let expressionValue: Option< String > = expressions[0].getData();
@@ -838,7 +862,7 @@ impl Structure
             }
             if functionName == "randUInt" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if expressions.len() > 1 
               { // functional
                 let min: usize = 
@@ -877,7 +901,7 @@ impl Structure
             } else 
             if functionName == "len" 
             { // get expressions
-              let expressions: Vec<Token> = self.getFunctionParameters(value, i);
+              let expressions: Vec<Token> = self.getCallParameters(value, i);
               if expressions.len() > 0
               { // functional
                 if expressions[0].getDataType().unwrap_or_default() == TokenType::Array 
@@ -948,8 +972,31 @@ impl Structure
             continue;
           }
         } else 
-        { // array & basic cell
+        { // if array & basic cell
           self.replaceStructureByName(value, &mut valueLength, i);
+        }
+      } else
+      if value[i].getDataType().unwrap_or_default() == TokenType::Link 
+      { // if link
+        println!("link");
+        // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        // functional
+        if expressions.len() > 0 
+        {
+//          println!("  has parameters");
+          //let data: String = value[0].getData().unwrap_or_default();
+          //value[0].setDataType( Some(TokenType::String) );
+          //value[0].setData(Some(
+          //  self.linkExpression(&mut data.split('.').collect(), None)
+          //));
+        } else 
+        {
+//          println!("  no parameters");
+          let data: String = value[0].getData().unwrap_or_default();
+          let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), Some(vec![]));
+          value[0].setDataType( linkResult.getDataType() );
+          value[0].setData( linkResult.getData() );
         }
       }
       if valueLength == 1 
