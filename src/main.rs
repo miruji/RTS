@@ -13,6 +13,11 @@ use std::io::{self, Read};
 use std::env;
 use std::time::Instant;
 
+use crate::logger::*;
+
+use reqwest::Error;
+use serde_json::Value;
+
 mod logger;
 mod tokenizer;
 mod parser;
@@ -47,13 +52,69 @@ fn getVersion(version: &str) -> String
   }
   result
 }
+// help
+fn help() -> ()
+{
+  // todo: description
+  println!("-v");
+  println!("-h");
+  println!("-d");
+  println!("-i <package name>");
+  println!("-rf <filename>");
+  println!("-rs \"<script>\"");
+}
+// 
+async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
+  let url = format!("https://realtime.su/api/packages/{}", packageId);
+  let response = reqwest::get(&url).await?;
+  let package = response.json::<Value>().await?;
+  Ok(package)
+}
+// install package
+async fn packageInstall(names: &Vec<String>) -> () {
+  log("ok", &format!("Installing packages {:?}", names));
+
+/*
+todo: realtime.su
+
+User:
+login: String
+password: String
+packages: Array<Package>
+
+Package
+name: String,
+lastVersion: String,
+Releases: Array<Release>
+
+Release
+version: String
+data: String
+date: Date
+*/
+
+  for name in names {
+    match fetchPackage(name).await {
+      Ok(package) => {
+        log("ok", &format!("Fetched package for {}: {}", name, package));
+
+        if let Some(pkgName) = package.get("name") {
+          log("ok", &format!("Package name: {}", pkgName));
+        }
+      }
+      Err(err) => {
+        log("error", &format!("Error fetching package {}: {}", name, err));
+      }
+    }
+  }
+}
 // main
-fn main() -> io::Result<()> 
+#[tokio::main]
+async fn main() -> io::Result<()> 
 {
   let startTime: Instant = Instant::now();
 
   //
-  use crate::logger::*;
   use crate::tokenizer::*;
   use crate::parser::*;
 
@@ -87,18 +148,27 @@ fn main() -> io::Result<()>
   }
 
   // debug mode on ?
-  for (key, _) in &args 
+  for (key, values) in &args 
   { // read keys
     match key.as_str() 
     {
       "-v" => 
       { // version
         log("ok",&format!("RTS v{}",*_version));
-        logExit();
+        logExit(0);
+      }
+      "-h" =>
+      {
+        help();
       }
       "-d" => 
       { // debug mode
         unsafe { _debugMode = true; }
+      }
+      "-i" =>
+      { // install
+        packageInstall(values).await;
+        logExit(0);
       }
       _ => {}
     }
@@ -154,8 +224,8 @@ fn main() -> io::Result<()>
   
   if noRun 
   {
-    log("err","Use the [-rf <filename>] or [-rs \"<script>\"] flag");
-    logExit();
+    log("err","Use the -h or flag for detailed information about available commands");
+    logExit(1);
   }
 
   // run file
@@ -179,7 +249,7 @@ fn main() -> io::Result<()>
       Err(_) => 
       {
         log("err",&format!("Unable to opening file [{}]",unsafe{&*_filePath}));
-        logExit()
+        logExit(1)
       }
     };
     // read file into buffer
@@ -200,7 +270,7 @@ fn main() -> io::Result<()>
       Err(_) => 
       {
         log("err",&format!("Unable to read file [{}]",unsafe{&*_filePath}));
-        logExit()
+        logExit(1)
       }
     }
   }

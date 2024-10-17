@@ -179,10 +179,15 @@ pub fn logSeparator(text: &str) -> ()
   ));
 }
 // exit log
-pub fn logExit() -> !
+pub fn logExit(code: i32) -> !
 {
+  if code == 0 {
+    logWithStyle("   \\b┗\\fg(#3dd73c) Exit 0\\c \\fg(#f0f8ff)\\b:)\\c\n");
+    std::process::exit(0);
+  }
+  // else
   logWithStyle("   \\b┗\\fg(#f94d4d) Exit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
-  std::process::exit(1);
+  std::process::exit(code);
 }
 // basic style log
 static mut _parts:       Vec<String> = Vec::new();
