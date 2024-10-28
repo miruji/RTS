@@ -1,5 +1,7 @@
 # RTS (Real-Time Script)
 A reactive, free-form, high-level scripting language that runs in interpreter mode and ~~converts scripts directly into machine code~~.
+
+### Introduction
 > Currently, RTS generates machine code by calling Rust functions. But according to the original plan, it should work in real-time code interpretation mode directly into machine code, which will give a significant performance increase. However, for this you need to either translate everything in real time through a separate module, or rewrite the code in the same GASS language (GAS Script), which will be assembled into machine code in advance. The main idea here is to avoid compilation garbage, reduce the number of instructions to a minimum and also make even fewer leaks compared to the same Rust; GAS (GNU Assembler) is most suitable for this.
 
 The language uses the Latin alphabet as a technical one and any other language as explanatory-accompanying, more understandable to the developer.
@@ -31,3 +33,13 @@ How interpretation and RTS work:
 
 The code is read from top to bottom line by line and taking into account the level of nesting.
 > RTS treats indentation as creating a new block of lines of code. You can also give the attachment a name. The type of structure itself will depend on its content.
+
+### Package Manager
+RTS has a package manager that allows you to easily manage libraries.
+
+Its main task is to maintain global storage for the user locally and provide the ability to create new packages and send them to the server. More detailed information about creating and managing packages can be found in the [Packages Section](https://realtime.su/packages)
+
+The package manager only adheres to hot stable releases in the format `<package name>-<release date>.<revision>`;
+This way the package manager and the user can quickly understand which version is the latest.
+
+The system itself is committed to supporting only code that people will appreciate and that will be more modern.
