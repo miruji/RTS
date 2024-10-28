@@ -23,7 +23,7 @@ mod tokenizer;
 mod parser;
 mod packageApi;
 // other globals
-pub static mut _filePath: String = String::new(); // todo: ?
+pub static mut _filePath: String = String::new(); // run file path
 pub static mut _debugMode: bool = false;          // debug flag
 // input & output
 pub static mut _argc: usize       = 0;            // arhuments count
@@ -57,13 +57,20 @@ fn getVersion(version: &str) -> String
 fn help() -> ()
 {
   // todo: description
-  println!("-v");
-  println!("-h");
-  println!("-d");
-  //println!("-i <package name>");
-  println!("-rf <filename>");
-  println!("-rs <script>");
-  println!("-rp");
+  log("ok","version");
+  log("ok","<empty>");
+  log("ok","help");
+  log("ok","drun");
+  log("ok","drun <filename>");
+  log("ok","drun \"<script>\"");
+  log("ok","run");
+  log("ok","run <filename>");
+  log("ok","run \"<script>\"");
+  log("ok","package <empty>");
+  log("ok","package help");
+  log("ok","package local");
+  log("ok","package local-delete");
+  logExit(0);
 }
 // 
 async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
@@ -103,122 +110,82 @@ async fn main() -> io::Result<()>
   use crate::packageApi::packageApi;
 
   // args to key-values
-  let mut args: Vec<(String, Vec<String>)> = Vec::new(); // Vector< key-values >
+  let mut args: Vec<(String, Vec<String>)> = Vec::new();
+  let input: Vec<String> = env::args().collect();
+  if input.len() > 1 
   {
-    let          input: Vec<String>    = env::args().collect(); // input argv
-    let mut     values: Vec<String>    = Vec::new();            // values
-    let mut readBuffer: Option<String> = None;                  // buffer
-
-    for arg in input.iter().skip(1) // skip first arg
-    { 
-      if arg.starts_with('-') 
-      { // read key
-        if let Some(key) = readBuffer.take() 
-        { // use `take` to get the current key
-          args.push((key, values.clone()));
-          values.clear();
-        }
-        readBuffer = Some(arg.clone());
-      } else if let Some(_) = readBuffer 
-      { // read values
-        values.push(arg.clone());
-      }
-    }
-
-    if let Some(key) = readBuffer 
-    { // set last key
-      args.push((key, values));
-    }
-  }
-
-  // debug mode on ?
-  for (key, values) in &args 
-  { // read keys
-    match key.as_str() 
-    {
-      "-v" => 
-      { // version
-        log("ok",&format!("RTS v{}",*_version));
-        logExit(0);
-      }
-      "-h" =>
-      {
-        help();
-      }
-      "-d" => 
-      { // debug mode
-        unsafe { _debugMode = true; }
-      }
-      //"-i" =>
-      //{ // install
-        //packageInstall(values).await;
-        //logExit(0);
-      //}
-      "-p" =>
-      { 
-        packageApi(values).await;
-        logExit(0);
-      }
-      _ => {}
-    }
-  }
-  if unsafe{_debugMode} 
-  {
-    logSeparator("Arguments");
-    log("ok","Debug mode");
-  }
-
-  // read args
-  let mut   noRun: bool = true;
+    // first argument is treated as key, others as values
+    let command: String = input[1].clone();
+    let values: Vec<String> = input.iter().skip(2).cloned().collect();
+    // store key and values in args vector
+    args.push((command.clone(), values.clone()));
+  } else { help() }
+  // read key
   let mut runFile: bool = false;
   let mut  buffer: Vec<u8> = Vec::new();
+  let valuesLength: usize = (args[0].1).len();
 
-  for (key, values) in &args 
+  if !args.is_empty() 
   {
-    let valuesLength: usize = (&values).len();
-    match key.as_str() 
+    let key: &str = args[0].0.as_str();
+    match key
     {
-      "-rf" => 
-      { // run file
+      "version" => 
+      { // get version
+        log("ok", &format!("RTS v{}", *_version));
+        logExit(0);
+      }
+      "help" => help(),
+      "package" =>
+      { // package
+        packageApi(&args[0].1,valuesLength).await;
+        logExit(0);
+      },
+      _ if (key == "run" || key == "drun") && valuesLength >= 1 =>
+      { // run
+
+        // debug ?
+        if key == "drun" { unsafe {_debugMode = true;} }
+
+        // todo: if not file
+        // run file
         unsafe
         {
           _argc = valuesLength;
-          _argv = values.clone();
-          _filePath = values[0].clone();
+          _argv = args[0].1.clone();
+          _filePath = args[0].1[0].clone();
         }
 
         // todo: check filePath file type
-        noRun = false;
         if unsafe{_debugMode} {
           log("ok",&format!("Run [{}]",unsafe{&*_filePath}));
         }
         runFile = true;
-      } 
-      "-rs" => 
-      { // run script
+
+        // run script
+        /*
         let combinedString: String = values.concat().replace("\\n", "\n"); // todo: \\n ?
         buffer = combinedString.clone().into_bytes();
         // todo: argc & argv
 
         // todo: check filePath file type
-        noRun = false;
         if unsafe{_debugMode} 
         {
           log("ok",&format!("Run [{}]",combinedString));
         }
-      }
-      "-rp" =>
-      {
+        */
+
+        // run package
         // todo: run package
       }
       _ => {}
     }
   }
-  
-  if noRun 
+
+  if unsafe{_debugMode} 
   {
-    log("err","Use the -h or flag for detailed information about available commands");
-    logExit(1);
+    logSeparator("Arguments");
+    log("ok","Debug mode");
   }
 
   // run file

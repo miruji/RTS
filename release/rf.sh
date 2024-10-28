@@ -1,8 +1,8 @@
 #!/bin/bash
 # RTS run file script for tests
 #
-#       name  x86  file
-# e:  ./rf.sh  64 test.rt
+#        x   32/64  file
+# e:  ./rf.sh  64  test.rt
 clear
 
 # remove back

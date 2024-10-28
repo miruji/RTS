@@ -2,8 +2,8 @@
 # RTS build script for x86-32 or x86-64
 # and optimize (strip + upx)
 #
-#        name    x86  all debug
-# e:  ./build.sh  64    false
+#          x     32/64  all debug
+# e:  ./build.sh  64      false
 clear
 
 # build file
@@ -63,6 +63,9 @@ elif [ "$1" == "32" ]; then
 	fi
 	ls &>> ./log
 	rm -f  ./log  # remove log
+else
+  echo "Specify 32 or 64 architecture for assembly"
+  exit 1
 fi
 echo "Everything is fine [linux-x86-$1]"
 #
