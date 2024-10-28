@@ -10,16 +10,14 @@ use crate::{log, logExit};
 
 // package api
 pub async fn packageApi(values: &Vec<String>, valuesLength: usize) -> () 
-{
+{ // check values length
   let valuesLength: usize = values.len();
-  if valuesLength == 0 || values[0].len() == 0 {
-    log("err", &format!("Use [package help] for help"));
-    logExit(1);
-  }
+  if valuesLength == 0 || values[0].len() == 0 { help() }
   //
   let mut error: bool = false;
 
   let _type: &String = &values[0];
+  if _type == "help" { help(); } else
   if _type == "local" {
     if valuesLength >= 2 
     { // local <package name>
@@ -44,9 +42,18 @@ pub async fn packageApi(values: &Vec<String>, valuesLength: usize) -> ()
     error = true;
   }
 
-  if error {
-    logExit(1);
-  }
+  if error { logExit(1); }
+}
+
+// help
+fn help() -> () 
+{
+  // todo: description
+  log("ok","<empty>");
+  log("ok","help");
+  log("ok","local");
+  log("ok","local-delete");
+  logExit(0);
 }
 
 // check that the directory already exists
@@ -92,13 +99,12 @@ fn deleteAllFilesInDirectory(packagePath: &str) -> usize {
 
 // create new package
 fn createPackage(packageName: &str, inDirectory: bool) -> usize 
-{
-  // create directory
+{ // create directory
   if !inDirectory {
     match fs::create_dir_all(packageName) {
-      Ok(_) => log("ok", &format!("Directory '{}' created successfully", packageName)),
+      Ok(_) => log("ok", &format!("Directory [{}] created successfully", packageName)),
       Err(e) => {
-        println!("Error creating directory '{}': {}", packageName, e);
+        println!("Error creating directory [{}]: [{}]", packageName, e);
         return 1;
       }
     }
@@ -106,9 +112,9 @@ fn createPackage(packageName: &str, inDirectory: bool) -> usize
   // create main.rt file
   let mainFilePath: &Path = &Path::new(packageName).join("main.rt");
   match fs::File::create(mainFilePath) {
-    Ok(_) => log("ok", &format!("File 'main.rt' created successfully")),
+    Ok(_) => log("ok", &format!("File [main.rt] created successfully")),
     Err(e) => {
-      log("err", &format!("Error creating file 'main.rt': {}", e));
+      log("err", &format!("Error creating file [main.rt]: {}", e));
       return 1;
     }
   }
@@ -117,7 +123,7 @@ fn createPackage(packageName: &str, inDirectory: bool) -> usize
   let mut packageJsonFile = match fs::File::create(packageJsonPath) {
     Ok(file) => file,
     Err(e) => {
-      log("err", &format!("Error creating file 'package.json': {}", e));
+      log("err", &format!("Error creating file [package.json]: {}", e));
       return 1;
     }
   };
@@ -138,10 +144,10 @@ fn createPackage(packageName: &str, inDirectory: bool) -> usize
   );
   // write json content
   if let Err(e) = packageJsonFile.write_all(packageJsonContent.as_bytes()) {
-    log("err", &format!("Error writing to 'package.json': {}", e));
+    log("err", &format!("Error writing to [package.json]: {}", e));
     return 1;
   } else {
-    log("ok", "File 'package.json' created successfully");
+    log("ok", "File [package.json] created successfully");
   }
   return 0;
 }
@@ -180,7 +186,7 @@ fn packageLocal(packageName: &str) -> usize
           "y" => { break; }    // exit the loop
           "n" => { return 1; } // exit
           _ => {
-            log("warn-input", "Invalid input. Please enter [y] or [n]: ");
+            log("warn-input", "Please enter [y] or [n]: ");
             io::stdout().flush().unwrap(); // ensure the prompt is printed before waiting for input
           }
         }
@@ -197,11 +203,11 @@ fn packageLocal(packageName: &str) -> usize
   { // not in directory mode [package local <package name>]
     // check directory exist
     if checkDirectoryExist(packageName) != 0 { 
-      log("err", &format!("Package '{}' already exists", packageName));
+      log("err", &format!("Package [{}] already exists", packageName));
       return 1; 
     }
     // check package JSON exist
-    if checkJsonExist(&format!("{}/",packageName)) != 0 { 
+    if checkJsonExist("") != 0 { 
       log("err", "You cannot create a new package in a directory with an existing package.json");
       return 1; 
     }
@@ -210,6 +216,7 @@ fn packageLocal(packageName: &str) -> usize
   }
   return 0;
 }
+
 // delete local package
 // e:
 //   package local-delete
@@ -223,7 +230,7 @@ fn packageLocalDelete(packageName: &str) -> usize
   {
     if checkDirectoryExist(packageName) != 1 
     { 
-      log("err", &format!("Package '{}' does not exist", packageName));
+      log("err", &format!("Package [{}] does not exist", packageName));
       return 1; 
     }
   }

@@ -178,7 +178,10 @@ async fn main() -> io::Result<()>
         // run package
         // todo: run package
       }
-      _ => {}
+      _ => {
+        log("err","Use [rts help] to get help");
+        logExit(1)
+      }
     }
   }
 
