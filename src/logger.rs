@@ -266,7 +266,7 @@ pub fn log(textType: &str, text: &str) -> ()
           (text, "+")
       };
     logWithStyle(&format!(
-      "   \\fg(#55af96)\\b{}\\cb \\fg(#f0f8ff){}\\c\n",
+      "   \\fg(#55af96)\\b{}\\cb \\fg(#f0f8ff)\\b{}\\c\n",
       prefix,
       content
     ));
@@ -275,7 +275,7 @@ pub fn log(textType: &str, text: &str) -> ()
   if textType == "err" 
   {
     logWithStyle(&format!(
-      "  \\fg(#e91a34)\\b-\\cb \\fg(#f0f8ff)\\b{}\\c\n",
+      "   \\fg(#e91a34)\\b-\\cb \\fg(#f0f8ff)\\b{}\\c\n",
       text
     ));
   } else

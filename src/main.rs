@@ -21,6 +21,7 @@ use serde_json::Value;
 mod logger;
 mod tokenizer;
 mod parser;
+mod packageApi;
 // other globals
 pub static mut _filePath: String = String::new(); // todo: ?
 pub static mut _debugMode: bool = false;          // debug flag
@@ -59,9 +60,10 @@ fn help() -> ()
   println!("-v");
   println!("-h");
   println!("-d");
-  println!("-i <package name>");
+  //println!("-i <package name>");
   println!("-rf <filename>");
-  println!("-rs \"<script>\"");
+  println!("-rs <script>");
+  println!("-rp");
 }
 // 
 async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
@@ -71,29 +73,10 @@ async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
   Ok(package)
 }
 // install package
-async fn packageInstall(names: &Vec<String>) -> () {
-  log("ok", &format!("Installing packages {:?}", names));
+async fn packageInstall(values: &Vec<String>) -> () {
+  log("ok", &format!("Installing packages {:?}", values));
 
-/*
-todo: realtime.su
-
-User:
-login: String
-password: String
-packages: Array<Package>
-
-Package
-name: String,
-lastVersion: String,
-Releases: Array<Release>
-
-Release
-version: String
-data: String
-date: Date
-*/
-
-  for name in names {
+  for name in values {
     match fetchPackage(name).await {
       Ok(package) => {
         log("ok", &format!("Fetched package for {}: {}", name, package));
@@ -117,6 +100,7 @@ async fn main() -> io::Result<()>
   //
   use crate::tokenizer::*;
   use crate::parser::*;
+  use crate::packageApi::packageApi;
 
   // args to key-values
   let mut args: Vec<(String, Vec<String>)> = Vec::new(); // Vector< key-values >
@@ -165,9 +149,14 @@ async fn main() -> io::Result<()>
       { // debug mode
         unsafe { _debugMode = true; }
       }
-      "-i" =>
-      { // install
-        packageInstall(values).await;
+      //"-i" =>
+      //{ // install
+        //packageInstall(values).await;
+        //logExit(0);
+      //}
+      "-p" =>
+      { 
+        packageApi(values).await;
         logExit(0);
       }
       _ => {}
@@ -217,6 +206,10 @@ async fn main() -> io::Result<()>
         {
           log("ok",&format!("Run [{}]",combinedString));
         }
+      }
+      "-rp" =>
+      {
+        // todo: run package
       }
       _ => {}
     }
