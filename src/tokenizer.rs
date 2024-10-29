@@ -2,14 +2,19 @@
     tokenizer
 */
 
-use crate::logger::*;
+pub mod token;
+pub mod line;
 
-pub mod token; use crate::tokenizer::token::*;
-pub mod line;  use crate::tokenizer::line::*;
+use crate::{
+  logger::*,
+  tokenizer::token::*,
+  tokenizer::line::*
+};
 
-use std::time::Instant;
-
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::{
+  time::{Instant,Duration},
+  sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}
+};
 
 // delete comment
 unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -> ()
@@ -561,7 +566,7 @@ unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
 pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize) -> ()
 {
   let lineIndentString: String = " ".repeat(lineIndent*2+1);
-  let identString:     String = " ".repeat(indent*2+1);
+  let identString:      String = " ".repeat(indent*2+1);
 
   let tokenCount: usize = tokens.len();
   for (i, token) in tokens.iter().enumerate() 
@@ -625,13 +630,13 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
       }
     // type only
     } else {
-      println!(
-        "{}{}{}{}",
+      formatPrint(&format!(
+        "{}{}{}{}\n",
         lineIndentString,
         c,
         identString,
         token.getDataType().unwrap_or_default().to_string()
-      );
+      ));
     }
     if let Some(tokens) = &token.tokens
     {
@@ -648,21 +653,21 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
 
   for (i, line) in linesLinks.iter().enumerate() 
   {
-    let line = line.read().unwrap();
+    let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
     log("parserBegin", &format!("{} {}",identStr1,i));
 
     if (&line.tokens).len() == 0 
     {
-      log("parserHeader", &format!("{}┗ Separator",identStr2));
+      formatPrint(&format!("{}\\b┗ \\fg(#90df91)Separator\\c\n",identStr2));
     } else 
     {
-      log("parserHeader", &format!("{}┣ Tokens",identStr2));
+      formatPrint(&format!("{}\\b┣ \\fg(#90df91)Tokens\\c\n",identStr2));
     }
 
     outputTokens(&line.tokens, indent, 1);
     if let Some(lineLines) = &line.lines
     {
-      log("parserHeader", &format!("{}┗ Lines",identStr2));
+      formatPrint(&format!("{}\\b┗ \\fg(#90df91)Lines\\c\n",identStr2));
       outputLines(lineLines, indent+1);
     }
   }
@@ -826,8 +831,8 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   if debugMode 
   {
     // duration
-    let endTime  = Instant::now();
-    let duration = endTime-startTime;
+    let endTime:  Instant  = Instant::now();
+    let duration: Duration = endTime-startTime;
     // lines
     outputLines(&linesLinks,2);
     //

@@ -8,10 +8,12 @@
 #[macro_use]
 extern crate lazy_static;
 
-use std::fs::File;
-use std::io::{self, Read};
-use std::env;
-use std::time::Instant;
+use std::{
+  time::{Instant,Duration},
+  env,
+  io::{self, Read},
+  fs::File
+};
 
 use crate::logger::*;
 
@@ -111,18 +113,20 @@ async fn main() -> io::Result<()>
 
   // args to key-values
   let mut args: Vec<(String, Vec<String>)> = Vec::new();
-  let input: Vec<String> = env::args().collect();
+  let input:    Vec<String>                = env::args().collect();
   if input.len() > 1 
   {
     // first argument is treated as key, others as values
-    let command: String = input[1].clone();
-    let values: Vec<String> = input.iter().skip(2).cloned().collect();
+    let command: String      = input[1].clone();
+    let values:  Vec<String> = input.iter().skip(2).cloned().collect();
     // store key and values in args vector
     args.push((command.clone(), values.clone()));
   } else { help() }
+  
   // read key
   let mut runFile: bool = false;
   let mut  buffer: Vec<u8> = Vec::new();
+
   let valuesLength: usize = (args[0].1).len();
 
   if !args.is_empty() 
@@ -247,8 +251,8 @@ async fn main() -> io::Result<()>
   // duration
   if unsafe{_debugMode} 
   {
-    let endTime  = Instant::now();
-    let duration = endTime-startTime;
+    let endTime:  Instant  = Instant::now();
+    let duration: Duration = endTime-startTime;
     log("ok",&format!("All duration [{:?}]",duration));
   }
   // ** to release test, use hyperfine/perf

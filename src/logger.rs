@@ -27,9 +27,9 @@ fn divideWhitespace(input: &str) -> (&str, &str)
   (&input[..firstNonSpaceIndex], &input[firstNonSpaceIndex..])
 }
 // style log
-fn logWithStyle(string: &str) -> ()
+pub fn formatPrint(string: &str) -> ()
 {
-  print!("{}",&formatPrint(string));
+  print!("{}",&formatString(string));
 }
 
 static mut _result: String = String::new();
@@ -41,19 +41,19 @@ static mut _stringChars:   Vec<char>   = Vec::new();
 static mut _string:        String      = String::new();
 
 /*
-  c    clear all
+  Formats a string, you can use flags:
+
+  \c    clear all
   
-  b    bold
-  fg   foreground
-  bg   background
+  \b    bold
+  \fg   foreground
+  \bg   background
 
-  cb   clear bold
-  cfg  clear foreground
-  cbg  clear background
-
-  or basic chars
+  \cb   clear bold
+  \cfg  clear foreground
+  \cbg  clear background
 */
-pub fn formatPrint(string: &str) -> String 
+fn formatString(string: &str) -> String 
 {
   unsafe
   {
@@ -173,7 +173,7 @@ pub fn formatPrint(string: &str) -> String
 // separator log
 pub fn logSeparator(text: &str) -> ()
 {
-  logWithStyle(&format!(
+  formatPrint(&format!(
     " \\fg(#55af96)\\bx \\fg(#0095B6){}\\c\n",
     text
   ));
@@ -182,11 +182,11 @@ pub fn logSeparator(text: &str) -> ()
 pub fn logExit(code: i32) -> !
 {
   if code == 0 {
-    logWithStyle("   \\b┗\\fg(#3dd73c) Exit 0\\c \\fg(#f0f8ff)\\b:)\\c\n");
+    formatPrint("   \\b┗\\fg(#1ae96b) Exit 0\\c \\fg(#f0f8ff)\\b:)\\c\n");
     std::process::exit(0);
   }
   // else
-  logWithStyle("   \\b┗\\fg(#f94d4d) Exit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
+  formatPrint("   \\b┗\\fg(#e91a34) Exit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
   std::process::exit(code);
 }
 // basic style log
@@ -196,31 +196,23 @@ pub fn log(textType: &str, text: &str) -> ()
 {
   if textType == "syntax" 
   {
-    logWithStyle("\\fg(#e91a34)\\bSyntax \\c");
+    formatPrint("\\fg(#e91a34)\\bSyntax \\c");
   } else
   // AST open +
   if textType == "parserBegin" 
   {
     let (divide1, divide2): (&str, &str) = divideWhitespace(text);
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "{}\\bg(#29352f)\\fg(#b5df90)\\b{}\\c\n",
       divide1,
       divide2
-    ));
-  } else
-  // AST header
-  if textType == "parserHeader" 
-  {
-    logWithStyle(&format!(
-      "\\fg(#90df91)\\b{}\\c\n",
-      text
     ));
   } else
   // AST info
   if textType == "parserInfo" 
   {
     let (divide1, divide2): (&str, &str) = divideWhitespace(text);
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "{}\\bg(#29352f)\\fg(#d9d9d9)\\b{}\\c\n",
       divide1,
       divide2
@@ -235,14 +227,14 @@ pub fn log(textType: &str, text: &str) -> ()
     if let Some(firstPart) = _parts.first() 
     {
       _outputParts.push(
-        formatPrint(firstPart)
+        formatString(firstPart)
       );
     }
     // last word
     for part in _parts.iter().skip(1) 
     {
       _outputParts.push(
-        formatPrint(&format!(
+        formatString(&format!(
           "\\b\\fg(#d9d9d9){}\\c",
           part
         ))
@@ -256,17 +248,17 @@ pub fn log(textType: &str, text: &str) -> ()
     let (content, prefix) = 
       if text.starts_with('+') 
       {
-          (&text[1..], "O\\cfg \\fg(#f0f8ff)┳")
+        (&text[1..], "O\\cfg \\fg(#f0f8ff)┳")
       } else
       if text.starts_with('x') 
       {
-          (&text[1..], "X\\cfg \\fg(#f0f8ff)┻")
+        (&text[1..], "X\\cfg \\fg(#f0f8ff)┻")
       } else 
       {
-          (text, "+")
+        (text, "+")
       };
-    logWithStyle(&format!(
-      "   \\fg(#55af96)\\b{}\\cb\\cfg \\fg(#f0f8ff)\\b{}\\c\n",
+    formatPrint(&format!(
+      "   \\fg(#1ae96b)\\b{}\\cb\\cfg \\fg(#f0f8ff)\\b{}\\c\n",
       prefix,
       content
     ));
@@ -274,7 +266,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // error
   if textType == "err" 
   {
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "   \\fg(#e91a34)\\b-\\cb\\cfg \\fg(#f0f8ff)\\b{}\\c\n",
       text
     ));
@@ -282,7 +274,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // warning
   if textType == "warn" 
   {
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "   \\fg(#e98e1a)\\b?\\cb\\cfg \\fg(#f0f8ff)\\b{}\\c\n",
       text
     ));
@@ -290,7 +282,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // warn input
   if textType == "warn-input" 
   {
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "   \\fg(#e98e1a)\\b?\\cb\\cfg \\fg(#f0f8ff)\\b{}\\c",
       text
     ));
@@ -298,7 +290,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // note
   if textType == "note" 
   {
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "  \\fg(#f0f8ff)\\bNote:\\c \\fg(#f0f8ff){}\\c\n",
       text
     ));
@@ -309,9 +301,9 @@ pub fn log(textType: &str, text: &str) -> ()
     _parts = text.split("->").map(|s| s.to_string()).collect();
     _string = 
       _parts.join(
-        &formatPrint("\\fg(#f0f8ff)\\b->\\c")
+        &formatString("\\fg(#f0f8ff)\\b->\\c")
       );
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "\\fg(#f0f8ff)\\b->\\c \\fg(#f0f8ff){}\\c\n",
       _string
     ));
@@ -325,7 +317,7 @@ pub fn log(textType: &str, text: &str) -> ()
     if let Some(firstPart) = _parts.first() 
     {
       _outputParts.push(
-        formatPrint(&format!(
+        formatString(&format!(
           "  \\fg(#f0f8ff)\\b{} | \\c",
           firstPart.to_string()
         ))
@@ -340,7 +332,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // basic
   }} else 
   {
-    logWithStyle(&format!(
+    formatPrint(&format!(
       "\\fg(#f0f8ff){}\\c\n",
       text
     ));

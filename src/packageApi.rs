@@ -53,6 +53,9 @@ fn help() -> ()
   log("ok","help");
   log("ok","local");
   log("ok","local-delete");
+  log("ok","upload");
+  log("ok","install");
+  log("ok","uninstall");
   logExit(0);
 }
 

@@ -2,24 +2,22 @@
     Method
 */
 
-use crate::logger::*;
-use crate::_exitCode;
+use crate::{
+    logger::*,
+    _exitCode,
+    tokenizer::{line::*, token::*, readTokens},
+    parser::{readLines, value::*, uf64::*},
+};
 
-use crate::tokenizer::line::*;
-use crate::tokenizer::token::*;
+use std::{
+    io::{self, Write},
+    process::{Command, Output},
+    str::SplitWhitespace,
+    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    thread::sleep,
+    time::Duration,
+};
 
-use crate::parser::readTokens;
-use crate::parser::readLines;
-use crate::parser::value::*;
-use crate::parser::uf64::*;
-
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-use std::{io, io::Write};
-use std::{str::SplitWhitespace};
-use std::process::{Command, Output};
-use std::thread::sleep;
-use std::time::Duration;
 use rand::Rng;
 
 // calculate value
@@ -312,7 +310,7 @@ impl Structure
           .parse::<usize>().unwrap_or_default();
       if let Some(nestingLine) = structureLines.get( nestingNum ) 
       {
-        let mut nestingLine = nestingLine.write().unwrap(); // todo: type
+        let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLine.write().unwrap();
 //        println!("structureLines [{:?}]",nestingLine.tokens);
         nestingLine.tokens = newTokens;
       }
@@ -339,7 +337,7 @@ impl Structure
         Token::newEmpty(None)
       };
     */
-    let mut structure = structureLink.write().unwrap();
+    let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
     // =
     if op == TokenType::Equals 
     {
@@ -411,7 +409,7 @@ impl Structure
           if let Some(idx) = arrayIndex 
           { // n-line structure
             // todo: fix memoryCell nesting
-            let result = self.expression(&mut structure.lines[idx].write().unwrap().tokens); // todo: type
+            let result: Token = self.expression(&mut structure.lines[idx].write().unwrap().tokens);
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
@@ -422,7 +420,7 @@ impl Structure
         { 
           if structure.lines.len() == 1 
           { // first-line structure
-            let result = self.expression(&mut structure.lines[0].write().unwrap().tokens); // todo: type
+            let result: Token = self.expression(&mut structure.lines[0].write().unwrap().tokens);
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
@@ -465,7 +463,7 @@ impl Structure
 //        println!("structure.line [{}]", lineNumber);
         if let Some(line) = self.lines.get(lineNumber) 
         { // get line of num and return result
-          let line = line.read().unwrap(); // todo: type
+          let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
 //          println!("  line {:?}:[{}]", line.tokens,line.tokens.len());
           let mut lineTokens: Vec<Token> = line.tokens.clone();
           let lineHasLines: Option<usize> = 
@@ -523,7 +521,7 @@ impl Structure
           { // single value
             if let Some(line) = structure.lines.get(0) 
             { // get first line and return result
-              let line = line.read().unwrap(); // todo: type
+              let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
 //              println!("  line {:?}:[{}] {}", line.tokens,line.tokens.len(),line.index);
               let mut lineTokens: Vec<Token> = line.tokens.clone();
               drop(line);
@@ -949,7 +947,7 @@ impl Structure
               { // get structure name
                 if let Some(structureLink) = self.getStructureByName(&structureName) 
                 { // get structure
-                  let structure = structureLink.read().unwrap();
+                  let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
                   if let Some(result) = &structure.result 
                   { // functional
                     value[i].setData    ( result.getData() );
@@ -1178,7 +1176,7 @@ impl Structure
                   let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
-                    println!("{}",formatPrint(&expressionValue));
+                    formatPrint(&format!("{}\n",&expressionValue));
                   } else 
                   { // else -> skip
                     println!();
@@ -1198,7 +1196,7 @@ impl Structure
                   let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
                   if let Some(expressionValue) = expressionValue 
                   { // functional
-                    print!("{}",formatPrint(&expressionValue));
+                    formatPrint(&expressionValue);
                   } else 
                   { // else -> skip
                     print!("");
@@ -1279,7 +1277,7 @@ impl Structure
 //                        println!("  parameterResult [{}]",parameterResult);
                         if let Some(parameterStructure) = calledStructureStructures.get(l) 
                         {
-                          let mut parameterStructure = parameterStructure.write().unwrap(); // todo: type
+                          let mut parameterStructure: RwLockWriteGuard<'_, Structure> = parameterStructure.write().unwrap();
 //                          println!("    parameterStructure [{}]",parameterStructure.name);
                           // add new structure
                           parameterStructure.lines = 

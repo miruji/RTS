@@ -2,24 +2,22 @@
   parser
 */
 
-use crate::logger::*;
-use crate::_argc;
-use crate::_argv;
-use crate::_debugMode;
-use crate::_exitCode;
-
 pub mod value;
 pub mod uf64;
-pub mod structure; use crate::parser::structure::*;
+pub mod structure;
 
-use crate::tokenizer::*;
-use crate::tokenizer::token::*;
-use crate::tokenizer::line::*;
+use crate::{
+    logger::*,
+    _argc, _argv, _debugMode, _exitCode,
+    parser::structure::*,
+    tokenizer::{self, token::*, line::*}
+};
 
-use std::time::Instant;
-
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::ptr::addr_of_mut;
+use std::{
+    time::{Instant, Duration},
+    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    ptr::addr_of_mut
+};
 
 // check memory cell type
 fn checkMemoryCellType(dataType: TokenType) -> bool 
@@ -376,7 +374,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 
   // argc & argv
   {
-    let mut main = _main.write().unwrap();
+    let mut main: RwLockWriteGuard<'_, Structure> = _main.write().unwrap();
     main.lines = tokenizerLinesLinks.clone();
     // argc
     /*
@@ -435,8 +433,8 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
   // duration
   if unsafe{_debugMode} 
   {
-    let endTime  = Instant::now();
-    let duration = endTime-startTime;
+    let endTime:  Instant  = Instant::now();
+    let duration: Duration = endTime-startTime;
     logSeparator("End");
     log("ok",&format!("Parser duration [{:?}]",duration));
   }
@@ -470,7 +468,7 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut u
       }
     }
     { // todo: rewrite this part
-      let structure = structureLink.read().unwrap();
+      let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
       if structure.lines.len() < *linesLength 
       {
         *linesLength = structure.lines.len();
