@@ -1,5 +1,5 @@
-/*
-  line
+/* /tokenizer/line
+  A line is a structure made up of consecutive Tokens
 */
 
 use crate::tokenizer::token::*;

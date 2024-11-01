@@ -1,5 +1,4 @@
-/*
-    tokenizer
+/* /tokenizer
 */
 
 pub mod token;
@@ -66,6 +65,7 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
         b'\0'
       };
 
+    // todo: use match case
     if !negative && buffer[*index] == b'-' 
     { // Int/Float flag
       result.push(byte1 as char);
@@ -92,8 +92,7 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
        (savedIndex+2 < bufferLength && isDigit(buffer[savedIndex+2])) 
     { // Rational
       rational = true;
-      result.push('/');
-      result.push('/');
+      result.push_str("//");
       savedIndex += 2;
     } else 
     {
@@ -105,11 +104,11 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
   // next return
   match (rational, dot, negative) 
   { //   rational,  dot,  negative
-    (true, _, _)     => Token::new( Some(TokenType::Rational), Some(result.clone()) ),
-    (_, true, true)  => Token::new( Some(TokenType::Float),    Some(result.clone()) ),
-    (_, true, false) => Token::new( Some(TokenType::UFloat),   Some(result.clone()) ),
-    (_, false, true) => Token::new( Some(TokenType::Int),      Some(result.clone()) ),
-    _                => Token::new( Some(TokenType::UInt),     Some(result.clone()) ),
+    (true, _, _)     => Token::new( Some(TokenType::Rational), Some(result) ),
+    (_, true, true)  => Token::new( Some(TokenType::Float),    Some(result) ),
+    (_, true, false) => Token::new( Some(TokenType::UFloat),   Some(result) ),
+    (_, false, true) => Token::new( Some(TokenType::Int),      Some(result) ),
+    _                => Token::new( Some(TokenType::UInt),     Some(result) ),
   }
 }
 
@@ -129,6 +128,7 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
   {
     let byte1: u8 = buffer[savedIndex]; // current char
 
+    // todo: use match case
     if (isDigit(byte1) || byte1 == b'.') && !result.is_empty()
     {
       result.push(byte1 as char);
@@ -152,10 +152,10 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
     Token::new( Some(TokenType::Link), Some(result.clone()) )
   } else 
   {
-    match &result[..] 
+    match result.as_str()
     {
-      "true"     => Token::new( Some(TokenType::Bool), Some("1".to_string()) ),
-      "false"    => Token::new( Some(TokenType::Bool), Some("0".to_string()) ),
+      "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
+      "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
       _          => Token::new( Some(TokenType::Word), Some(result) ),
     }
   }
@@ -188,6 +188,7 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
       }
 
       // read quote
+      // todo: use match case ?
       if byte2 != byte1 
       {
         result.push(byte2 as char);
@@ -239,14 +240,14 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
       Token::newEmpty(None)
     } else 
     {
-      Token::new( Some(TokenType::Char), Some(result.clone()) )
+      Token::new( Some(TokenType::Char), Some(result) )
     }
   } else if byte1 == b'"' 
   {
-    Token::new( Some(TokenType::String), Some(result.clone()) )
+    Token::new( Some(TokenType::String), Some(result) )
   } else if byte1 == b'`' 
   {
-    Token::new( Some(TokenType::RawString), Some(result.clone()) )
+    Token::new( Some(TokenType::RawString), Some(result) )
   } else 
   {
     Token::newEmpty(None)
@@ -256,8 +257,8 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
 // get operator token by buffer-index
 unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
-  let currentChar = buffer[*index];
-  let nextChar = 
+  let currentChar: u8 = buffer[*index];
+  let nextChar: u8 = 
     if *index+1 < bufferLength 
     { 
       buffer[*index+1]
@@ -393,7 +394,7 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
   let mut brackets: Vec::<usize> = Vec::new();
   let mut   length: usize        = tokens.len();
 
-  let mut l = 0; // index buffer
+  let mut l: usize = 0; // index buffer
   while l < length 
   {
     let tokenType: &TokenType = &tokens[l].getDataType().unwrap_or_default();
@@ -475,14 +476,14 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
       if isNesting 
       {
         // get next line and remove
-        let nestingLineLink = linesLinks.remove(nextIndex);
+        let nestingLineLink: Arc<RwLock<Line>> = linesLinks.remove(nextIndex);
         length -= 1;
         { // set parent line link
           let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
           nestingLine.parent = Some( linesLinks[index].clone() );
         }
         // push nesting
-        let mut currentLine = linesLinks[index].write().unwrap();
+        let mut currentLine: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
         match &mut currentLine.lines 
         {
           Some(lineLines) => 
@@ -510,7 +511,7 @@ fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >)
 {
   for (i, lineLink) in linesLinks.iter().enumerate() 
   {
-    let mut line = lineLink.write().unwrap();
+    let mut line: RwLockWriteGuard<'_, Line> = lineLink.write().unwrap();
     line.index = i;
     if let Some(ref mut lineLines) = line.lines
     {
@@ -771,7 +772,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
           let lineTokensLength: usize = lineTokens.len();
           if lineTokensLength > 0 
           {
-              let backToken = &lineTokens[lineTokensLength-1];
+              let backToken: &Token = &lineTokens[lineTokensLength-1];
               if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
                  backToken.getData().unwrap_or_default() == "f" 
               {

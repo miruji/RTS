@@ -7,64 +7,51 @@ pub mod uf64;
 pub mod structure;
 
 use crate::{
-    logger::*,
-    _argc, _argv, _debugMode, _exitCode,
-    parser::structure::*,
-    tokenizer::{self, token::*, line::*}
+  logger::*,
+  _argc, _argv, _debugMode, _exitCode,
+  parser::structure::*,
+  tokenizer::{self, token::*, line::*}
 };
 
 use std::{
-    time::{Instant, Duration},
-    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
-    ptr::addr_of_mut
+  time::{Instant, Duration},
+  sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+  ptr::addr_of_mut
 };
 
 // check memory cell type
 fn checkMemoryCellType(dataType: TokenType) -> bool 
 {
-  return 
-    if dataType == TokenType::Int    || 
-       dataType == TokenType::UInt   || 
-       dataType == TokenType::Float  || 
-       dataType == TokenType::UFloat || 
-       dataType == TokenType::Rational
-    {
-      true
-      // todo: complex number
-      // and other types
-    } else {
-      false
-    }
+  matches!(dataType, 
+    TokenType::Int | 
+    TokenType::UInt | 
+    TokenType::Float | 
+    TokenType::UFloat | 
+    TokenType::Rational
+  )
+  // todo: complex number
+  // and other types
 }
 // check operator
 fn checkMemoryCellMathOperator(dataType: TokenType) -> bool 
 {
-  if dataType == TokenType::Equals         || // =
-
-     dataType == TokenType::UnaryPlus      || // ++
-     dataType == TokenType::PlusEquals     || // +=
-
-     dataType == TokenType::UnaryMinus     || // --
-     dataType == TokenType::MinusEquals    || // -=
-
-     dataType == TokenType::UnaryMultiply  || // **
-     dataType == TokenType::MultiplyEquals || // *=
-
-     dataType == TokenType::UnaryDivide    || // //
-     dataType == TokenType::DivideEquals   || // /=
-
-     dataType == TokenType::UnaryModulo    || // %%
-     dataType == TokenType::ModuloEquals   || // %=
-
-     dataType == TokenType::UnaryExponent  || // ^^
-     dataType == TokenType::ExponentEquals    // ^=
-  {
-    true
-  } else 
-  {
-    false
-  }
+  matches!(dataType, 
+    TokenType::Equals         | // =
+    TokenType::UnaryPlus      | // ++
+    TokenType::PlusEquals     | // +=
+    TokenType::UnaryMinus     | // --
+    TokenType::MinusEquals    | // -=
+    TokenType::UnaryMultiply  | // **
+    TokenType::MultiplyEquals | // *=
+    TokenType::UnaryDivide    | // //
+    TokenType::DivideEquals   | // /=
+    TokenType::UnaryModulo    | // %%
+    TokenType::ModuloEquals   | // %=
+    TokenType::UnaryExponent  | // ^^
+    TokenType::ExponentEquals   // ^=
+  )
 }
+
 // return [function only]
 // e:  = value
 unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<Structure>>) -> bool 

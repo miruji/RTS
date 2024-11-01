@@ -33,5 +33,8 @@ println( f"a.c.d = {a.c.d}:{type(a.c.d)}" ) # 5
 
 println("todo:")
 f = a.c.0
-println(f"f = a.c.0 = {f}")
-println(f"a.c.0 = {a.c.0}")
+println(f"f = a.c.0 = {f}:{type(f)}")
+println(f"a.c.0 = {a.c.0}:{type(a.c.0)}")
+
+m = a
+println(f"m = {m}:{type(m)}")

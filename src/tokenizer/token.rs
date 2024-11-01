@@ -1,5 +1,5 @@
-/*
-  token
+/* /tokenizer/token
+  Token is the smallest unit of data, represents strings, numbers, operators...
 */
 
 use std::fmt;

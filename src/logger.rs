@@ -1,5 +1,5 @@
-/*
-    Logger
+/* /logger
+  Has both debug functions and for normal work
 */
 
 use termion::color::{Bg, Fg, Rgb, Reset};
@@ -245,7 +245,7 @@ pub fn log(textType: &str, text: &str) -> ()
   // ok
   if textType == "ok" 
   {
-    let (content, prefix) = 
+    let (content, prefix): (&str, &str) = 
       if text.starts_with('+') 
       {
         (&text[1..], "O\\cfg \\fg(#f0f8ff)┳")

@@ -1,21 +1,22 @@
-/*
-    Method
+/* /parser/structure
+  A structure is a memory cell of a free structure.
+  Has its own settings, storage space
 */
 
 use crate::{
-    logger::*,
-    _exitCode,
-    tokenizer::{line::*, token::*, readTokens},
-    parser::{readLines, value::*, uf64::*},
+  logger::*,
+  _exitCode,
+  tokenizer::{line::*, token::*, readTokens},
+  parser::{readLines, value::*, uf64::*},
 };
 
 use std::{
-    io::{self, Write},
-    process::{Command, Output},
-    str::SplitWhitespace,
-    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
-    thread::sleep,
-    time::Duration,
+  io::{self, Write},
+  process::{Command, Output},
+  str::SplitWhitespace,
+  sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+  thread::sleep,
+  time::Duration,
 };
 
 use rand::Rng;
@@ -26,7 +27,7 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
   // get values of types
   let leftTokenData:     String    = leftToken.getData().unwrap_or_default();
   let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or_default();
-  let leftValue = match leftTokenDataType
+  let leftValue: Value = match leftTokenDataType
   {
     TokenType::Int => 
     {
@@ -74,7 +75,7 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
   };
   let rightTokenData:     String    = rightToken.getData().unwrap_or_default();
   let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or_default();
-  let rightValue = match rightTokenDataType {
+  let rightValue: Value = match rightTokenDataType {
     TokenType::Int    => 
     { 
       rightTokenData.parse::<i64>()
@@ -535,7 +536,7 @@ impl Structure
               let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
               parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
 
-              let mut expressionTokens  = vec![
+              let mut expressionTokens: Vec<Token> = vec![
                 Token::new( Some(TokenType::Word), Some(structure.name.clone()) ),
                 parametersToken
               ];
@@ -607,9 +608,9 @@ impl Structure
   // get structure parameters
   pub fn getStructureParameters(&self, value: &mut Vec<Token>) -> Vec<Token> 
   {
-    let mut result = Vec::new();
+    let mut result: Vec<Token> = Vec::new();
 
-    let mut expressionBuffer = Vec::new(); // buffer of current expression
+    let mut expressionBuffer: Vec<Token> = Vec::new(); // buffer of current expression
     for (l, token) in value.iter().enumerate() 
     { // read tokens
       if token.getDataType().unwrap_or_default() == TokenType::Comma || l+1 == value.len() 
@@ -843,7 +844,7 @@ impl Structure
                       .args(&args)
                       .output()
                       .expect("Failed to execute process"); // todo: no errors
-                  let outputString = String::from_utf8_lossy(&output.stdout).to_string();
+                  let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
                   if !outputString.is_empty() 
                   { // result
                     value[i].setData    ( Some(outputString) );
@@ -1150,7 +1151,7 @@ impl Structure
           {
             // todo: multi-param
             // basic structures
-            let mut result = true;
+            let mut result: bool = true;
             match tokenData.as_str() {
               "go" =>
               { // go block up
@@ -1273,7 +1274,7 @@ impl Structure
                       if let Some(calledStructureStructures) = &calledStructure.structures
                       {
 //                        println!("  calledStructure.structures.len [{}]",calledStructureStructures.len());
-                        let parameterResult = self.expression(&mut vec![parameter.clone()]); // todo: type
+                        let parameterResult: Token = self.expression(&mut vec![parameter.clone()]); // todo: type
 //                        println!("  parameterResult [{}]",parameterResult);
                         if let Some(parameterStructure) = calledStructureStructures.get(l) 
                         {

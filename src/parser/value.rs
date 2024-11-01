@@ -1,6 +1,5 @@
-/*
-  Value
-  ** interaction of primitives through operators
+/* /parser/value
+  Interaction of primitives through operators
 */
 
 use std::fmt;
@@ -15,7 +14,7 @@ pub enum Value
    Float(f64),
   UFloat(uf64),
     Char(char),
-  String(String), // todo: String max size?
+  String(String),
 }
 impl Value 
 {

@@ -1,4 +1,6 @@
-// packageApi.rs
+/* /packageApi
+  Provides a set of functions for working with packages locally and remotely
+*/
 
 use std::{
   fs::{self, ReadDir, DirEntry, Metadata},
