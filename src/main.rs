@@ -75,6 +75,7 @@ fn help() -> ()
   logExit(0);
 }
 // 
+/*
 async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
   let url = format!("https://realtime.su/api/packages/{}", packageId);
   let response = reqwest::get(&url).await?;
@@ -100,6 +101,7 @@ async fn packageInstall(values: &Vec<String>) -> () {
     }
   }
 }
+*/
 // main
 #[tokio::main]
 async fn main() -> io::Result<()> 

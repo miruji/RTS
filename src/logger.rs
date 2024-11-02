@@ -6,17 +6,14 @@ use termion::color::{Bg, Fg, Rgb, Reset};
 use termion::style;
 
 // hex str -> termion::color::Rgb
-fn hexToTermionColor(hex: &str) -> Option<Rgb> 
-{
-  if hex.len() == 6 
-  {
-    Some(Rgb(
-      u8::from_str_radix(&hex[0..2], 16).ok()?, 
-      u8::from_str_radix(&hex[2..4], 16).ok()?, 
-      u8::from_str_radix(&hex[4..6], 16).ok()?
-    ))
-  } 
-  else { None }
+fn hexToTermionColor(hex: &str) -> Option<Rgb> {
+  if hex.len() != 6 { return None; }
+
+  Some(Rgb(
+    u8::from_str_radix(&hex[0..2], 16).ok()?, 
+    u8::from_str_radix(&hex[2..4], 16).ok()?, 
+    u8::from_str_radix(&hex[4..6], 16).ok()?
+  ))
 }
 // devide white space, begin from the left
 fn divideWhitespace(input: &str) -> (&str, &str) 

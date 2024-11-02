@@ -177,8 +177,8 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
     {
       resultType = TokenType::String;
     } else
-    if (leftTokenDataType == TokenType::Int   || leftTokenDataType == TokenType::UInt) && // todo: ?
-        rightTokenDataType == TokenType::Char 
+    if (matches!(leftTokenDataType, TokenType::Int | TokenType::UInt) && 
+        rightTokenDataType == TokenType::Char) 
     {
       resultType = leftTokenDataType.clone();
     } else
@@ -322,10 +322,11 @@ impl Structure
   // structure op
   pub fn structureOp(&mut self, structureLink: Arc<RwLock<Structure>>, op: TokenType, leftValue: Vec<Token>, rightValue: Vec<Token>) -> ()
   {
-    if op != TokenType::Equals         &&
-       op != TokenType::PlusEquals     && op != TokenType::MinusEquals &&
-       op != TokenType::MultiplyEquals && op != TokenType::DivideEquals 
-      { return; }
+    match op {
+      TokenType::Equals | TokenType::PlusEquals | TokenType::MinusEquals | 
+      TokenType::MultiplyEquals | TokenType::DivideEquals => {},
+      _ => {return},
+    }
 
     // calculate new values
     /*
@@ -700,9 +701,8 @@ impl Structure
           value[0].setDataType( linkResult.getDataType() );
           value[0].setData( linkResult.getData() );
         } else 
-        if value[0].getDataType().unwrap_or_default() == TokenType::FormattedRawString ||
-           value[0].getDataType().unwrap_or_default() == TokenType::FormattedString    ||
-           value[0].getDataType().unwrap_or_default() == TokenType::FormattedChar 
+        if matches!(value[0].getDataType().unwrap_or_default(), 
+           TokenType::FormattedRawString | TokenType::FormattedString | TokenType::FormattedChar) 
         { 
           if let Some(valueData) = value[0].getData() 
           { 
@@ -1035,15 +1035,10 @@ impl Structure
       }
 
       token = value[i].clone();
-      if i+1 < valueLength && 
-        (token.getDataType().unwrap_or_default() == TokenType::Inclusion           || 
-         token.getDataType().unwrap_or_default() == TokenType::Joint               || 
-         token.getDataType().unwrap_or_default() == TokenType::Equals              || 
-         token.getDataType().unwrap_or_default() == TokenType::NotEquals           ||
-         token.getDataType().unwrap_or_default() == TokenType::GreaterThan         || 
-         token.getDataType().unwrap_or_default() == TokenType::LessThan            ||
-         token.getDataType().unwrap_or_default() == TokenType::GreaterThanOrEquals || 
-         token.getDataType().unwrap_or_default() == TokenType::LessThanOrEquals) {
+      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
+         TokenType::Inclusion | TokenType::Joint | TokenType::Equals | 
+         TokenType::NotEquals | TokenType::GreaterThan | TokenType::LessThan |
+         TokenType::GreaterThanOrEquals | TokenType::LessThanOrEquals) {
         value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
         
         value.remove(i); // remove op
@@ -1069,9 +1064,8 @@ impl Structure
       }
 
       token = value[i].clone();
-      if i+1 < valueLength && 
-        (token.getDataType().unwrap_or_default() == TokenType::Multiply || 
-         token.getDataType().unwrap_or_default() == TokenType::Divide) 
+      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
+        TokenType::Multiply | TokenType::Divide)
       {
         value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
@@ -1099,9 +1093,8 @@ impl Structure
 
       token = value[i].clone();
       // + and -
-      if i+1 < valueLength && 
-        (token.getDataType().unwrap_or_default() == TokenType::Plus || 
-         token.getDataType().unwrap_or_default() == TokenType::Minus) 
+      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
+         TokenType::Plus | TokenType::Minus) 
       {
         value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
@@ -1111,8 +1104,7 @@ impl Structure
         continue;
       } else
       // value -value2
-      if token.getDataType().unwrap_or_default() == TokenType::Int || 
-         token.getDataType().unwrap_or_default() == TokenType::Float 
+      if matches!(token.getDataType().unwrap_or_default(), TokenType::Int | TokenType::Float) 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 

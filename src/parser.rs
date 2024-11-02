@@ -348,7 +348,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 // preparation
   if unsafe{_debugMode} 
   {
-      logSeparator("Preparation");
+    logSeparator("Preparation");
   }
 
   // argc & argv

@@ -26,16 +26,13 @@ unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -
 }
 
 // get single char token
-fn isSingleChar(c: u8) -> bool 
-{
-  match c 
-  {
+fn isSingleChar(c: u8) -> bool {
+  matches!(c, 
     b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
     b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
     b'(' | b')' | b'{' | b'}' | b'[' | b']' | 
-    b':' | b',' | b'.' | b'~' => true,
-    _ => false,
-  }
+    b':' | b',' | b'.' | b'~'
+  )
 }
 
 // is digit ?
@@ -557,6 +554,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
   let identString:      String = " ".repeat(indent*2+1);
 
   let tokenCount: usize = tokens.len();
+  let mut tokenType: TokenType;
   for (i, token) in tokens.iter().enumerate() 
   {
     let c: char = 
@@ -568,42 +566,43 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
         '┃'
       };
 
+    tokenType = token.getDataType().unwrap_or_default();
     if let Some(tokenData) = token.getData()
     {
     // single quote
-      if token.getDataType().unwrap_or_default() == TokenType::Char || 
-         token.getDataType().unwrap_or_default() == TokenType::FormattedChar {
+      if matches!(tokenType, 
+         TokenType::Char | TokenType::FormattedChar) {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
           lineIndentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or_default().to_string()
+          tokenType.to_string()
         ));
     // double quote
       } else
-      if token.getDataType().unwrap_or_default() == TokenType::String || 
-         token.getDataType().unwrap_or_default() == TokenType::FormattedString {
+      if matches!(tokenType, 
+         TokenType::String | TokenType::FormattedString) {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
           lineIndentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or_default().to_string()
+          tokenType.to_string()
         ));
     // back quote
       } else
-      if token.getDataType().unwrap_or_default() == TokenType::RawString || 
-         token.getDataType().unwrap_or_default() == TokenType::FormattedRawString {
+      if matches!(tokenType, 
+         TokenType::RawString | TokenType::FormattedRawString) {
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
           lineIndentString,
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or_default().to_string()
+          tokenType.to_string()
         ));
     // basic
       } else {
@@ -613,7 +612,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
           c,
           identString,
           tokenData,
-          token.getDataType().unwrap_or_default().to_string()
+          tokenType.to_string()
         ));
       }
     // type only
@@ -623,7 +622,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
         lineIndentString,
         c,
         identString,
-        token.getDataType().unwrap_or_default().to_string()
+        tokenType.to_string()
       ));
     }
     if let Some(tokens) = &token.tokens
