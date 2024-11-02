@@ -81,7 +81,7 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<St
   return false;
 }
 //
-unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure>>) -> bool 
+unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure>>, lineIndex: *mut usize) -> bool 
 {
   let line:             RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
   let lineTokens:       &Vec<Token>               = &line.tokens;
@@ -197,8 +197,8 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
 //        println!("[line structure]");
         if let Some(structureName) = lineTokens[0].getData() 
         {
-          let leftValue  = Some( lineTokens[1..opPos-1].to_vec() ); // todo: type
-          let rightValue = Some( lineTokens[opPos..(lineTokensLength)].to_vec() ); // todo: type
+          let leftValue:  Option< Vec<Token> > = Some( lineTokens[1..opPos-1].to_vec() );
+          let rightValue: Option< Vec<Token> > = Some( lineTokens[opPos..(lineTokensLength)].to_vec() );
 //          println!("  [structureName] [{}] [{:?}]",structureName,rightValue);
           let mut structure: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
           if let Some(parentLink) = structure.getStructureByName(&structureName) 
@@ -221,7 +221,6 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
                   Line {
                     tokens: rightValue.unwrap_or(vec![]).clone(),
                     indent: 0,
-                    index:  10,
                     lines:  None,
                     parent: None
                   }
@@ -245,11 +244,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       let lines:       &Vec< Arc<RwLock<Line>> >      = &structure.lines;
       let linesLength: usize                          = lines.len();
       { // search bottom lines
-        let mut i: usize =
-          {
-            let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
-            line.index
-          };
+        let mut i: usize = *lineIndex;
         // if line index < lines length
         while i < linesLength 
         {
@@ -268,7 +263,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       }
       // if no conditions
       if conditions.len() == 0 { return false; }
-      else { _lineIndex += conditions.len()-1; }
+      else { *lineIndex += conditions.len()-1; }
     }
     // read conditions
 //    println!("[conditions.len] [{}]",conditions.len());
@@ -348,9 +343,6 @@ lazy_static!
 }
 
 // parse lines
-static mut _lineIndex:   usize = 0;
-static mut _linesLength: usize = 0;
-
 pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 {
 // preparation
@@ -408,7 +400,8 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     }
   }
 
-  _linesLength = tokenizerLinesLinks.len();
+  let mut lineIndex:   usize = 0;
+  let mut linesLength: usize = tokenizerLinesLinks.len();
 
   // read lines
   let startTime: Instant = Instant::now();
@@ -416,7 +409,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
   {
     logSeparator("Interpretation");
   }
-  readLines(_main.clone(), addr_of_mut!(_lineIndex), addr_of_mut!(_linesLength), false);
+  readLines(_main.clone(), addr_of_mut!(lineIndex), addr_of_mut!(linesLength), false);
   // duration
   if unsafe{_debugMode} 
   {
@@ -443,7 +436,7 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut u
       }
     }
     // structure
-    if !searchStructure(lineLink.clone(), structureLink.clone()) 
+    if !searchStructure(lineLink.clone(), structureLink.clone(), lineIndex) 
     { // search return
       if !searchReturn(lineLink.clone(), structureLink.clone()) 
       { // expression

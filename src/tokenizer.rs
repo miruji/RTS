@@ -506,19 +506,6 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
     }
   }
 }
-// get new line nesting nums
-fn setLineNestingNums(linesLinks: &mut Vec< Arc<RwLock<Line>> >) 
-{
-  for (i, lineLink) in linesLinks.iter().enumerate() 
-  {
-    let mut line: RwLockWriteGuard<'_, Line> = lineLink.write().unwrap();
-    line.index = i;
-    if let Some(ref mut lineLines) = line.lines
-    {
-      setLineNestingNums(lineLines);
-    }
-  }
-}
 
 // delete DoubleComment
 unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
@@ -735,7 +722,6 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
             Line {
               tokens: lineTokens.clone(),
               indent: lineIndent,
-              index:  0,
               lines:  None,
               parent: None
             }
@@ -840,6 +826,5 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
     println!("     ┃");
     log("ok",&format!("xDuration: {:?}",duration));
   }
-  setLineNestingNums(&mut linesLinks); // set correct line nums
   linesLinks
 }

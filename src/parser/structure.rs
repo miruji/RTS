@@ -365,7 +365,6 @@ impl Structure
               Line {
                 tokens: rightValue,
                 indent: 0,
-                index:  0,
                 lines:  None,
                 parent: None
               }
@@ -1288,7 +1287,6 @@ impl Structure
                                 Line {
                                   tokens: vec![parameterResult],
                                   indent: 0,
-                                  index:  0,
                                   lines:  None,
                                   parent: None
                                 }
