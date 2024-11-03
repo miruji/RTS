@@ -1,0 +1,16 @@
+
+# test
+
+# test
+  test
+
+a = 1
+? a = 1
+  ? a = 1
+    println(10)
+
+b -> UInt
+  = -100.0
+
+println(f"b {b()}:{type(b())}")
+println("test")

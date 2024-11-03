@@ -259,15 +259,21 @@ impl Token
 
   // convert data
   fn convertData(&mut self) -> ()
-  {
+  { // todo: фиг его знает что это за ерунда,
+    // но смысл такой, что если тип был Int или Float, 
+    // а ожидается UInt или UFloat, то понятно,
+    // что результат будет 0
     if let Some(ref mut data) = self.data 
     {
       if data.chars().nth(0) == Some('-') 
       {
-        if self.dataType.clone().unwrap_or(TokenType::None) == TokenType::UInt ||
-           self.dataType.clone().unwrap_or(TokenType::None) == TokenType::UFloat 
+        if self.dataType.clone().unwrap_or_default() == TokenType::UInt 
         {
-          *data = data[1..].to_string()
+          *data = String::from("0");
+        } else
+        if self.dataType.clone().unwrap_or_default() == TokenType::UFloat 
+        {
+          *data = String::from("0.0"); // todo: use . (0.0)
         }
       }
     }

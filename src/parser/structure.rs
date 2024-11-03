@@ -1,6 +1,6 @@
 /* /parser/structure
-  A structure is a memory cell of a free structure.
-  Has its own settings, storage space
+  структура, которая представляет свободную ячейку данных в памяти;
+  имеет свои настройки, место хранения.
 */
 
 use crate::{
@@ -777,7 +777,8 @@ impl Structure
               valueLength -= 1;
               continue;
             } else 
-            if functionName == "type" 
+            if functionName == "type" // todo: создать resultType() ?
+                                      // для возвращения результата ожидаемого структурой
             { // get expressions
               let expressions: Vec<Token> = self.getCallParameters(value, i);
               if expressions.len() > 0
@@ -1291,13 +1292,8 @@ impl Structure
                   }
                 }
                 // run
-                let mut lineIndexBuffer:   usize = 0;
-                let mut linesLengthBuffer: usize = // todo: remove this, use calledStructure.lines.len() in readLines()
-                  {
-                    let calledStructure: RwLockReadGuard<'_, Structure> = calledStructureLink.read().unwrap();
-                    calledStructure.lines.len()
-                  };
-                readLines(calledStructureLink, &mut lineIndexBuffer, &mut linesLengthBuffer, false);
+                let mut lineIndexBuffer: usize = 0;
+                readLines(calledStructureLink, &mut lineIndexBuffer, false);
                 return true;
               }
             }

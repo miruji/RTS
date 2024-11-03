@@ -15,7 +15,8 @@ use std::{
   sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}
 };
 
-// delete comment
+// проверяет buffer по index и так пропускае возможные комментарии
+// потом они будут удалены по меткам
 unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -> ()
 {
   *index += 1;
@@ -25,7 +26,8 @@ unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -
   }
 }
 
-// get single char token
+// проверяет что байт является одиночным знаком;
+// доступным для синтаксиса
 fn isSingleChar(c: u8) -> bool {
   matches!(c, 
     b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
@@ -35,12 +37,15 @@ fn isSingleChar(c: u8) -> bool {
   )
 }
 
-// is digit ?
+// проверяет что байт является числом
 fn isDigit(c: u8) -> bool 
 {
   c >= b'0' && c <= b'9'
 }
-// get int-float token by buffer-index
+// проверяет buffer по index и так находит возможные 
+// примитивные численные типы данных;
+// e: UInt, Int, UFloat, Float, Rational, Complex
+// todo: ввести Complex числа
 unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
@@ -109,12 +114,13 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
   }
 }
 
-// is letter ?
+// проверяет что байт является буквой a-z A-Z
 fn isLetter(c: u8) -> bool 
 {
   (c|32)>=b'a'&&(c|32)<=b'z'
 }
-// get word token by buffer-index
+// проверяет buffer по index и так находит возможные слова;
+// из них также выделяет сразу определяемые зарезервированные
 unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
@@ -158,12 +164,11 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
   }
 }
 
-// get quotes token by buffer-index
+// проверяет buffer по index и так находит возможные 
+// Char, String, RawString
 unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token 
 {
-  let byte1: u8 = buffer[*index]; // quote
-
-  let length: usize = buffer.len();
+  let byte1: u8 = buffer[*index]; // quote byte
   let mut result = String::new();
 
   if buffer[*index] == byte1 
@@ -172,9 +177,10 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
     let mut noSlash:          bool;
     let mut backslashCounter: usize;
 
+    let length: usize = buffer.len();
     while *index < length 
     {
-      let byte2: u8 = buffer[*index]; // current char
+      let byte2: u8 = buffer[*index]; // current byte
 
       // check endline error
       if byte2 == b'\n' 
@@ -251,11 +257,12 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token
   }
 }
 
-// get operator token by buffer-index
+// проверяет buffer по index и так находит возможные 
+// двойные и одиночные операторы
 unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
 {
-  let currentChar: u8 = buffer[*index];
-  let nextChar: u8 = 
+  let currentByte: u8 = buffer[*index]; // current byte
+  let nextByte: u8 =                    // next byte or \0
     if *index+1 < bufferLength 
     { 
       buffer[*index+1]
@@ -265,85 +272,85 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
     };
 
   let mut increment = |count: usize| 
-    {
+    { // index increment for single & duble operators
       *index += count;
     };
 
-  match currentChar 
+  match currentByte 
   {
     b'+' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::PlusEquals) ) }
-      else if nextChar == b'+' 
+      else if nextByte == b'+' 
         { increment(2); Token::newEmpty( Some(TokenType::UnaryPlus) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Plus) ) }
     }
     b'-' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::MinusEquals) ) }
-      else if nextChar == b'-' 
+      else if nextByte == b'-' 
         { increment(2); Token::newEmpty( Some(TokenType::UnaryMinus) ) }
-      else if nextChar == b'>' 
+      else if nextByte == b'>' 
         { increment(2); Token::newEmpty( Some(TokenType::Pointer) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Minus) ) }
     }
     b'*' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::MultiplyEquals) ) }
-      else if nextChar == b'*' 
+      else if nextByte == b'*' 
         { increment(2); Token::newEmpty( Some(TokenType::UnaryMultiply) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Multiply) ) }
     }
     b'/' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::DivideEquals) ) }
-      else if nextChar == b'/' 
+      else if nextByte == b'/' 
         { increment(2); Token::newEmpty( Some(TokenType::UnaryDivide) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Divide) ) }
     }
     b'%' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
-      else if nextChar == b'%' 
+      else if nextByte == b'%' 
         { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Modulo) ) }
     }
     b'^' => 
     {
-           if nextChar == b'=' 
+           if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
-      else if nextChar == b'^' 
+      else if nextByte == b'^' 
         { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Disjoint) ) }
     }
     b'>' => 
     {
-      if nextChar == b'=' 
+      if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::GreaterThanOrEquals) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::GreaterThan) ) }
     }
     b'<' => 
     {
-      if nextChar == b'=' 
+      if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::LessThanOrEquals) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::LessThan) ) }
     }
     b'!' => 
     {
-      if nextChar == b'=' 
+      if nextByte == b'=' 
         { increment(2); Token::newEmpty( Some(TokenType::NotEquals) ) }
       else 
         { increment(1); Token::newEmpty( Some(TokenType::Exclusion) ) }
@@ -369,43 +376,46 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
   }
 }
 
-// bracket nasting [begin bracket -> end bracket]
-//                [+ recall in token child tokens]
-// 1 () no tokens childrens -> 
-// 2 [] tokens childrens 1  ->
-// 3 {} tokens childres 1+2
+// основная функция, которая вкладывает токены в скобки
+// e: () [] {}
+// от начальной скобки до закрывающей
+// её особенность в рекурсивном вызове себя для дочерних токенов
 unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   for token in tokens.iter_mut() 
-  {
+  { // чтение токенов
     if let Some(ref mut tokens) = token.tokens 
-    {
+    { // рекурсия
       bracketNesting(tokens, beginType, endType);
     }
   }
+  // вкладывание
   blockNesting(tokens, beginType, endType);
 }
-// block nasting [begin token -> end token]
+// эта функция является дочерней bracketNesting 
+// и занимается только самим вложением токенов 
+// от начальной скобки до закрывающей
 unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
-  let mut brackets: Vec::<usize> = Vec::new();
-  let mut   length: usize        = tokens.len();
+  let mut brackets: Vec::<usize> = Vec::new();   // nested brackets
+  let mut tokensLength: usize    = tokens.len(); // tokens length
 
-  let mut l: usize = 0; // index buffer
-  while l < length 
-  {
-    let tokenType: &TokenType = &tokens[l].getDataType().unwrap_or_default();
+  let mut i: usize = 0; // index buffer
+  while i < tokensLength 
+  { // read tokens
+    let tokenType: &TokenType = &tokens[i].getDataType().unwrap_or_default();
+    // compare type
     if tokenType == beginType 
-    {
-      brackets.push(l);
-    } else if tokenType == endType 
-    {
-      if let Some(penultBracket) = brackets.pop() 
-      {
+    { // if this is the first token
+      brackets.push(i);
+    } else 
+    if tokenType == endType 
+    { // if this is the last token
+      if let Some(lastBracket) = brackets.pop() 
+      { // then delete last bracket
         if !brackets.is_empty() 
-        {
-          // add nesting
-          let savedToken: Token = tokens[penultBracket].clone();
+        { // add new nesting
+          let savedToken: Token = tokens[lastBracket].clone(); // last token (bracket)
           if let Some(token) = tokens.get_mut(brackets[brackets.len()-1]) 
           {
             if let Some(tokenTokens) = &mut token.tokens 
@@ -417,24 +427,22 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
             }
           }
 
-          //
-          tokens.remove(penultBracket);
-          length -= 1;
+          // remove last token (bracket)
+          tokens.remove(lastBracket);
+          tokensLength -= 1;
 
-          if penultBracket < l 
-          {
-            l -= 1;
-          }
+          if lastBracket < i { i -= 1; }
         }
       }
 
-      tokens.remove(l);
-      length -= 1;
+      // remove begin token (bracket)
+      tokens.remove(i);
+      tokensLength -= 1;
       continue;
-    } else if !brackets.is_empty() 
-    {
-      // add nesting
-      let savedToken: Token = tokens.remove(l);
+    } else 
+    if !brackets.is_empty() 
+    { // nesting tokens to bracket begin
+      let savedToken: Token = tokens.remove(i);
       if let Some(token) = tokens.get_mut(brackets[brackets.len()-1]) 
       {
         if let Some(tokenTokens) = &mut token.tokens 
@@ -446,119 +454,119 @@ unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: 
         }
       }
 
-      //
-      length -= 1;
+      // go to next token
+      tokensLength -= 1;
       continue;
     }
-    l += 1;
+    i += 1; // continue
   }
 }
-// line nesting [line -> line]
+// вкладывает линии токенов друг в друга
 fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
 {
-  let mut index:     usize = 0;
-  let mut nextIndex: usize = 1;
-  let mut length:    usize = linesLinks.len();
+  let mut index:     usize = 0;                // current line index
+  let mut nextIndex: usize = 1;                // next    line index
+  let mut length:    usize = linesLinks.len(); // all lines links length
 
-  while index < length 
-  {
-    if nextIndex < length 
+  while index < length && nextIndex < length 
+  { // если мы не дошли до конца, то читаем линии
+    if // compare current indent < next indent
+      linesLinks[index].read().unwrap()
+        .indent < 
+      linesLinks[nextIndex].read().unwrap()
+        .indent
     {
-      let isNesting: bool = 
-        { // check current indent < next indent
-            let currentLine: RwLockReadGuard<'_, Line> = linesLinks    [index].read().unwrap();
-            let nextLine:    RwLockReadGuard<'_, Line> = linesLinks[nextIndex].read().unwrap();
-            currentLine.indent < nextLine.indent
-        };
-      if isNesting 
-      {
-        // get next line and remove
-        let nestingLineLink: Arc<RwLock<Line>> = linesLinks.remove(nextIndex);
-        length -= 1;
-        { // set parent line link
-          let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLineLink.write().unwrap();
-          nestingLine.parent = Some( linesLinks[index].clone() );
-        }
-        // push nesting
-        let mut currentLine: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
-        match &mut currentLine.lines 
-        {
-          Some(lineLines) => 
-          { 
-            lineLines.push(nestingLineLink); // nesting
-            lineNesting(lineLines);          // cycle
-          },
-          None => 
-          { 
-            currentLine.lines = Some(vec![nestingLineLink]);  // nesting
-            lineNesting(currentLine.lines.as_mut().unwrap()); // cycle
-          }
-        }
-      } else {
-        index += 1; // next line < current line => skip
-        nextIndex = index+1;
+      // get next line and remove
+      let nestingLineLink: Arc<RwLock<Line>> = linesLinks.remove(nextIndex);
+      length -= 1;
+      { // set parent line link
+        nestingLineLink.write().unwrap()
+          .parent = Some( linesLinks[index].clone() );
       }
-    } else {
-      break; // if no lines
+      // push nesting
+      let mut currentLine: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
+      match &mut currentLine.lines 
+      {
+        Some(lineLines) => 
+        { // если вложения уже были, то просто делаем push
+          lineLines.push(nestingLineLink); // nesting
+          lineNesting(lineLines);          // cycle
+        },
+        None => 
+        { // если вложения не было до этого, то создаём
+          currentLine.lines = Some(vec![nestingLineLink]);  // nesting
+          lineNesting(currentLine.lines.as_mut().unwrap()); // cycle
+        }
+      }
+    } else 
+    {
+      index += 1;
+      nextIndex = index+1;
     }
   }
 }
 
-// delete DoubleComment
-unsafe fn deleteDoubleComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
+// удаляет возможные вложенные комментарии по меткам;
+// это такие комментарии, которые имеют вложения
+unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
 {
-  let mut linesLinksLength: usize = linesLinks.len();
-  let mut lastTokenIndex:   usize;
+  let mut linesLinksLength: usize = linesLinks.len(); // количество ссылок строк
+  let mut lastTokenIndex:   usize;                    // это указатель на метку где TokenType::Comment
 
   while index < linesLinksLength 
   {
-    let mut deleteLine: bool  = false;
+    let mut deleteLine: bool  = false; // состояние удаления текущей линии
     'exit: 
-    { // interrupt
-      // get line and check lines len
+    { // прерывание чтобы не нарушать мутабельность
       let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
       if let Some(ref mut lineLines) = line.lines
-      {
-        deleteDoubleComment(lineLines, index);
+      { // рекурсивно обрабатываем вложенные линии
+        deleteNestedComment(lineLines, index);
       }
-      // skip separator
+      // пропускаем разделители, они нужны для синтаксиса
       if line.tokens.is_empty() {
         break 'exit;
       }
-      // ? delete comment
+      // комментарии удаляем
       lastTokenIndex = line.tokens.len()-1;
       if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment {
         line.tokens.remove(lastTokenIndex);
-        if line.tokens.is_empty() { // go to delete empty line
-          deleteLine = true;        //
-          break 'exit;              //
+        if line.tokens.is_empty() { // переходим к удалению пустой линии
+          deleteLine = true;        // линия была удалена
+          break 'exit;              // выходим из прерывания
         }
       }
     }
-    // after interrupt -> delete line
+    // когда линия удалена в прерывании, 
+    // её можно спокойно удалить
     if deleteLine 
     {
       linesLinks.remove(index);
       linesLinksLength -= 1;
       continue;
     }
-    // next
+    // продолжаем чтение
     index += 1;
   }
 }
 
-// output token and its tokens
+// выводит токен, его тип данных
 pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize) -> ()
 {
-  let lineIndentString: String = " ".repeat(lineIndent*2+1);
-  let identString:      String = " ".repeat(indent*2+1);
+  let lineIndentString: String = " ".repeat(lineIndent*2+1); // отступ для линии
+  let identString:      String = " ".repeat(indent*2+1);     // отступ для вложения токенов
 
-  let tokenCount: usize = tokens.len();
+  let tokenCount: usize = tokens.len()-1;
+  let mut c: char;
+
   let mut tokenType: TokenType;
   for (i, token) in tokens.iter().enumerate() 
-  {
-    let c: char = 
-      if i == tokenCount-1 
+  { // читаем все токены
+
+    // слева помечаем что это за токен;
+    // в случае с X это завершающий токен
+    c = 
+      if i == tokenCount 
       {
         'X'
       } else 
@@ -566,12 +574,11 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
         '┃'
       };
 
-    tokenType = token.getDataType().unwrap_or_default();
+    tokenType = token.getDataType().unwrap_or_default(); // тип токена
     if let Some(tokenData) = token.getData()
-    {
-    // single quote
-      if matches!(tokenType, 
-         TokenType::Char | TokenType::FormattedChar) {
+    { // проверяем что за токен
+      if matches!(tokenType, TokenType::Char | TokenType::FormattedChar) 
+      { // если токен это Char | FormattedChar
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
           lineIndentString,
@@ -580,10 +587,9 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
           tokenData,
           tokenType.to_string()
         ));
-    // double quote
       } else
-      if matches!(tokenType, 
-         TokenType::String | TokenType::FormattedString) {
+      if matches!(tokenType, TokenType::String | TokenType::FormattedString) 
+      { // если токен это String | FormattedString
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
           lineIndentString,
@@ -592,10 +598,9 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
           tokenData,
           tokenType.to_string()
         ));
-    // back quote
       } else
-      if matches!(tokenType, 
-         TokenType::RawString | TokenType::FormattedRawString) {
+      if matches!(tokenType, TokenType::RawString | TokenType::FormattedRawString) 
+      { // если токен это RawString | FormattedRawString
         log("parserToken",&format!(
           "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
           lineIndentString,
@@ -604,8 +609,8 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
           tokenData,
           tokenType.to_string()
         ));
-    // basic
-      } else {
+      } else 
+      { // если это обычный токен
         log("parserToken",&format!(
           "{}{}{}{}  |{}",
           lineIndentString,
@@ -615,8 +620,8 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
           tokenType.to_string()
         ));
       }
-    // type only
-    } else {
+    } else 
+    { // если это токен только с типом, то выводим тип как символ
       formatPrint(&format!(
         "{}{}{}{}\n",
         lineIndentString,
@@ -625,43 +630,47 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
         tokenType.to_string()
       ));
     }
+
+    // если есть вложения у токена, то просто рекурсивно обрабатываем их
     if let Some(tokens) = &token.tokens
     {
       outputTokens(tokens, lineIndent, indent+1)
     }
-    //
   }
 }
-// output line info
+// выводит информацию о линии;
+// также токены линии
 pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) -> ()
 {
-  let identStr1: String = " ".repeat(indent*2);
-  let identStr2: String = " ".repeat(indent*2+1);
+  let identStr1: String = " ".repeat(indent*2);      // это отступ для главной строки
+  let identStr2: String = format!("{} ", identStr1); // а это для дочерних токенов
 
   for (i, line) in linesLinks.iter().enumerate() 
-  {
+  { // проходи по линиям через чтение
     let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
     log("parserBegin", &format!("{} {}",identStr1,i));
 
     if (&line.tokens).len() == 0 
-    {
+    { // заголовок для разделителей
       formatPrint(&format!("{}\\b┗ \\fg(#90df91)Separator\\c\n",identStr2));
     } else 
-    {
+    { // заголовок для начала вложенных токенов
       formatPrint(&format!("{}\\b┣ \\fg(#90df91)Tokens\\c\n",identStr2));
+      outputTokens(&line.tokens, indent, 1); // выводим вложенные токены
     }
-
-    outputTokens(&line.tokens, indent, 1);
+    
     if let Some(lineLines) = &line.lines
-    {
+    { // заголовок для начала вложенных линий
       formatPrint(&format!("{}\\b┗ \\fg(#90df91)Lines\\c\n",identStr2));
-      outputLines(lineLines, indent+1);
+      outputLines(lineLines, indent+1); // выводим вложенные линии
     }
   }
   //
 }
 
-// tokens reader cycle
+// основная функция для чтения токенов и получения чистых линий из них;
+// токены в этот момент не только сгруппированы в линии, но и имеют 
+// предварительные базовые типы данных.
 pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
 {
   if debugMode 
@@ -671,21 +680,22 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
     println!("     ┃");
   }
 
-  let mut      index: usize = 0;
-  let   bufferLength: usize = buffer.len();
-  let mut lineIndent: usize = 0;
-  let mut lineTokens: Vec<Token> = Vec::new();
+  let mut      index: usize = 0;               // основной индекс чтения
+  let   bufferLength: usize = buffer.len();    // размер буфера байтов
+  let mut lineIndent: usize = 0;               // текущий отступ линии
+  let mut lineTokens: Vec<Token> = Vec::new(); // прочитанные токены текущей линии
 
-  let startTime: Instant = Instant::now();
+  let startTime: Instant = Instant::now(); // замеряем текущее время для debug
 
-  let mut linesLinks:     Vec< Arc<RwLock<Line>> > = Vec::new();
-  let mut readLineIndent: bool                     = true;
+  let mut linesLinks:     Vec< Arc<RwLock<Line>> > = Vec::new(); // это ссылки на готовые линии 
+  let mut readLineIndent: bool                     = true;       // флаг на проверку есть ли indent сейчас
 
   while index < bufferLength 
-  {
-    let byte: u8 = buffer[index]; // current char
+  { // читаем байты
+    let byte: u8 = buffer[index]; // текущий байт
 
-    // indent
+    // проверяем отступы, они могут быть указаны пробелами;
+    // либо readLineIndent будет true после конца строки предыдущей линии
     if byte == b' ' && readLineIndent 
     {
       index += 1;
@@ -693,10 +703,10 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
     } else 
     {
       readLineIndent = false;
-      // get endline
+      // смотрим является ли это endline
       if byte == b'\n' || byte == b';' 
-      {
-        // bracket nesting
+      { // если это действительно конец строки,
+        // то вкладываем возможные скобки
         bracketNesting(
           &mut lineTokens,
           &TokenType::CircleBracketBegin, 
@@ -707,6 +717,27 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
           &TokenType::SquareBracketBegin, 
           &TokenType::SquareBracketEnd
         );
+        // FigureBracketBegin и FigureBracketEnd
+        // это остаётся всё ещё здесь только потому,
+        // что может быть нужным для реализации использования
+        // подобных структур:
+        /*
+          for x(args: <Token>) -> None
+            args[0]
+            ? args[1]
+              {}
+              args[2]
+              go(1)
+
+          for i = 0, i < 10, i++
+            println(10)
+        */
+        // здесь наглядно видно, что for функция будет запущена
+        // только когда дойдёт до самого конца вложения,
+        // после чего {} позволит запустить всё вложение.
+        // а при необходимости мы бы могли обращаться к вложению,
+        // например: {}.0 или {}[0] ...
+        // поэтому эта тема требует отдельных тестов.
         /*
         bracketNesting(
           &mut lineTokens,
@@ -715,42 +746,38 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
         );
         */
 
-        // add new line
+        // добавляем новую линию и пушим ссылку на неё
         linesLinks.push( 
           Arc::new(RwLock::new( 
             Line {
-              tokens: lineTokens.clone(),
+              tokens: std::mem::take(&mut lineTokens), // забираем все токены в линию, 
+                                                       // оставляя пустой вектор для следующей
               indent: lineIndent,
-              lines:  None,
-              parent: None
+              lines:  None, // в данный момент у неё нет вложенных линий, это будет чуть ниже
+              parent: None  // также у неё нет родителя, это тоже будет ниже при вложении
             }
           ))
         );
         lineIndent = 0;
 
-        readLineIndent = true;
-        lineTokens.clear();
+        readLineIndent = true; // это был конец строки
         index += 1;
       } else
-      // delete comment
       if byte == b'#' 
-      {
-        deleteComment(&buffer, &mut index, bufferLength);
+      { // ставим метку на комментарий в линии, по ним потом будут удалены линии
+        deleteComment(&buffer, &mut index, bufferLength); // пропускает комментарий
         lineTokens.push( Token::newEmpty( Some(TokenType::Comment) ) );
       } else
-      // get int-float
       if isDigit(byte) || (byte == b'-' && index+1 < bufferLength && isDigit(buffer[index+1])) 
-      {
+      { // получаем все возможные численные примитивные типы данных
         lineTokens.push( getNumber(&buffer, &mut index, bufferLength) );
       } else
-      // get word
       if isLetter(byte) 
-      {
+      { // получаем все возможные и зарезервированные слова
         lineTokens.push( getWord(&buffer, &mut index, bufferLength) );
       } else
-      // get quotes ' " `
       if byte == b'\'' || byte == b'"' || byte == b'`' 
-      {
+      { // получаем Char, String, RawString
         let mut token: Token = getQuotes(&buffer, &mut index);
         if token.getDataType() != None 
         { // if formatted quotes
@@ -788,42 +815,40 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
           index += 1;
         }
       } else
-      // get single and double chars
+      // получаем возможные двойные и одиночные символы
       if isSingleChar(byte) 
       {
         let token: Token = getOperator(&buffer, &mut index, bufferLength);
         if token.getDataType() != None
         {
-            lineTokens.push(token.clone()); // todo: remove copy
+            lineTokens.push(token);
         } else 
         {
           index += 1;
         }
-          // skip
       } else 
-      {
+      { // если мы ничего не нашли из возможного, значит этого нет в синтаксисе;
+        // поэтому просто идём дальше
         index += 1;
       }
     }
   }
 
-  // line nesting
+  // вкладываем линии
   lineNesting(&mut linesLinks);
-
-  // delete DoubleComment
-  deleteDoubleComment(&mut linesLinks, 0);
+  // удаляем возможные вложенные комментарии по меткам
+  deleteNestedComment(&mut linesLinks, 0);
 
   // debug output and return
   if debugMode 
   {
-    // duration
-    let endTime:  Instant  = Instant::now();
-    let duration: Duration = endTime-startTime;
-    // lines
-    outputLines(&linesLinks,2);
+    let endTime:  Instant  = Instant::now();    // получаем текущее время
+    let duration: Duration = endTime-startTime; // получаем сколько всего прошло
+    outputLines(&linesLinks,2); // выводим полученное AST дерево из линий
     //
     println!("     ┃");
     log("ok",&format!("xDuration: {:?}",duration));
   }
+  // возвращаем готовые ссылки на линии
   linesLinks
 }
