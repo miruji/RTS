@@ -21,106 +21,16 @@ use std::{
 
 use rand::Rng;
 
-// calculate value
+// вычисляет по математической операции значение и тип нового токена из двух
 pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token 
 {
-  // get values of types
-  let leftTokenData:     String    = leftToken.getData().unwrap_or_default();
+  // получаем значение левой части выражения
   let leftTokenDataType: TokenType = leftToken.getDataType().unwrap_or_default();
-  let leftValue: Value = match leftTokenDataType
-  {
-    TokenType::Int => 
-    {
-      leftTokenData.parse::<i64>()
-        .map(Value::Int)
-        .unwrap_or(Value::Int(0))
-    },
-    TokenType::UInt => 
-    {
-      leftTokenData.parse::<u64>()
-        .map(Value::UInt)
-        .unwrap_or(Value::UInt(0))
-    },
-    TokenType::Float => 
-    {
-      leftTokenData.parse::<f64>()
-        .map(Value::Float)
-        .unwrap_or(Value::Float(0.0))
-    },
-    TokenType::UFloat => 
-    {
-      leftTokenData.parse::<f64>()
-        .map(uf64::from)
-        .map(Value::UFloat)
-        .unwrap_or(Value::UFloat(uf64::from(0.0)))
-    },
-    TokenType::Char => 
-    {
-      leftTokenData.parse::<char>()
-        .map(|x| Value::Char(x))
-        .unwrap_or(Value::Char('\0'))
-    },
-    TokenType::String => 
-    {
-      leftTokenData.parse::<String>()
-        .map(|x| Value::String(x))
-        .unwrap_or(Value::String("".to_string()))
-    },
-    TokenType::Bool => 
-    {
-      if leftTokenData == "1" { Value::UInt(1) } 
-      else                    { Value::UInt(0)}
-    },
-    _ => Value::UInt(0),
-  };
-  let rightTokenData:     String    = rightToken.getData().unwrap_or_default();
+  let leftValue: Value = getValue(leftToken.getData().unwrap_or_default(), &leftTokenDataType);
+  // получаем значение правой части выражения
   let rightTokenDataType: TokenType = rightToken.getDataType().unwrap_or_default();
-  let rightValue: Value = match rightTokenDataType {
-    TokenType::Int    => 
-    { 
-      rightTokenData.parse::<i64>()
-        .map(Value::Int)
-        .unwrap_or(Value::Int(0)) 
-    },
-    TokenType::UInt   => 
-    { 
-      rightTokenData.parse::<u64>()
-        .map(Value::UInt)
-        .unwrap_or(Value::UInt(0)) 
-    },
-    TokenType::Float  => 
-    { 
-      rightTokenData.parse::<f64>()
-        .map(Value::Float)
-        .unwrap_or(Value::Float(0.0)) 
-    },
-    TokenType::UFloat => 
-    { 
-      rightTokenData.parse::<f64>()
-        .map(uf64::from)
-        .map(Value::UFloat)
-        .unwrap_or(Value::UFloat(uf64::from(0.0))) 
-    },
-    TokenType::Char   => 
-    { 
-      rightTokenData.parse::<char>()
-        .map(|x| Value::Char(x))
-        .unwrap_or(Value::Char('\0')) 
-    },
-    TokenType::String => 
-    { 
-      rightTokenData.parse::<String>()
-        .map(|x| Value::String(x))
-        .unwrap_or(Value::String("".to_string())) 
-    },
-    TokenType::Bool   => 
-    { 
-      if rightTokenData == "1" { Value::UInt(1) } 
-      else                     { Value::UInt(0) } 
-    },
-    _ => Value::UInt(0),
-  };
-  // calculate and set pre-result type
+  let rightValue: Value = getValue(rightToken.getData().unwrap_or_default(), &rightTokenDataType);
+  // получаем значение выражения, а также предварительный тип
   let mut resultType: TokenType = TokenType::UInt;
   let resultValue: String = match *op 
   {
@@ -170,16 +80,17 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
     }
     _ => "0".to_string(),
   };
-  // set result type
+  // после того как значение было получено,
+  // смотрим какой точно тип выдать новому токену
   if resultType != TokenType::Bool 
   {
     if leftTokenDataType == TokenType::String || rightTokenDataType == TokenType::String 
-    {
+    { 
       resultType = TokenType::String;
     } else
     if (matches!(leftTokenDataType, TokenType::Int | TokenType::UInt) && 
         rightTokenDataType == TokenType::Char) 
-    {
+    { // 
       resultType = leftTokenDataType.clone();
     } else
     if leftTokenDataType == TokenType::Char 
@@ -195,14 +106,66 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
       resultType = TokenType::UFloat;
     } else
     if leftTokenDataType == TokenType::Int    || rightTokenDataType == TokenType::Int 
-    {
+    { 
       resultType = TokenType::Int;
     }
   }
   return Token::new( Some(resultType), Some(resultValue) );
 }
+// зависимость для calculate
+// считает значение левой и правой части выражения
+fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value {
+  return
+    match tokenDataType {
+      TokenType::Int    => 
+      { 
+        tokenData.parse::<i64>()
+          .map(Value::Int)
+          .unwrap_or(Value::Int(0)) 
+      },
+      TokenType::UInt   => 
+      { 
+        tokenData.parse::<u64>()
+          .map(Value::UInt)
+          .unwrap_or(Value::UInt(0)) 
+      },
+      TokenType::Float  => 
+      { 
+        tokenData.parse::<f64>()
+          .map(Value::Float)
+          .unwrap_or(Value::Float(0.0)) 
+      },
+      TokenType::UFloat => 
+      { 
+        tokenData.parse::<f64>()
+          .map(uf64::from)
+          .map(Value::UFloat)
+          .unwrap_or(Value::UFloat(uf64::from(0.0))) 
+      },
+      TokenType::Char   => 
+      { 
+        tokenData.parse::<char>()
+          .map(|x| Value::Char(x))
+          .unwrap_or(Value::Char('\0')) 
+      },
+      TokenType::String => 
+      { 
+        tokenData.parse::<String>()
+          .map(|x| Value::String(x))
+          .unwrap_or(Value::String("".to_string())) 
+      },
+      TokenType::Bool   => 
+      { 
+        if tokenData == "1" { Value::UInt(1) } 
+        else                { Value::UInt(0) } 
+      },
+      _ => Value::UInt(0),
+    };
+}
 
 // get structure result type
+// todo: вообще лучше бы это было в самом Token,
+//       поскольку там есть перевод уже TokenType -> String
 pub fn getStructureResultType(word: String) -> TokenType 
 {
   match word.as_str() 
@@ -254,7 +217,7 @@ impl Structure
     }
   }
 
-  // get Structure by name
+  // ищет структуру по имени и возвращает либо None, либо ссылку на неё
   pub fn getStructureByName(&self, name: &str) -> Option<Arc<RwLock<Structure>>> 
   {
     if let Some(someStructures) = &self.structures 
@@ -281,7 +244,7 @@ impl Structure
     } else { None }
   }
 
-  // push memoryCell to self memoryCellList
+  // добавляет новую вложенную структуру в текущую структуру
   pub fn pushStructure(&mut self, mut structure: Structure) -> ()
   { 
     // if self.structures == None, create new
@@ -297,6 +260,7 @@ impl Structure
   }
 
   // get structure nesting
+  // todo: описание
   fn setStructureNesting(&self, structureNesting: &Vec<Token>, structureLines: &Vec< Arc<RwLock<Line>> >, newTokens: Vec<Token>) -> () 
   {
 //    println!("structureNesting [{}]",structureNesting.len());
@@ -319,7 +283,10 @@ impl Structure
     }
   }
 
-  // structure op
+  // выполняет операцию со структурой,
+  // для этого требует левую и правую часть выражения,
+  // кроме того, требует передачи родительской структуры,
+  // чтобы было видно возможные объявления в ней
   pub fn structureOp(&mut self, structureLink: Arc<RwLock<Structure>>, op: TokenType, leftValue: Vec<Token>, rightValue: Vec<Token>) -> ()
   {
     match op {
@@ -384,6 +351,7 @@ impl Structure
   }
 
   // update value
+  // todo: описание
   fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
     fn setNone(value: &mut Vec<Token>, index: usize) 
     { // error -> skip
@@ -420,18 +388,20 @@ impl Structure
         } else 
         { 
           if structure.lines.len() == 1 
-          { // first-line structure
+          { // структура с одним вложением
             let result: Token = self.expression(&mut structure.lines[0].write().unwrap().tokens);
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
           if structure.lines.len() > 1 
-          { // array structure
+          { // это структура с вложением
             let mut linesResult = Vec::new(); // todo: type
             for line in &structure.lines 
             {
               linesResult.push(
-                self.expression(&mut line.write().unwrap().tokens)
+                // в данном случае они дублируются чтобы использовать повторно
+                // todo: можно лучше?
+                self.expression(&mut line.write().unwrap().tokens.clone())
               );
             }
             value[index] = Token::newNesting( Some(linesResult) );
@@ -453,7 +423,7 @@ impl Structure
   }
 
   // get link expression
-  // todo: if func => return result
+  // считает ссылочные выражения
   fn linkExpression(&mut self, link: &mut Vec<&str>, parameters: Option< Vec<Token> >) -> Token
   {
 //    println!("linkExpression {:?}",link);
@@ -556,7 +526,8 @@ impl Structure
     Token::newEmpty( Some(TokenType::None) )
   }
 
-  // format quote
+  // берёт formatQuote типы, 
+  // получает возможное значение в них
   fn formatQuote(&mut self, quote: String) -> String 
   {
     let mut result:           String    = String::new();
@@ -605,7 +576,7 @@ impl Structure
     result
   }
 
-  // get structure parameters
+  // получает параметры структуры вычисляя их значения
   pub fn getStructureParameters(&self, value: &mut Vec<Token>) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
@@ -620,6 +591,8 @@ impl Structure
           expressionBuffer.push( token.clone() );
         }
 
+        // todo: зачем это?
+        /*
         if expressionBuffer.len() == 3 
         {
           if let Some(expressionData) = expressionBuffer[2].getData() 
@@ -627,6 +600,7 @@ impl Structure
             expressionBuffer[0].setDataType( Some(getStructureResultType(expressionData)) );
           }
         }
+        */
         result.push( expressionBuffer[0].clone() );
 
         expressionBuffer.clear();
@@ -639,7 +613,7 @@ impl Structure
     result
   }
 
-  // get function parameters
+  // получает параметры при вызове структуры в качестве метода
   fn getCallParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
@@ -664,14 +638,14 @@ impl Structure
             expressionBuffer.push( token.clone() );
           }
         }
-        value.remove(i+1); // remove bracket
+        //value.remove(i+1); // remove bracket
       }
     }
 
     result
   }
 
-  // expression
+  // основная функция, которая получает результат выражения
   pub fn expression(&mut self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len();
@@ -721,255 +695,11 @@ impl Structure
     while i < valueLength 
     { 
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
-      { // if function call
+      { // запуск функции
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
         {
-          // todo: uint float ufloat ...
-          // todo: replace if -> match
-          if let Some(functionName) = value[i].getData() 
-          { // begin of list of functions
-            if functionName == "int" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-              { // functional
-                value[i].setData    ( Some(expressionData) );
-                value[i].setDataType( Some(TokenType::Int) );
-              } else 
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "char" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-              { // functional
-                value[i] = expressions[0].clone();
-
-                let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
-                value[i].setData( Some(newData) );
-
-                value[i].setDataType( Some(TokenType::Char) );
-              } else 
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "str" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-              { // functional
-                value[i].setData    ( Some(expressionData) );
-                value[i].setDataType( Some(TokenType::String ) );
-              } else
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "type" // todo: создать resultType() ?
-                                      // для возвращения результата ожидаемого структурой
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if expressions.len() > 0
-              { // functional
-                value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
-                value[i].setDataType( Some(TokenType::String) );
-              } else 
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else
-            if functionName == "input" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-
-              // functional
-              if expressions.len() > 0 
-              {
-                if let Some(expressionData) = expressions[0].getData() 
-                {
-                  print!("{}",expressionData);
-                  io::stdout().flush().unwrap(); // forced withdrawal of old
-                } // else -> skip
-              }   // else -> skip
-
-              value[i].setData( None );
-
-              if let Some(mut valueData) = value[i].getData() {
-                io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
-                value[i].setData( 
-                  Some( valueData.trim_end().to_string() )
-                );
-              } else 
-              { // error -> skip
-                value[i].setData( 
-                  None
-                );
-              }
-
-              value[i].setDataType( Some(TokenType::String) );
-
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "exec"
-            { // execute
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if expressions.len() > 0 
-              { // functional
-                let expressionValue: Option< String > = expressions[0].getData();
-                if let Some(expressionValue) = expressionValue 
-                { // functional
-                  let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
-
-                  let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
-                  let    args: Vec<&str> = parts.collect();
-
-                  let output: Output = 
-                    Command::new(command)
-                      .args(&args)
-                      .output()
-                      .expect("Failed to execute process"); // todo: no errors
-                  let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
-                  if !outputString.is_empty() 
-                  { // result
-                    value[i].setData    ( Some(outputString) );
-                    value[i].setDataType( Some(TokenType::String) );
-                  }
-                } else 
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-                valueLength -= 1;
-                continue;
-              }
-            }
-            if functionName == "randUInt" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if expressions.len() > 1 
-              { // functional
-                let min: usize = 
-                  if let Some(expressionData) = expressions[0].getData() {
-                    expressionData.parse::<usize>().unwrap_or_default()
-                  } else 
-                  {
-                    0
-                  };
-                let max: usize = 
-                  if let Some(expressionData) = expressions[1].getData() {
-                    expressionData.parse::<usize>().unwrap_or_default()
-                  } else 
-                  {
-                    0
-                  };
-
-                let randomNumber: usize = 
-                  if min < max 
-                  {
-                    rand::thread_rng().gen_range(min..=max)
-                  } else 
-                  {
-                    0
-                  };
-
-                value[i].setData    ( Some(randomNumber.to_string()) );
-                value[i].setDataType( Some(TokenType::UInt) );
-              } else 
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else 
-            if functionName == "len" 
-            { // get expressions
-              let expressions: Vec<Token> = self.getCallParameters(value, i);
-              if expressions.len() > 0
-              { // functional
-                if expressions[0].getDataType().unwrap_or_default() == TokenType::Array 
-                {
-                  if let Some(memoryCellName) = expressions[0].getData() 
-                  {
-                    if let Some(memoryCellLink) = self.getStructureByName(&memoryCellName) 
-                    {
-                      let memoryCell: RwLockReadGuard<'_, Structure> = memoryCellLink.read().unwrap();
-                      /*
-                      value[i].setData(Some(
-                        memoryCell.value.tokens
-                          .clone().unwrap_or_default()
-                          .len().to_string()
-                      ));
-                      */
-                    } else 
-                    { // error -> skip
-                      value[i].setData( Some(String::from("0")) );
-                    }
-                  } else 
-                  { // error -> skip
-                    value[i].setData( Some(String::from("0")) );
-                  }
-                } else 
-                { // get basic cell len
-                  // todo:
-                  value[i].setData  ( Some(String::from("0")) );
-                }
-                value[i].setDataType( Some(TokenType::UInt) );
-              } else 
-              { // error -> skip
-                value[i].setData    ( None );
-                value[i].setDataType( None );
-              }
-              valueLength -= 1;
-              continue;
-            } else
-            { // custom structure result
-              let mut lineBuffer = Line::newEmpty();
-              lineBuffer.tokens  = value.clone();
-              unsafe{ self.procedureCall( Arc::new(RwLock::new(lineBuffer)) ); }
-
-              if let Some(structureName) = value[0].getData() 
-              { // get structure name
-                if let Some(structureLink) = self.getStructureByName(&structureName) 
-                { // get structure
-                  let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-                  if let Some(result) = &structure.result 
-                  { // functional
-                    value[i].setData    ( result.getData() );
-                    value[i].setDataType( result.getDataType().clone() );
-                  } else 
-                  { // error -> skip
-                    value[i].setData    ( None );
-                    value[i].setDataType( None );
-                  }
-                } else 
-                { // error -> skip
-                  value[i].setData    ( None );
-                  value[i].setDataType( None );
-                }
-              }
-              // end of list of functions
-            }
-            value.remove(i+1);
-            valueLength -= 1;
-            continue;
-          }
+          self.functionCall(value, &mut valueLength, i);
+          continue;
         } else 
         { // if array & basic cell
           self.replaceStructureByName(value, &mut valueLength, i);
@@ -977,7 +707,6 @@ impl Structure
       } else
       if value[i].getDataType().unwrap_or_default() == TokenType::Link 
       { // if link
-        println!("link");
         // get expressions
         let expressions: Vec<Token> = self.getCallParameters(value, i);
         // functional
@@ -1125,185 +854,406 @@ impl Structure
     }
   }
 
-  /* search procedure call
-     e:
-       procedureCall(parameters)
+  /* Запускает функцию;
+     Функция - это такая структура, которая возвращает значение.
+
+     Но кроме того, запускает не стандартные методы; 
+     В нестандартных методах могут быть процедуры, которые не вернут результат.
   */
-  pub unsafe fn procedureCall(&mut self, lineLink: Arc<RwLock<Line>>) -> bool 
+  pub fn functionCall(&mut self, value: &mut Vec<Token>, valueLength: &mut usize, i: usize) -> ()
   {
-    let line: RwLockReadGuard<'_, Line> = lineLink.read().unwrap();
-    if line.tokens.get(0).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::Word
-    { // add structure call
-      if line.tokens.get(1).and_then(|t| t.getDataType()).unwrap_or_default() == TokenType::CircleBracketBegin
-      { // check lower first char
-        let token: &Token = &line.tokens[0];
-        if let Some(tokenData) = token.getData() 
-        {
-          if tokenData.starts_with(|c: char| c.is_lowercase()) 
-          {
-            // todo: multi-param
-            // basic structures
-            let mut result: bool = true;
-            match tokenData.as_str() {
-              "go" =>
-              { // go block up
-                if let Some(parentLink) = &line.parent 
-                {
-                  if let Some(structureParent) = &self.parent 
-                  {
-                    // todo: check expressionValue
-                    //searchCondition(parentLink.clone(), structureParent.clone());
-                  }
-                }
-              }
-              "ex" =>
-              { // exit block up
-                println!("ex"); 
-              }
-              "println" =>
-              { // println
-                // expression tokens
-                let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                if let Some(mut expressionValue) = expressionValue 
-                { // expression value
-                  let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
-                  if let Some(expressionValue) = expressionValue 
-                  { // functional
-                    formatPrint(&format!("{}\n",&expressionValue));
-                  } else 
-                  { // else -> skip
-                    println!();
-                  }
-                } else 
-                { // else -> skip
-                  println!();
-                }
-                io::stdout().flush().unwrap(); // forced withdrawal of old
-              }
-              "print" =>
-              { // print
-                // expression tokens
-                let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                if let Some(mut expressionValue) = expressionValue 
-                { // expression value
-                  let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
-                  if let Some(expressionValue) = expressionValue 
-                  { // functional
-                    formatPrint(&expressionValue);
-                  } else 
-                  { // else -> skip
-                    print!("");
-                  }
-                } else 
-                { // else -> skip
-                  print!("");
-                }
-                io::stdout().flush().unwrap(); // forced withdrawal of old
-              }
-              "exec" =>
-              { // execute
-                // run function
-                self.expression(&mut line.tokens.clone()).getData();
-                // else -> skip
-              }
-              "clear" =>
-              { // clear
-                Command::new("clear")
-                  .status()
-                  .expect("Failed to clear console"); // todo: move to functions ?
-              }
-              "sleep" =>
-              { // sleep
-                // expression tokens
-                let expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                if let Some(mut expressionTokens) = expressionTokens 
-                { // expression value
-                  let expressionValue: Option< String > = self.expression(&mut expressionTokens).getData();
-                  if let Some(expressionValue) = expressionValue 
-                  { // functional
-                    let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
-                    if valueNumber > 0 
-                    {
-                      sleep( Duration::from_millis(valueNumber) );
-                    }
-                  } // else -> skip
-                }   // else -> skip
-              }
-              "exit" =>
-              { // exit
-                _exitCode = true;
-              }
-              _ =>
-              { // custom structure
-                result = false;
-              }
-            }
-            // custom structures
-            if !result 
-            {
-              if let Some(calledStructureLink) = self.getStructureByName(&tokenData) 
-              {
-                //
-                // set parameters
-                // todo: merge with up structure
-                {
-                  let expressionValue: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-                  let parameters:      Option< Vec<Token> > = 
-                    if let Some(mut expressionValue) = expressionValue
-                    {
-//                      println!("2: expressionValue {:?}",expressionValue);
-                      Some( self.getStructureParameters(&mut expressionValue) )
-                    } else 
-                    {
-                      None
-                    };
-                  if let Some(parameters) = parameters 
-                  {
-                    let calledStructure: RwLockWriteGuard<'_, Structure> = calledStructureLink.write().unwrap();
-                    for (l, parameter) in parameters.iter().enumerate() 
-                    {
-//                      println!("2: call parameter [{}]:[{}]",parameter,parameter.getDataType().unwrap_or_default().to_string());
-                      if let Some(calledStructureStructures) = &calledStructure.structures
-                      {
-//                        println!("  calledStructure.structures.len [{}]",calledStructureStructures.len());
-                        let parameterResult: Token = self.expression(&mut vec![parameter.clone()]); // todo: type
-//                        println!("  parameterResult [{}]",parameterResult);
-                        if let Some(parameterStructure) = calledStructureStructures.get(l) 
-                        {
-                          let mut parameterStructure: RwLockWriteGuard<'_, Structure> = parameterStructure.write().unwrap();
-//                          println!("    parameterStructure [{}]",parameterStructure.name);
-                          // add new structure
-                          parameterStructure.lines = 
-                            vec![
-                              Arc::new(
-                              RwLock::new(
-                                Line {
-                                  tokens: vec![parameterResult],
-                                  indent: 0,
-                                  lines:  None,
-                                  parent: None
-                                }
-                              ))
-                            ];
-                        }
-                      }
-                      //
-                    }
-                  }
-                }
-                // run
-                let mut lineIndexBuffer: usize = 0;
-                readLines(calledStructureLink, &mut lineIndexBuffer, false);
-                return true;
-              }
-            }
-            return result;
-          }
-          //
+    // todo: uint float ufloat ...
+    if let Some(structureName) = value[i].getData() // todo: проверка на нижний регистр
+    { // 
+      /*
+      if functionName == "int" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+        { // functional
+          value[i].setData    ( Some(expressionData) );
+          value[i].setDataType( Some(TokenType::Int) );
+        } else 
+        { // error -> skip
+          value[i].setData    ( None );
+          value[i].setDataType( None );
         }
-        //
+      } else 
+      if functionName == "char" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+        { // functional
+          value[i] = expressions[0].clone();
+
+          let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
+          value[i].setData( Some(newData) );
+
+          value[i].setDataType( Some(TokenType::Char) );
+        } else 
+        { // error -> skip
+          value[i].setData    ( None );
+          value[i].setDataType( None );
+        }
+      } else 
+      if functionName == "str" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
+        { // functional
+          value[i].setData    ( Some(expressionData) );
+          value[i].setDataType( Some(TokenType::String ) );
+        } else
+        { // error -> skip
+          value[i].setData    ( None );
+          value[i].setDataType( None );
+        }
+      } else 
+      */
+      /*
+      if functionName == "input" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+
+        // functional
+        if expressions.len() > 0 
+        {
+          if let Some(expressionData) = expressions[0].getData() 
+          {
+            print!("{}",expressionData);
+            io::stdout().flush().unwrap(); // forced withdrawal of old
+          } // else -> skip
+        }   // else -> skip
+
+        value[i].setData( None );
+
+        if let Some(mut valueData) = value[i].getData() {
+          io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
+          value[i].setData( 
+            Some( valueData.trim_end().to_string() )
+          );
+        } else 
+        { // error -> skip
+          value[i].setData( 
+            None
+          );
+        }
+
+        value[i].setDataType( Some(TokenType::String) );
+      } else 
+      if functionName == "exec"
+      { // execute
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if expressions.len() > 0 
+        { // functional
+          let expressionValue: Option< String > = expressions[0].getData();
+          if let Some(expressionValue) = expressionValue 
+          { // functional
+            let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
+
+            let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
+            let    args: Vec<&str> = parts.collect();
+
+            let output: Output = 
+              Command::new(command)
+                .args(&args)
+                .output()
+                .expect("Failed to execute process"); // todo: no errors
+            let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
+            if !outputString.is_empty() 
+            { // result
+              value[i].setData    ( Some(outputString) );
+              value[i].setDataType( Some(TokenType::String) );
+            }
+          } else 
+          { // error -> skip
+            value[i].setData    ( None );
+            value[i].setDataType( None );
+          }
+        }
       }
+      if functionName == "randUInt" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if expressions.len() > 1 
+        { // functional
+          let min: usize = 
+            if let Some(expressionData) = expressions[0].getData() {
+              expressionData.parse::<usize>().unwrap_or_default()
+            } else 
+            {
+              0
+            };
+          let max: usize = 
+            if let Some(expressionData) = expressions[1].getData() {
+              expressionData.parse::<usize>().unwrap_or_default()
+            } else 
+            {
+              0
+            };
+
+          let randomNumber: usize = 
+            if min < max 
+            {
+              rand::thread_rng().gen_range(min..=max)
+            } else 
+            {
+              0
+            };
+
+          value[i].setData    ( Some(randomNumber.to_string()) );
+          value[i].setDataType( Some(TokenType::UInt) );
+        } else 
+        { // error -> skip
+          value[i].setData    ( None );
+          value[i].setDataType( None );
+        }
+      } else 
+      if functionName == "len" 
+      { // get expressions
+        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        if expressions.len() > 0
+        { // functional
+          if expressions[0].getDataType().unwrap_or_default() == TokenType::Array 
+          {
+            if let Some(memoryCellName) = expressions[0].getData() 
+            {
+              if let Some(memoryCellLink) = self.getStructureByName(&memoryCellName) 
+              {
+                let memoryCell: RwLockReadGuard<'_, Structure> = memoryCellLink.read().unwrap();
+                /*
+                value[i].setData(Some(
+                  memoryCell.value.tokens
+                    .clone().unwrap_or_default()
+                    .len().to_string()
+                ));
+                */
+              } else 
+              { // error -> skip
+                value[i].setData( Some(String::from("0")) );
+              }
+            } else 
+            { // error -> skip
+              value[i].setData( Some(String::from("0")) );
+            }
+          } else 
+          { // get basic cell len
+            // todo:
+            value[i].setData  ( Some(String::from("0")) );
+          }
+          value[i].setDataType( Some(TokenType::UInt) );
+        } else 
+        { // error -> skip
+          value[i].setData    ( None );
+          value[i].setDataType( None );
+        }
+      } else
+      */
+      let expressions: Vec<Token> = self.getCallParameters(value, i);
+      // далее идут базовые методы;
+      // эти методы ожидают аргументов
+      'basicMethods: 
+      { // это позволит выйти, если мы ожидаем не стандартные варианты
+        if expressions.len() > 0 
+        { // далее просто сверяем имя структуры в поисках базовой
+          match structureName.as_str() 
+          { // проверяем на сходство стандартных функций
+            "type" =>
+            { // todo: создать resultType() ?
+              // для возвращения результата ожидаемого структурой
+              value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
+              value[i].setDataType( Some(TokenType::String) );
+            } 
+            _ => { break 'basicMethods; } // выходим, т.к. ожидается нестандартный метод
+          }
+          // если всё было успешно, то сдвигаем всё до 1 токена;
+          // этот токен останется с полученным значением
+          *valueLength -= 1;
+          value.remove(i+1);
+          return;
+        }
+      }
+      // если код не завершился ранее, то далее идут custom методы;
+      { // передаём параметры, они также могут быть None
+        self.procedureCall( structureName.clone(), Some(expressions) );
+        // если всё было успешно, то сдвигаем всё до 1 токена;
+        *valueLength -= 1;
+        value.remove(i+1);
+        // после чего решаем какой результат оставить
+        if let Some(structureLink) = self.getStructureByName(&structureName) 
+        { // по результату структуры, определяем пустой он или нет
+          if let Some(result) = &structureLink.read().unwrap()
+                                  .result 
+          { // результат не пустой, значит оставляем его
+            value[i].setData    ( result.getData() );
+            value[i].setDataType( result.getDataType().clone() );
+          } else 
+          { // если результата структуры не было, 
+            // значит это была действительно процедура
+            value[i].setData    ( None );
+            value[i].setDataType( None );
+          }
+        }
+      }
+      // заканчиваем чтение методов
     }
+  }
+
+  /* Запускает стандартные процедуры; 
+     Процедура - это такая структура, которая не возвращает результат.
+
+     Но кроме того, запускает не стандартные методы; 
+     Из нестандартных методов, процедуры могут вернуть результат, в таком случае, их следует считать функциями.
+  */
+  pub fn procedureCall(&mut self, structureName: String, expressions: Option< Vec<Token> >) -> bool 
+  {
+    if structureName.starts_with(|c: char| c.is_lowercase()) 
+    { // если название в нижнем регистре - то это точно процедура
+      let mut result: bool = true; // ожидается, что он завершится успешно
+      match structureName.as_str() 
+      { // проверяем на сходство стандартных функций
+        "println" =>
+        { // println
+          // expression tokens
+          if let Some(mut expressionValue) = expressions 
+          { // expression value
+            let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
+            if let Some(expressionValue) = expressionValue 
+            { // functional
+              formatPrint(&format!("{}\n",&expressionValue));
+            } else 
+            { // else -> skip
+              println!();
+            }
+          } else 
+          { // else -> skip
+            println!();
+          }
+          io::stdout().flush().unwrap(); // forced withdrawal of old
+        }
+        "print" =>
+        { // print
+          // expression tokens
+          if let Some(mut expressionValue) = expressions 
+          { // expression value
+            let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
+            if let Some(expressionValue) = expressionValue 
+            { // functional
+              formatPrint(&expressionValue);
+            } else 
+            { // else -> skip
+              print!("");
+            }
+          } else 
+          { // else -> skip
+            print!("");
+          }
+          io::stdout().flush().unwrap(); // forced withdrawal of old
+        }
+        /*
+        "go" =>
+        { // go block up
+          if let Some(parentLink) = &line.parent 
+          {
+            if let Some(structureParent) = &self.parent 
+            {
+              // todo: check expressionValue
+              //searchCondition(parentLink.clone(), structureParent.clone());
+            }
+          }
+        }
+        "ex" =>
+        { // exit block up
+          println!("ex"); 
+        }
+        */
+        /*
+        "exec" =>
+        { // execute
+          // run function
+          self.expression(&mut line.tokens.clone()).getData();
+          // else -> skip
+        }
+        "clear" =>
+        { // clear
+          Command::new("clear")
+            .status()
+            .expect("Failed to clear console"); // todo: move to functions ?
+        }
+        "sleep" =>
+        { // sleep
+          // expression tokens
+          let expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
+          if let Some(mut expressionTokens) = expressionTokens 
+          { // expression value
+            let expressionValue: Option< String > = self.expression(&mut expressionTokens).getData();
+            if let Some(expressionValue) = expressionValue 
+            { // functional
+              let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
+              if valueNumber > 0 
+              {
+                sleep( Duration::from_millis(valueNumber) );
+              }
+            } // else -> skip
+          }   // else -> skip
+        }
+        "exit" =>
+        { // exit
+          unsafe{ _exitCode = true; }
+        }
+        */
+        _ =>
+        { // если не было найдено совпадений среди стандартных процедур,
+          // значит это нестандартный метод.
+          if let Some(calledStructureLink) = self.getStructureByName(&structureName) 
+          { // после получения такой нестандартной структуры по имени, 
+            // мы смотрим на её параметры
+            {
+              if let Some(expressions) = expressions 
+              {
+                let calledStructure: RwLockWriteGuard<'_, Structure> = calledStructureLink.write().unwrap();
+                for (l, parameter) in expressions.iter().enumerate() 
+                {
+                  if let Some(calledStructureStructures) = &calledStructure.structures
+                  {
+                    let parameterResult: Token = self.expression(&mut vec![parameter.clone()]);
+                    if let Some(parameterStructure) = calledStructureStructures.get(l) 
+                    {
+                      let mut parameterStructure: RwLockWriteGuard<'_, Structure> = parameterStructure.write().unwrap();
+                      // add new structure
+                      parameterStructure.lines = 
+                        vec![
+                          Arc::new(
+                          RwLock::new(
+                            Line {
+                              tokens: vec![parameterResult],
+                              indent: 0,
+                              lines:  None,
+                              parent: None
+                            }
+                          ))
+                        ];
+                    }
+                  }
+                  //
+                }
+              }
+            }
+            // запускаем новую структуру
+            let mut lineIndexBuffer:   usize = 0;
+            let mut linesLengthBuffer: usize = // todo: remove this, use calledStructure.lines.len() in readLines()
+              {
+                let calledStructure: RwLockReadGuard<'_, Structure> = calledStructureLink.read().unwrap();
+                calledStructure.lines.len()
+              };
+            unsafe{ readLines(calledStructureLink, &mut lineIndexBuffer, false); }
+            return true;
+          }
+        } // конец custom метода
+      }
+      // всё успешно, это была стандартная процедура
+      return result;
+    } // если название структуры не с маленьких букв
     return false;
   }
 }

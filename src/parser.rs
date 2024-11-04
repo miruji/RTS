@@ -1,7 +1,7 @@
 /* /parser
-  Provides mechanisms for parsing tokens;
-  which allows running the resulting structures.
-*/ 
+  предоставляет механизмы для парсинга токенов;
+  что позволяет запускать получившиеся структуры.
+*/
 
 pub mod value;
 pub mod uf64;
@@ -108,6 +108,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
           { // берём вложенные токены в TokenType::CircleBracketBegin 
             // получаем параметры из этих токенов, давая доступ к родительским структурам
             parameters = Some( structure.getStructureParameters(&mut lineTokens) );
+            println!("0 {:?}",parameters);
           }
           // если > 3 (т.е name () -> result)
           // то значит это результат структуры 
@@ -489,7 +490,7 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut u
       if !searchReturn(lineLink.clone(), structureLink.clone()) 
       { // ищем выражения
         if !structuresRead 
-        { // читаем выражение в режиме чтения структуры
+        { // читаем выражение в режиме изменения структуры
           structureLink.write().unwrap()
             .expression(&mut lineLink.write().unwrap().tokens);
         }

@@ -10,7 +10,7 @@ use std::{
 
 use crate::{log, logExit};
 
-// package api
+// основная функция для обращения ко всем остальным
 pub async fn packageApi(values: &Vec<String>, valuesLength: usize) -> () 
 { // check values length
   let valuesLength: usize = values.len();

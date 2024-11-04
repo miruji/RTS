@@ -1,16 +1,15 @@
 
-# test
+#
+  b -> UInt
+    = -100.0
 
-# test
-  test
+  println(f"b {b()}:{type(b())}")
 
-a = 1
-? a = 1
-  ? a = 1
-    println(10)
+b (c: UInt)
+  println(10)
+  println(20)
+  = c
 
-b -> UInt
-  = -100.0
-
-println(f"b {b()}:{type(b())}")
-println("test")
+a = 10
+println( b(a) )
+b(a)
