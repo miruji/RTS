@@ -752,9 +752,19 @@ impl Structure
           valueLength -= 1;
           // меняем отрицание
           let tokenData: String = value[i].getData().unwrap_or_default();
-          value[i].setData( 
-            Some( tokenData.chars().skip(1).collect() ) 
-          );
+          if tokenData.starts_with(|c: char| c == '-') 
+          { // если это было отрицательное выражение,
+            // то делаем его положительным
+            value[i].setData( 
+              Some( tokenData.chars().skip(1).collect() ) 
+            );
+          } else 
+          { // если это не было отрицательным выражением,
+            // то делаем его отрицательным
+            value[i].setData( 
+              Some( format!("-{}", tokenData) )
+            );
+          }
         }
       } else
       if value[i].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
