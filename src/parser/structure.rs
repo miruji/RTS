@@ -653,6 +653,7 @@ impl Structure
   {
     let mut valueLength: usize = value.len(); // получаем количество токенов в выражении
 
+    // 1 токен
     'isSingleToken: 
     { // если это будет не одиночный токен, 
       // то просто выйдем отсюда
@@ -695,14 +696,18 @@ impl Structure
       }
     }
 
-    //
+    // если это выражение не из одного токена,
+    // то следует проверять каждый токен в цикле и
+    // производить соответствующие операции
     let mut i: usize = 0; // указатель на текущий токен
-    let mut token: Token; // текущий токен
 
     while i < valueLength 
-    {
+    { // проверяем на использование методов,
+      // на использование ссылок на структуру,
+      // на использование простого выражения в скобках
+
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
-      { 
+      { // это либо метод, либо просто слово-структура
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
         { // запускает метод
           self.functionCall(value, &mut valueLength, i);
@@ -712,146 +717,121 @@ impl Structure
         }
       } else
       if value[i].getDataType().unwrap_or_default() == TokenType::Link 
-      { // if link
-        // get expressions
+      { // это ссылка на структуру
         let expressions: Vec<Token> = self.getCallParameters(value, i);
-        // functional
+        // todo: с параметрами
         if expressions.len() > 0 
-        {
-  //          println!("  has parameters");
+        { // если имеются параметры
           //let data: String = value[0].getData().unwrap_or_default();
           //value[0].setDataType( Some(TokenType::String) );
           //value[0].setData(Some(
           //  self.linkExpression(&mut data.split('.').collect(), None)
           //));
         } else 
-        {
-  //          println!("  no parameters");
-          let data: String = value[0].getData().unwrap_or_default();
+        { // без параметров
+          let data: String = value[i].getData().unwrap_or_default();
           let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), Some(vec![]));
-          value[0].setDataType( linkResult.getDataType() );
-          value[0].setData( linkResult.getData() );
+          value[i].setDataType( linkResult.getDataType() );
+          value[i].setData( linkResult.getData() );
         }
-      }
-      i += 1;
-    }
-
-    // bracket
-    i = 0;
-    while i < valueLength 
-    {
-      token = value[i].clone();
-      if token.getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-      {
+      } else
+      if value[i].getDataType().unwrap_or_default() == TokenType::Minus 
+      { // это выражение в круглых скобках, но перед ними отрицание -
+        if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+        { // считаем выражение внутри скобок
+          value[i] = 
+            if let Some(mut tokenTokens) = value[i+1].tokens.clone() 
+            { // если получилось то оставляем его
+              self.expression(&mut tokenTokens)
+            } else
+            { // если не получилось, то просто None
+              Token::newEmpty(None)
+            };
+          // удаляем скобки
+          value.remove(i+1); // remove UInt
+          valueLength -= 1;
+          // меняем отрицание
+          let tokenData: String = value[i].getData().unwrap_or_default();
+          value[i].setData( 
+            Some( tokenData.chars().skip(1).collect() ) 
+          );
+        }
+      } else
+      if value[i].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+      { // это просто выражение в круглых скобках
         value[i] = 
-          if let Some(mut tokenTokens) = token.tokens.clone() 
-          {
+          if let Some(mut tokenTokens) = value[i].tokens.clone() 
+          { // если получилось то оставляем его
             self.expression(&mut tokenTokens)
           } else
-          {
+          { // если не получилось, то просто None
             Token::newEmpty(None)
           }
       }
       i += 1;
     }
-    // =
-    i = 0;
-    while i < valueLength 
-    {
-      if valueLength == 1 
-      {
-        break;
-      }
-      if i == 0 {
-        i += 1;
-        continue;
-      }
+
+    // далее идут варианты математических и логических операций
+
+    // проверка на логические операции
+    self.expressionOp(value, &mut valueLength, 
+      &[TokenType::Inclusion, TokenType::Joint, TokenType::Equals, 
+        TokenType::NotEquals, TokenType::GreaterThan, TokenType::LessThan,
+        TokenType::GreaterThanOrEquals, TokenType::LessThanOrEquals]
+    );
+    
+    // проверка * и /
+    self.expressionOp(value, &mut valueLength, &[TokenType::Multiply, TokenType::Divide]);
+    
+    // проверка + и -
+    self.expressionOp(value, &mut valueLength, &[TokenType::Plus, TokenType::Minus]);
+
+    // конец чтения выражения
+    if value.len() > 0 
+    { // в том случае, если мы имеем всё ещё значение,
+      // значит просто вернём 0 элемент, чтобы избавиться от него
+      value[0].clone()
+    } else 
+    { // а если всё пусто, ну значит пусто
+      Token::newEmpty(None)
+    }
+  }
+
+  fn expressionOp(&mut self, value: &mut Vec<Token>, valueLength: &mut usize, operations: &[TokenType]) 
+  {
+    let mut i: usize = 0;
+    let mut token: Token;
+    let mut tokenType: TokenType;
+
+    while i < *valueLength 
+    { // проверка на логические операции
+      if *valueLength == 1 { break; }
+      if i == 0 { i += 1; continue; }
 
       token = value[i].clone();
-      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
-         TokenType::Inclusion | TokenType::Joint | TokenType::Equals | 
-         TokenType::NotEquals | TokenType::GreaterThan | TokenType::LessThan |
-         TokenType::GreaterThanOrEquals | TokenType::LessThanOrEquals) {
-        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
+      tokenType = token.getDataType().unwrap_or_default();
+      if i+1 < *valueLength && matches!(tokenType, ref operations) 
+      {
+        value[i-1] = calculate(&tokenType, &value[i-1], &value[i+1]);
         
         value.remove(i); // remove op
         value.remove(i); // remove right value
-        valueLength -= 2;
+        *valueLength -= 2;
         continue;
       }
 
-      i += 1;
-    }
-    // * and /
-    i = 0;
-    while i < valueLength 
-    {
-      if valueLength == 1 
-      {
-        break;
-      }
-      if i == 0 
-      {
-        i += 1;
-        continue;
-      }
-
-      token = value[i].clone();
-      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), TokenType::Multiply | TokenType::Divide)
-      {
-        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
-
-        value.remove(i); // remove op
-        value.remove(i); // remove right value
-        valueLength -= 2;
-        continue;
-      }
-
-      i += 1;
-    }
-    // + and -
-    i = 0;
-    while i < valueLength 
-    {
-      if valueLength == 1 
-      {
-        break;
-      }
-      if i == 0 
-      {
-        i += 1;
-        continue;
-      }
-
-      token = value[i].clone();
-      // + and -
-      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), TokenType::Plus | TokenType::Minus) 
-      {
-        value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
-
-        value.remove(i); // remove op
-        value.remove(i); // remove right value
-        valueLength -= 2;
-        continue;
-      } else
       // value -value2
-      if matches!(token.getDataType().unwrap_or_default(), TokenType::Int | TokenType::Float) 
+      if tokenType == TokenType::Minus && 
+         matches!(tokenType, TokenType::Int | TokenType::Float) 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
         value.remove(i); // remove UInt
-        valueLength -= 1;
+        *valueLength -= 1;
         continue;
       }
 
       i += 1;
-    }
-    //
-    if value.len() > 0 
-    {
-      value[0].clone()
-    } else {
-      Token::newEmpty(None)
     }
   }
 

@@ -5,3 +5,5 @@ b (c: UInt) -> UInt
   = c
 
 println(10 +b(20) )
+
+println(10 + -(-10))
