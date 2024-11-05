@@ -218,7 +218,7 @@ impl Structure
   }
 
   // ищет структуру по имени и возвращает либо None, либо ссылку на неё
-  pub fn getStructureByName(&self, name: &str) -> Option<Arc<RwLock<Structure>>> 
+  pub fn getStructureByName(&self, name: &str) -> Option< Arc<RwLock<Structure>> > 
   {
     if let Some(someStructures) = &self.structures 
     {
@@ -350,9 +350,11 @@ impl Structure
     }
   }
 
-  // update value
-  // todo: описание
-  fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) {
+  // вроде как возвращает результат за место 
+  // struct, array struct, array с одним вложением
+  // todo: более подробное описание
+  fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
+  {
     fn setNone(value: &mut Vec<Token>, index: usize) 
     { // error -> skip
       value[index].setData    (None);
@@ -613,7 +615,8 @@ impl Structure
     result
   }
 
-  // получает параметры при вызове структуры в качестве метода
+  // получает параметры при вызове структуры в качестве метода;
+  // т.е. получает переданные значение через expression
   fn getCallParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
@@ -648,60 +651,63 @@ impl Structure
   // основная функция, которая получает результат выражения
   pub fn expression(&mut self, value: &mut Vec<Token>) -> Token 
   {
-    let mut valueLength: usize = value.len();
+    let mut valueLength: usize = value.len(); // получаем количество токенов в выражении
 
-    // 1 number
-    if valueLength == 1 
-    {
-      if value[0].getDataType().unwrap_or_default() != TokenType::CircleBracketBegin 
-      {
-        if value[0].getDataType().unwrap_or_default() == TokenType::Link 
-        { 
-          let data: String = value[0].getData().unwrap_or_default();
-          let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), None);
-          let linkType: TokenType = linkResult.getDataType().unwrap_or_default();
-          if linkType == TokenType::Word {
-            value[0].setDataType( Some(TokenType::Link) );
-          } else 
-          {
-            value[0].setDataType( linkResult.getDataType() );
+    'isSingleToken: 
+    { // если это будет не одиночный токен, 
+      // то просто выйдем отсюда
+      // todo: возможно стоит сразу проверять что тут не Figure, Square, Circle скобки
+      if valueLength == 1 
+      { // если это выражение с 1 токеном, то;
+        match value[0].getDataType().unwrap_or_default()
+        { // проверяем возможные варианты;
+          TokenType::Link =>
+          { // если это TokenType::Link, то;
+            let data:       String = value[0].getData().unwrap_or_default();                    // token data
+            let linkResult: Token  = self.linkExpression(&mut data.split('.').collect(), None); // получаем результат от data
+            let linkType:   TokenType = linkResult.getDataType().unwrap_or_default();           // предполагаем изменение dataType
+            if linkType == TokenType::Word 
+            { // если это TokenType::Word то теперь это будет TokenType::Link
+              value[0].setDataType( Some(TokenType::Link) );
+            } else 
+            { // если это другие типы, то просто ставим новый dataType
+              value[0].setDataType( linkResult.getDataType() );
+            }
+            value[0].setData( linkResult.getData() ); // ставим новый data
           }
-          value[0].setData( linkResult.getData() );
-        } else
-        if value[0].getDataType().unwrap_or_default() == TokenType::Word 
-        { 
-          let data: String = value[0].getData().unwrap_or_default();
-          let linkResult: Token = self.linkExpression(&mut vec![&data], None);
-          value[0].setDataType( linkResult.getDataType() );
-          value[0].setData( linkResult.getData() );
-        } else 
-        if matches!(value[0].getDataType().unwrap_or_default(), 
-           TokenType::FormattedRawString | TokenType::FormattedString | TokenType::FormattedChar) 
-        { 
-          if let Some(valueData) = value[0].getData() 
-          { 
-            let newData: String = self.formatQuote(valueData);
-            value[0].setData( Some(newData) );
+          TokenType::Word =>
+          { // если это TokenType::Word, то;
+            let data:       String = value[0].getData().unwrap_or_default();      // token data
+            let linkResult: Token  = self.linkExpression(&mut vec![&data], None); // получаем результат от data
+            value[0].setDataType( linkResult.getDataType() );                     // ставим новый dataType
+            value[0].setData(     linkResult.getData() );                         // ставим новый data
           }
+          TokenType::FormattedRawString | TokenType::FormattedString | TokenType::FormattedChar =>
+          { // если это форматные варианты Char, String, RawString;
+            if let Some(valueData) = value[0].getData() 
+            {  // получаем data этого токена и сразу вычисляем его значение
+              value[0].setData( Some(self.formatQuote(valueData)) );
+            }
+          }
+          _ => { break 'isSingleToken; } // выходим т.к. все варианты не прошли
         }
-        return value[0].clone();
+        return value[0].clone(); // возвращаем результат в виде одного токена
       }
     }
 
     //
-    let mut i: usize = 0;
-    let mut token: Token;
-    // MemoryCell & function
+    let mut i: usize = 0; // указатель на текущий токен
+    let mut token: Token; // текущий токен
+
     while i < valueLength 
-    { 
+    {
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
-      { // запуск функции
+      { 
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-        {
+        { // запускает метод
           self.functionCall(value, &mut valueLength, i);
-          continue;
         } else 
-        { // if array & basic cell
+        { // вычисляем значение для struct, array struct, array struct с одним вложением
           self.replaceStructureByName(value, &mut valueLength, i);
         }
       } else
@@ -712,7 +718,7 @@ impl Structure
         // functional
         if expressions.len() > 0 
         {
-//          println!("  has parameters");
+  //          println!("  has parameters");
           //let data: String = value[0].getData().unwrap_or_default();
           //value[0].setDataType( Some(TokenType::String) );
           //value[0].setData(Some(
@@ -720,19 +726,16 @@ impl Structure
           //));
         } else 
         {
-//          println!("  no parameters");
+  //          println!("  no parameters");
           let data: String = value[0].getData().unwrap_or_default();
           let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), Some(vec![]));
           value[0].setDataType( linkResult.getDataType() );
           value[0].setData( linkResult.getData() );
         }
       }
-      if valueLength == 1 
-      {
-        break;
-      }
       i += 1;
     }
+
     // bracket
     i = 0;
     while i < valueLength 
@@ -794,8 +797,7 @@ impl Structure
       }
 
       token = value[i].clone();
-      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
-        TokenType::Multiply | TokenType::Divide)
+      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), TokenType::Multiply | TokenType::Divide)
       {
         value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
@@ -823,8 +825,7 @@ impl Structure
 
       token = value[i].clone();
       // + and -
-      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), 
-         TokenType::Plus | TokenType::Minus) 
+      if i+1 < valueLength && matches!(token.getDataType().unwrap_or_default(), TokenType::Plus | TokenType::Minus) 
       {
         value[i-1] = calculate(&token.getDataType().unwrap_or_default(), &value[i-1], &value[i+1]);
 
@@ -1075,7 +1076,7 @@ impl Structure
       }
       // если код не завершился ранее, то далее идут custom методы;
       { // передаём параметры, они также могут быть None
-        self.procedureCall( structureName.clone(), Some(expressions) );
+        self.procedureCall( &structureName, Some(expressions) );
         // если всё было успешно, то сдвигаем всё до 1 токена;
         *valueLength -= 1;
         value.remove(i+1);
@@ -1105,12 +1106,12 @@ impl Structure
      Но кроме того, запускает не стандартные методы; 
      Из нестандартных методов, процедуры могут вернуть результат, в таком случае, их следует считать функциями.
   */
-  pub fn procedureCall(&mut self, structureName: String, expressions: Option< Vec<Token> >) -> bool 
+  pub fn procedureCall(&mut self, structureName: &str, expressions: Option< Vec<Token> >) -> bool 
   {
     if structureName.starts_with(|c: char| c.is_lowercase()) 
     { // если название в нижнем регистре - то это точно процедура
       let mut result: bool = true; // ожидается, что он завершится успешно
-      match structureName.as_str() 
+      match structureName 
       { // проверяем на сходство стандартных функций
         "println" =>
         { // println

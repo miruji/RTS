@@ -1,15 +1,7 @@
 
-#
-  b -> UInt
-    = -100.0
-
-  println(f"b {b()}:{type(b())}")
-
-b (c: UInt)
+b (c: UInt) -> UInt
   println(10)
   println(20)
   = c
 
-a = 10
-println( b(a) )
-b(a)
+println(10 +b(20) )

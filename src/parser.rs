@@ -108,7 +108,6 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
           { // берём вложенные токены в TokenType::CircleBracketBegin 
             // получаем параметры из этих токенов, давая доступ к родительским структурам
             parameters = Some( structure.getStructureParameters(&mut lineTokens) );
-            println!("0 {:?}",parameters);
           }
           // если > 3 (т.е name () -> result)
           // то значит это результат структуры 
