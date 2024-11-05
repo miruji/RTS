@@ -424,20 +424,18 @@ impl Structure
     }
   }
 
-  // get link expression
-  // считает ссылочные выражения
+  /* Получает значение из ссылки на структуру;
+     Ссылка на структуру может состоять как из struct name, так и просто из цифр.
+  */
   fn linkExpression(&mut self, link: &mut Vec<&str>, parameters: Option< Vec<Token> >) -> Token
   {
-//    println!("linkExpression {:?}",link);
     match link[0].parse::<usize>() 
-    { // check type
+    { // проверяем тип
       Ok(lineNumber) => 
-      { // line num
-//        println!("structure.line [{}]", lineNumber);
+      { // если мы нашли цифры в ссылке
         if let Some(line) = self.lines.get(lineNumber) 
-        { // get line of num and return result
+        { // тогда просто берём такую строку по её номеру
           let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-//          println!("  line {:?}:[{}]", line.tokens,line.tokens.len());
           let mut lineTokens: Vec<Token> = line.tokens.clone();
           let lineHasLines: Option<usize> = 
             if let Some(lineLines) = &line.lines 
@@ -455,7 +453,6 @@ impl Structure
             { // if empty
               &lineTokens[0]
             };
-//          println!("  link.len [{}] lineResult [{}]",link.len(),lineResult);
           if link.len() == 1 
           { // read end
             if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1 
@@ -470,7 +467,6 @@ impl Structure
             if let Some(structureLink) = self.getStructureByName(&lineResult.getData().unwrap_or_default())
             {
               let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-//              println!("  structure.name [{}]", structure.name);
               link.remove(0);
               return structure.linkExpression(link, parameters);
             }
@@ -478,12 +474,10 @@ impl Structure
         }
       }
       Err(_) => 
-      { // name
-//        println!("111 {}",link[0]);
+      { // если мы не нашли цифры в ссылке, значит это просто struct name
         if let Some(structureLink) = self.getStructureByName(link[0]) 
         {
           let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-//          println!("structure.name [{}]", structure.name);
 
           link.remove(0);
           if link.len() != 0 
@@ -495,7 +489,6 @@ impl Structure
             if let Some(line) = structure.lines.get(0) 
             { // get first line and return result
               let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-//              println!("  line {:?}:[{}] {}", line.tokens,line.tokens.len(),line.index);
               let mut lineTokens: Vec<Token> = line.tokens.clone();
               drop(line);
               return structure.expression(&mut lineTokens);
@@ -504,7 +497,6 @@ impl Structure
           { // name
             if let Some(parameters) = parameters 
             { // method
-//              println!("todo: method call {:?}",parameters);
               let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
               parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
 
@@ -512,7 +504,6 @@ impl Structure
                 Token::new( Some(TokenType::Word), Some(structure.name.clone()) ),
                 parametersToken
               ];
-//              println!("todo: method call {:?}",expressionTokens);
               drop(structure);
               unsafe{ 
                 return self.expression( &mut expressionTokens );
@@ -525,60 +516,74 @@ impl Structure
         }
       }
     }
+    // если всё было плохо, то просто используем пустой результат
     Token::newEmpty( Some(TokenType::None) )
   }
 
-  // берёт formatQuote типы, 
-  // получает возможное значение в них
-  fn formatQuote(&mut self, quote: String) -> String 
+  /* Принимает formatQuote типы и получает возможное значение обычной строки;
+     В основном всё сводится к получению токенов в {} через Token::readTokens(),
+     после чего результат проходит через expression и мы получаем обычную строку на выходе.
+  */
+  fn formatQuote(&mut self, tokenData: String) -> String 
   {
-    let mut result:           String    = String::new();
-    let mut expressionBuffer: String    = String::new();
-    let mut expressionRead:   bool      = false;
-    let     chars:            Vec<char> = quote.chars().collect();
+    let mut result:           String    = String::new(); // это строка которая будет получена в конце
+    let mut expressionBuffer: String    = String::new(); // буфер для выражения между {}
+    let mut expressionRead:   bool      = false;         // флаг чтения в буфер выражения
 
-    let mut i:      usize = 0;
-    let     length: usize = chars.len();
-    let mut c:      char;
+    let chars:       Vec<char> = tokenData.chars().collect(); // всех символы в строке
+    let charsLength: usize     = chars.len();                 // количество всех символов в строке
 
-    while i < length 
-    {
+    let mut i:      usize = 0; // указатель на текущий символ
+    let mut c:      char;      // текущий символ
+
+    while i < charsLength 
+    { // читаем символы
       c = chars[i];
       if c == '{' 
-      {
+      { // начинаем чтение выражения
         expressionRead = true;
       } else
       if c == '}' 
-      {
+      { // заканчиваем чтение выражения
         expressionRead = false;
-        expressionBuffer += "\n";
-        unsafe
-        { 
-          let     expressionLineLink:     &Arc<RwLock< Line >>      = &readTokens( expressionBuffer.as_bytes().to_vec(), false )[0];
-          let     expressionLine:         RwLockReadGuard<'_, Line> = expressionLineLink.read().unwrap();
-          let mut expressionBufferTokens: Vec<Token>                = expressionLine.tokens.clone();
-          if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
-          {
-            result += &expressionData;
-          }
+        expressionBuffer += "\n"; // это нужно чтобы успешно завершить чтение линии Tokenizer::readTokens()
+
+        let expressionLineLink: &Arc<RwLock< Line >> = 
+          unsafe{ // получаем результат выражения в виде ссылки на буферную линию
+            &readTokens(expressionBuffer.as_bytes().to_vec(), false)[0]
+          };
+
+        // получаем линию на чтение
+        let     expressionLine:         RwLockReadGuard<'_, Line> = expressionLineLink.read().unwrap();
+        // получаем все токены линии
+        let mut expressionBufferTokens: Vec<Token>                = expressionLine.tokens.clone();
+        // отправляем все токены линии как выражение
+        if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
+        { // записываем результат посчитанный между {}
+          result += &expressionData;
         }
+        // обнуляем буфер, вдруг далее ещё есть выражения между {}
         expressionBuffer = String::new();
       } else 
-      {
+      { // запись символов кроме {}
         if expressionRead 
-        {
+        { // если флаг чтения активен, то записываем символы выражения
           expressionBuffer.push(c);
         } else 
-        {
+        { // если флаг чтения не активен, то это просто символы
           result.push(c);
         }
       }
+      // продолжаем чтение символов строки
       i += 1;
     }
+    // отдаём новую строку
     result
   }
 
-  // получает параметры структуры вычисляя их значения
+  /* Получает параметры структуры вычисляя их значения;
+     todo: требует пересмотра
+  */
   pub fn getStructureParameters(&self, value: &mut Vec<Token>) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
@@ -615,8 +620,9 @@ impl Structure
     result
   }
 
-  // получает параметры при вызове структуры в качестве метода;
-  // т.е. получает переданные значение через expression
+  /* Получает параметры при вызове структуры в качестве метода;
+     т.е. получает переданные значения через expression
+  */
   fn getCallParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
@@ -648,7 +654,10 @@ impl Structure
     result
   }
 
-  // основная функция, которая получает результат выражения
+  /* Основная функция, которая получает результат выражения состоящего из токенов;
+     Сначала она проверяет что это single токен, но если нет, 
+     то в цикле перебирает возможные варианты
+  */
   pub fn expression(&mut self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len(); // получаем количество токенов в выражении
@@ -719,7 +728,8 @@ impl Structure
       if value[i].getDataType().unwrap_or_default() == TokenType::Link 
       { // это ссылка на структуру
         let expressions: Vec<Token> = self.getCallParameters(value, i);
-        // todo: с параметрами
+        // todo: это непонятное место, + с параметрами что-то;
+        //       возможно оно может работать и так
         if expressions.len() > 0 
         { // если имеются параметры
           //let data: String = value[0].getData().unwrap_or_default();
@@ -807,6 +817,10 @@ impl Structure
     }
   }
 
+  /* Получает значение операции по левому и правому выражению;
+     Это зависимость для expression.
+     Кроме того, может обрабатываеть отрицание при использовании TokenType::Minus
+  */
   fn expressionOp(&mut self, value: &mut Vec<Token>, valueLength: &mut usize, operations: &[TokenType]) 
   {
     let mut i: usize = 0;
