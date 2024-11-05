@@ -76,7 +76,7 @@ fi
 if [ -e "$outputPath" ]; then
 	# optimize
 	strip $outputPath
-	upx --ultra-brute -q -q -q $outputPath
+	upx -b -q -q -q $outputPath
 
 	# move here
 	mv $outputPath release
