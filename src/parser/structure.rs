@@ -208,12 +208,12 @@ impl Structure
   {
     Structure 
     {
-                name,
-               lines,
-          parameters: None, // todo: remove
-              result: None,
-          structures: None,
-              parent
+            name,
+           lines,
+      parameters: None, // todo: remove
+          result: None,
+      structures: None,
+          parent
     }
   }
 
@@ -475,15 +475,50 @@ impl Structure
       }
       Err(_) => 
       { // если мы не нашли цифры в ссылке, значит это просто struct name
-        if let Some(structureLink) = self.getStructureByName(link[0]) 
-        {
+        let mut structureLink: Option< Arc<RwLock<Structure>> > = 
+          { // однако мы не можем быть уверенны, что эта структура не является обычной ссылкой на другую;
+            // а также, что такая структура вообще есть.
+            let mut resultStructureLink: Option< Arc<RwLock<Structure>> > = self.getStructureByName(link[0]);
+            if let Some(structureLink) = resultStructureLink.clone() // делаем запрос по копии ссылки
+            { // теперь мы уверенны, что такая структура существует;
+              let mut firstStructure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
+              // остаётся проверить, что это не ссылка на другую структуру;
+              if firstStructure.lines.len() == 1 
+              { // только если это одиночный токен, то мы предполагаем, что это может быть ссылкой;
+                // в ином случае, ссылка была бы только по первому имени, текущее предположение было бы невозможно.
+                let firstLine: RwLockReadGuard<'_, Line> = firstStructure.lines[0].read().unwrap();
+                if firstLine.tokens.len() == 1 && firstLine.tokens[0].getDataType().unwrap_or_default() == TokenType::Link
+                { // если в линии только один токен, то это уже практически понятно, что ссылка;
+                  // а так как ещё и тип совпал, то мы точно об этом знаем.
+
+                  // в таком случае возвращаем просто другую структуру, на которую была ссылка;
+                  // берём название по 1 токену, это будет название ссылки на другую структуру.
+                  let linkedStructureLink: Option< Arc<RwLock<Structure>> > = 
+                    self.getStructureByName( &firstLine.tokens[0].getData().unwrap_or_default() );
+                  if linkedStructureLink.is_none() 
+                  { // а вот если её не было, то стоит задуматься и выдать None, так безопаснее;
+                    return Token::newEmpty( Some(TokenType::None) );
+                  } else 
+                  { // если структура была, то просто возвращаем её;
+                    resultStructureLink = linkedStructureLink;
+                  }
+                }
+              }
+            }
+            // по итогу, это либо обычная структура, либо мы выдали структуру по ссылке;
+            resultStructureLink
+          };
+        // собственно, если всё нормально, то None мы не получим и идём далее;
+        if let Some(structureLink) = structureLink 
+        { // это структура по имени
           let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
 
           link.remove(0);
           if link.len() != 0 
-          { // has nesting
+          { // если это стуктура с вложением
             return structure.linkExpression(link, parameters);
           } else 
+          // todo: ниже комментарии нужны
           if structure.lines.len() == 1 
           { // single value
             if let Some(line) = structure.lines.get(0) 
@@ -491,7 +526,7 @@ impl Structure
               let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
               let mut lineTokens: Vec<Token> = line.tokens.clone();
               drop(line);
-              return structure.expression(&mut lineTokens);
+              return self.expression(&mut lineTokens);
             }
           } else 
           { // name
@@ -513,6 +548,7 @@ impl Structure
               return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
             }
           }
+          //
         }
       }
     }
@@ -714,7 +750,6 @@ impl Structure
     { // проверяем на использование методов,
       // на использование ссылок на структуру,
       // на использование простого выражения в скобках
-
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
       { // это либо метод, либо просто слово-структура
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 

@@ -221,9 +221,9 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             );
           } else 
           { // если мы не нашли похожую, то создаём новую и работаем с правой частью выражения
-            let tt = // todo: бред, бредишь ты
-              vec![
-                structure.expression( &mut rightValue.unwrap_or(vec![]).clone() )
+            let token: Vec<Token> = 
+              vec![ // значение будет состоять из вычисленной правой части выражения
+                structure.expression( &mut rightValue.unwrap_or(vec![]).clone() ) // один токен
               ];
             // закидываем новую структуру в родительскую структуру
             structure.pushStructure(
@@ -231,7 +231,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
                 structureName,
                 vec![ Arc::new(RwLock::new( 
                   Line {
-                    tokens: tt,
+                    tokens: token,
                     indent: 0,
                     lines:  None,
                     parent: None

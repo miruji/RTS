@@ -18,10 +18,12 @@ serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 
 [profile.release]
-opt-level = 3
+opt-level = "z"
 codegen-units = 1
 lto = "fat"
 panic = "abort"
 strip = "symbols"
-overflow-checks = true
+overflow-checks = false
 debug  = false
+incremental = true
+rpath = false

@@ -524,7 +524,7 @@ unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
         deleteNestedComment(lineLines, index);
       }
       // пропускаем разделители, они нужны для синтаксиса
-      if line.tokens.is_empty() {
+      if line.tokens.is_empty() { // todo: разделители стоит объединять в один если они идут подряд
         break 'exit;
       }
       // комментарии удаляем
