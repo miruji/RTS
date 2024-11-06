@@ -224,8 +224,7 @@ impl Structure
     {
       for childStructureLink in someStructures 
       {
-        let childStructure: RwLockReadGuard<'_, Structure> = childStructureLink.read().unwrap();
-        if name == childStructure.name 
+        if name == childStructureLink.read().unwrap().name 
         {
           return Some(childStructureLink.clone());
         }
@@ -275,9 +274,8 @@ impl Structure
           .parse::<usize>().unwrap_or_default();
       if let Some(nestingLine) = structureLines.get( nestingNum ) 
       {
-        let mut nestingLine: RwLockWriteGuard<'_, Line> = nestingLine.write().unwrap();
-//        println!("structureLines [{:?}]",nestingLine.tokens);
-        nestingLine.tokens = newTokens;
+        nestingLine.write().unwrap()
+          .tokens = newTokens;
       }
 
     }
@@ -380,7 +378,11 @@ impl Structure
           if let Some(idx) = arrayIndex 
           { // n-line structure
             // todo: fix memoryCell nesting
-            let result: Token = self.expression(&mut structure.lines[idx].write().unwrap().tokens);
+            let result: Token = self.expression(
+              &mut structure.lines[idx]
+                .write().unwrap()
+                .tokens
+            );
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
@@ -391,7 +393,11 @@ impl Structure
         { 
           if structure.lines.len() == 1 
           { // структура с одним вложением
-            let result: Token = self.expression(&mut structure.lines[0].write().unwrap().tokens);
+            let result: Token = self.expression(
+              &mut structure.lines[0]
+                .write().unwrap()
+                .tokens
+            );
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
@@ -403,7 +409,10 @@ impl Structure
               linesResult.push(
                 // в данном случае они дублируются чтобы использовать повторно
                 // todo: можно лучше?
-                self.expression(&mut line.write().unwrap().tokens.clone())
+                self.expression(
+                  &mut line.write().unwrap()
+                    .tokens.clone()
+                )
               );
             }
             value[index] = Token::newNesting( Some(linesResult) );
@@ -429,143 +438,24 @@ impl Structure
   */
   fn linkExpression(&mut self, currentStructureLink: Option< Arc<RwLock<Structure>>  >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
   {
-    /*
     match link[0].parse::<usize>() 
     { // проверяем тип
       Ok(lineNumber) => 
-      { // если мы нашли цифры в ссылке
-        if let Some(line) = self.lines.get(lineNumber) 
-        { // тогда просто берём такую строку по её номеру
-          link.remove(0);
-          let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-          let mut lineTokens: Vec<Token> = line.tokens.clone();
-          /*
-          let lineHasLines: Option<usize> = 
-            if let Some(lineLines) = &line.lines 
-            {
-              Some(lineLines.len())
-            } else 
-            {
-              None
-            };
-          */
-          drop(line);
-
-          if lineTokens.len() < 1 
-          {
-            return Token::newEmpty( Some(TokenType::None) );
-          }
-          let mut lineResult: &Token = &lineTokens[0];
-          println!("  num end {:?}",link);
-          //
-          if link.len() != 0 
-          { // если дальше есть продолжение ссылки
-            link.insert(0, lineResult.getData().unwrap_or_default());
-            return self.linkExpression(link, parameters);
-          } else 
-          { // если дальше нет продолжения ссылки
-            return Token::new( Some(TokenType::Link), lineResult.getData() );
-          }
-          /*
-            if lineHasLines == None { 
-              &self.expression(&mut lineTokens.clone())
-            } else 
-            { // if empty
-              &lineTokens[0]
-            };
-          */
-          /*
-          if link.len() == 1 
-          { // read end
-            println!("1 !!!");
-            if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1 
-            { 
-              return self.expression(&mut lineTokens);
-            } else 
-            {
-              return lineResult.clone();
-            }
-          } else 
-          { // read next
-          */
-          /*
-            println!("self.name {}",self.name);
-            if let Some(structureLink) = self.getStructureByName(&lineResult.getData().unwrap_or_default())
-            {
-              println!("2 !!!");
-              let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-              link.remove(0);
-              return structure.linkExpression(link, parameters);
-            }
-          */
-          //}
-        }
-      }
-      Err(_) => 
-      { // если мы не нашли цифры в ссылке, значит это просто struct name
-        let mut structureLink: Option< Arc<RwLock<Structure>> > = self.getStructureByName(&link[0]);
-
-        // собственно, если всё нормально, то None мы не получим и идём далее;
-        if let Some(structureLink) = structureLink 
-        { // это структура по имени
-          let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-          println!("structure {}",structure.name);
-
-          link.remove(0);
-          if link.len() != 0 
-          { // если это стуктура с вложением
-            println!("  nesting struct {:?}",link);
-            return structure.linkExpression(link, parameters);
-          } else 
-          // todo: ниже комментарии нужны
-          if structure.lines.len() == 1 
-          { // single value
-            if let Some(line) = structure.lines.get(0) 
-            { // get first line and return result
-              let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-              let mut lineTokens: Vec<Token> = line.tokens.clone();
-              drop(line);
-              return self.expression(&mut lineTokens);
-            }
-          } else 
-          { // name
-            if let Some(parameters) = parameters 
-            { // method
-              let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
-              parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
-
-              let mut expressionTokens: Vec<Token> = vec![
-                Token::new( Some(TokenType::Word), Some(structure.name.clone()) ),
-                parametersToken
-              ];
-              drop(structure);
-              unsafe{ 
-                return self.expression( &mut expressionTokens );
-              }
-            } else 
-            { // name only
-              return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
-            }
-          }
-          //
-        }
-      }
-    }
-    */
-    match link[0].parse::<usize>() 
-    { // проверяем тип
-      Ok(lineNumber) => 
-      { // если мы нашли цифры в ссылке
+      { // если мы нашли цифру в ссылке, значит это номер на линию в структуре;
+        // номер ссылкается только на пространство currentStructureLink
         link.remove(0);
-        //println!("num line {}",lineNumber);
+
         if let Some(ref currentStructureLock) = currentStructureLink 
-        {
-          let currentStructure = currentStructureLock.write().unwrap();
-          //println!("  self [{}] current [{}]",self.name,currentStructure.name);
+        { // это структура, которая была передана предыдущем уровнем ссылки;
+          // только в ней мы можем найти нужную линию
+          let currentStructure = currentStructureLock.read().unwrap(); // todo: type
           if let Some(line) = currentStructure.lines.get(lineNumber) 
-          { // тогда просто берём такую строку по её номеру
-            let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
-            let mut lineTokens: Vec<Token> = line.tokens.clone();
+          { // тогда просто берём такую линию по её номеру
+            let mut lineTokens: Vec<Token> = 
+              {
+                line.read().unwrap()
+                  .tokens.clone()
+              };
             //println!("  tokens {:?}",lineTokens);
             if lineTokens.len() > 0 
             {
@@ -595,16 +485,64 @@ impl Structure
         }
       }
       Err(_) => 
-      { // если мы не нашли цифры в ссылке, значит это просто struct name
-        if let Some(structureLink) = self.getStructureByName(&link[0])
+      { // если мы не нашли цифры в ссылке, значит это просто struct name;
+        // они работают в пространстве первого self, но могут и внутри себя
+        let mut structureLink = self.getStructureByName(&link[0]);
+/* todo: почти работает
+        if structureLink.is_none() 
         {
-          //println!("name struct {}",link[0]);
-          link.remove(0);
-          //let mut structure = structureLink.write().unwrap();
-          if link.len() > 0
+          if let Some(currentStructureLink) = currentStructureLink
           {
-            //println!("  go next");
+            let structure = currentStructureLink.read().unwrap(); // todo: type
+            structureLink = structure.getStructureByName(&link[0])
+          }
+        }
+*/
+        //
+        if let Some(structureLink) = structureLink
+        { // это структура которую мы нашли по имени в self пространстве
+          link.remove(0);
+
+          if link.len() > 0
+          { // если ссылка ещё не закончилась, значит продолжаем её чтение
             return self.linkExpression(Some(structureLink), link, parameters);
+          } else 
+          { // если это конец ссылки, то берём структуру и работаем с ней
+            let structure = structureLink.read().unwrap();
+            if structure.lines.len() == 1 
+            { // если это просто одиночное значение, то просто выдаём его
+              if let Some(line) = structure.lines.get(0) 
+              { // по сути это просто 0 линия через expression
+                let mut lineTokens: Vec<Token> = 
+                  {
+                    line.read().unwrap()
+                      .tokens.clone()
+                  };
+                drop(line);
+                return self.expression(&mut lineTokens);
+              }
+            } else
+            if let Some(parameters) = parameters 
+            { // если это был просто запуск метода, то запускаем его
+              let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
+              parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
+
+              let mut expressionTokens: Vec<Token> = vec![
+                Token::new( Some(TokenType::Word), Some(structure.name.clone()) ),
+                parametersToken
+              ];
+
+/* todo: почти работает
+              let parentStructureLink = structure.parent.clone().unwrap();
+              let mut parentStructure = parentStructureLink.write().unwrap();
+              println!("  in {} structure {} run {:?}",self.name,parentStructure.name,expressionTokens);
+*/
+              return self.expression( &mut expressionTokens );
+            } else 
+            { // если это просто ссылка, то оставляем её
+              return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
+            }
+            //
           }
           //
         }
@@ -647,10 +585,13 @@ impl Structure
             &readTokens(expressionBuffer.as_bytes().to_vec(), false)[0]
           };
 
-        // получаем линию на чтение
-        let     expressionLine:         RwLockReadGuard<'_, Line> = expressionLineLink.read().unwrap();
+        // получаем линию на чтение;
         // получаем все токены линии
-        let mut expressionBufferTokens: Vec<Token>                = expressionLine.tokens.clone();
+        let mut expressionBufferTokens: Vec<Token> = 
+          {
+            expressionLineLink.read().unwrap()
+              .tokens.clone()
+          };
         // отправляем все токены линии как выражение
         if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
         { // записываем результат посчитанный между {}
@@ -841,7 +782,7 @@ impl Structure
                                         .collect();
           let linkResult: Token = self.linkExpression(None, &mut link, Some(vec![]));
           value[i].setDataType( linkResult.getDataType() );
-          value[i].setData( linkResult.getData() );
+          value[i].setData(     linkResult.getData() );
         }
       } else
       if value[i].getDataType().unwrap_or_default() == TokenType::Minus 
@@ -944,8 +885,7 @@ impl Structure
       }
 
       // value -value2
-      if tokenType == TokenType::Minus && 
-         matches!(tokenType, TokenType::Int | TokenType::Float) 
+      if tokenType == TokenType::Minus && matches!(tokenType, TokenType::Int | TokenType::Float) 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
@@ -1345,11 +1285,6 @@ impl Structure
             }
             // запускаем новую структуру
             let mut lineIndexBuffer:   usize = 0;
-            let mut linesLengthBuffer: usize = // todo: remove this, use calledStructure.lines.len() in readLines()
-              {
-                let calledStructure: RwLockReadGuard<'_, Structure> = calledStructureLink.read().unwrap();
-                calledStructure.lines.len()
-              };
             unsafe{ readLines(calledStructureLink, &mut lineIndexBuffer, false); }
             return true;
           }

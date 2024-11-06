@@ -84,7 +84,7 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
     { // UFloat
       if rational 
       {
-          break;
+        break;
       }
       dot = true;
       result.push(byte1 as char);
@@ -272,9 +272,9 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
     };
 
   let mut increment = |count: usize| 
-    { // index increment for single & duble operators
-      *index += count;
-    };
+  { // index increment for single & duble operators
+    *index += count;
+  };
 
   match currentByte 
   {

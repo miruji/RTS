@@ -25,8 +25,8 @@ println( f"a   = {a}:{type(a)}" )     # a
 println( f"a.2 = {a.2}:{type(a.2)}" ) # c
 println( f"a.c = {a.c}:{type(a.c)}" ) # c
 
-println( f"a.2() = {a.2()}:{type(a.2())}" ) # 4\n123 # todo:
-println( f"a.c() = {a.c()}:{type(a.c())}" ) # 4\n123
+#println( f"a.2() = {a.2()}:{type(a.2())}" ) # 4\n123 # todo:
+#println( f"a.c() = {a.c()}:{type(a.c())}" ) # 4\n123
 
 println( f"a.2.0 = {a.2.0}:{type(a.2.0)}" ) # 3
 println( f"a.c.0 = {a.c.0}:{type(a.c.0)}" ) # 3

@@ -7,12 +7,30 @@ b
   a
   10
 
-c
+c() -> UInt
   b
   10
+  println(111)
+  = 123
 
 println(f"b.0     {b.0}:{type(b.0)}")
 println(f"b.0.0   {b.0.0}:{type(b.0.0)}")
 println(f"c.0.0.0 {c.0.0.0}:{type(c.0.0.0)}")
 println(f"c.b.0.0 {c.b.0.0}:{type(c.b.0.0)}")
 println(f"c.b.a.0 {c.b.a.0}:{type(c.b.a.0)}")
+
+d = 10
+
+println(f"d = {d}:{type(d)}")
+
+c()
+
+println( c() )
+
+e
+  f() -> UInt
+    1
+    println(10)
+    = 10
+
+println(f"e.f() {e.f()}:{type(e.f())}")
