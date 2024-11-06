@@ -76,7 +76,10 @@ fi
 if [ -e "$outputPath" ]; then
 	# optimize
 	strip $outputPath
-	upx -b -q -q -q $outputPath
+	# можно исппользовать 
+	# upx --best -q -q -q $outputPath
+	# или использовать режим --ultra-brute
+	# но они сильно режут скорость работы rts
 
 	# move here
 	mv $outputPath release

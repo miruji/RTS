@@ -427,16 +427,19 @@ impl Structure
   /* Получает значение из ссылки на структуру;
      Ссылка на структуру может состоять как из struct name, так и просто из цифр.
   */
-  fn linkExpression(&mut self, link: &mut Vec<&str>, parameters: Option< Vec<Token> >) -> Token
+  fn linkExpression(&mut self, currentStructureLink: Option< Arc<RwLock<Structure>>  >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
   {
+    /*
     match link[0].parse::<usize>() 
     { // проверяем тип
       Ok(lineNumber) => 
       { // если мы нашли цифры в ссылке
         if let Some(line) = self.lines.get(lineNumber) 
         { // тогда просто берём такую строку по её номеру
+          link.remove(0);
           let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
           let mut lineTokens: Vec<Token> = line.tokens.clone();
+          /*
           let lineHasLines: Option<usize> = 
             if let Some(lineLines) = &line.lines 
             {
@@ -445,16 +448,36 @@ impl Structure
             {
               None
             };
+          */
           drop(line);
-          let mut lineResult: &Token = 
+
+          if lineTokens.len() < 1 
+          {
+            return Token::newEmpty( Some(TokenType::None) );
+          }
+          let mut lineResult: &Token = &lineTokens[0];
+          println!("  num end {:?}",link);
+          //
+          if link.len() != 0 
+          { // если дальше есть продолжение ссылки
+            link.insert(0, lineResult.getData().unwrap_or_default());
+            return self.linkExpression(link, parameters);
+          } else 
+          { // если дальше нет продолжения ссылки
+            return Token::new( Some(TokenType::Link), lineResult.getData() );
+          }
+          /*
             if lineHasLines == None { 
               &self.expression(&mut lineTokens.clone())
             } else 
             { // if empty
               &lineTokens[0]
             };
+          */
+          /*
           if link.len() == 1 
           { // read end
+            println!("1 !!!");
             if lineResult.getDataType().unwrap_or_default() == TokenType::Word && lineHasLines.unwrap_or_default() == 1 
             { 
               return self.expression(&mut lineTokens);
@@ -464,58 +487,34 @@ impl Structure
             }
           } else 
           { // read next
+          */
+          /*
+            println!("self.name {}",self.name);
             if let Some(structureLink) = self.getStructureByName(&lineResult.getData().unwrap_or_default())
             {
+              println!("2 !!!");
               let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
               link.remove(0);
               return structure.linkExpression(link, parameters);
             }
-          }
+          */
+          //}
         }
       }
       Err(_) => 
       { // если мы не нашли цифры в ссылке, значит это просто struct name
-        let mut structureLink: Option< Arc<RwLock<Structure>> > = 
-          { // однако мы не можем быть уверенны, что эта структура не является обычной ссылкой на другую;
-            // а также, что такая структура вообще есть.
-            let mut resultStructureLink: Option< Arc<RwLock<Structure>> > = self.getStructureByName(link[0]);
-            if let Some(structureLink) = resultStructureLink.clone() // делаем запрос по копии ссылки
-            { // теперь мы уверенны, что такая структура существует;
-              let mut firstStructure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
-              // остаётся проверить, что это не ссылка на другую структуру;
-              if firstStructure.lines.len() == 1 
-              { // только если это одиночный токен, то мы предполагаем, что это может быть ссылкой;
-                // в ином случае, ссылка была бы только по первому имени, текущее предположение было бы невозможно.
-                let firstLine: RwLockReadGuard<'_, Line> = firstStructure.lines[0].read().unwrap();
-                if firstLine.tokens.len() == 1 && firstLine.tokens[0].getDataType().unwrap_or_default() == TokenType::Link
-                { // если в линии только один токен, то это уже практически понятно, что ссылка;
-                  // а так как ещё и тип совпал, то мы точно об этом знаем.
+        let mut structureLink: Option< Arc<RwLock<Structure>> > = self.getStructureByName(&link[0]);
 
-                  // в таком случае возвращаем просто другую структуру, на которую была ссылка;
-                  // берём название по 1 токену, это будет название ссылки на другую структуру.
-                  let linkedStructureLink: Option< Arc<RwLock<Structure>> > = 
-                    self.getStructureByName( &firstLine.tokens[0].getData().unwrap_or_default() );
-                  if linkedStructureLink.is_none() 
-                  { // а вот если её не было, то стоит задуматься и выдать None, так безопаснее;
-                    return Token::newEmpty( Some(TokenType::None) );
-                  } else 
-                  { // если структура была, то просто возвращаем её;
-                    resultStructureLink = linkedStructureLink;
-                  }
-                }
-              }
-            }
-            // по итогу, это либо обычная структура, либо мы выдали структуру по ссылке;
-            resultStructureLink
-          };
         // собственно, если всё нормально, то None мы не получим и идём далее;
         if let Some(structureLink) = structureLink 
         { // это структура по имени
           let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
+          println!("structure {}",structure.name);
 
           link.remove(0);
           if link.len() != 0 
           { // если это стуктура с вложением
+            println!("  nesting struct {:?}",link);
             return structure.linkExpression(link, parameters);
           } else 
           // todo: ниже комментарии нужны
@@ -547,6 +546,65 @@ impl Structure
             { // name only
               return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
             }
+          }
+          //
+        }
+      }
+    }
+    */
+    match link[0].parse::<usize>() 
+    { // проверяем тип
+      Ok(lineNumber) => 
+      { // если мы нашли цифры в ссылке
+        link.remove(0);
+        //println!("num line {}",lineNumber);
+        if let Some(ref currentStructureLock) = currentStructureLink 
+        {
+          let currentStructure = currentStructureLock.write().unwrap();
+          //println!("  self [{}] current [{}]",self.name,currentStructure.name);
+          if let Some(line) = currentStructure.lines.get(lineNumber) 
+          { // тогда просто берём такую строку по её номеру
+            let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
+            let mut lineTokens: Vec<Token> = line.tokens.clone();
+            //println!("  tokens {:?}",lineTokens);
+            if lineTokens.len() > 0 
+            {
+              //println!("  res");
+              
+              if link.len() != 0 
+              { // если дальше есть продолжение ссылки
+                link.insert(0, lineTokens[0].getData().unwrap_or_default());
+                return self.linkExpression(currentStructureLink.clone(), link, parameters);
+              } else 
+              { // если дальше нет продолжения ссылки
+                if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Word 
+                { // если это слово, то оставляем как ссылку
+                  return Token::new( Some(TokenType::Link), lineTokens[0].getData() );
+                } else 
+                { // если это не слово, то смотрим на результат expression
+                  return self.expression(&mut lineTokens);
+                }
+              }
+
+            } else 
+            {
+              return Token::newEmpty( Some(TokenType::None) );
+            }
+          }
+          //
+        }
+      }
+      Err(_) => 
+      { // если мы не нашли цифры в ссылке, значит это просто struct name
+        if let Some(structureLink) = self.getStructureByName(&link[0])
+        {
+          //println!("name struct {}",link[0]);
+          link.remove(0);
+          //let mut structure = structureLink.write().unwrap();
+          if link.len() > 0
+          {
+            //println!("  go next");
+            return self.linkExpression(Some(structureLink), link, parameters);
           }
           //
         }
@@ -709,9 +767,12 @@ impl Structure
         { // проверяем возможные варианты;
           TokenType::Link =>
           { // если это TokenType::Link, то;
-            let data:       String = value[0].getData().unwrap_or_default();                    // token data
-            let linkResult: Token  = self.linkExpression(&mut data.split('.').collect(), None); // получаем результат от data
-            let linkType:   TokenType = linkResult.getDataType().unwrap_or_default();           // предполагаем изменение dataType
+            let data: String = value[0].getData().unwrap_or_default();                // token data
+            let mut link: Vec<String> = data.split('.')
+                                          .map(|s| s.to_string())
+                                          .collect();
+            let linkResult: Token  = self.linkExpression(None, &mut link, None);            // получаем результат от data
+            let linkType:   TokenType = linkResult.getDataType().unwrap_or_default(); // предполагаем изменение dataType
             if linkType == TokenType::Word 
             { // если это TokenType::Word то теперь это будет TokenType::Link
               value[0].setDataType( Some(TokenType::Link) );
@@ -724,7 +785,7 @@ impl Structure
           TokenType::Word =>
           { // если это TokenType::Word, то;
             let data:       String = value[0].getData().unwrap_or_default();      // token data
-            let linkResult: Token  = self.linkExpression(&mut vec![&data], None); // получаем результат от data
+            let linkResult: Token  = self.linkExpression(None, &mut vec![data], None); // получаем результат от data
             value[0].setDataType( linkResult.getDataType() );                     // ставим новый dataType
             value[0].setData(     linkResult.getData() );                         // ставим новый data
           }
@@ -775,7 +836,10 @@ impl Structure
         } else 
         { // без параметров
           let data: String = value[i].getData().unwrap_or_default();
-          let linkResult: Token = self.linkExpression(&mut data.split('.').collect(), Some(vec![]));
+          let mut link: Vec<String> = data.split('.')
+                                        .map(|s| s.to_string())
+                                        .collect();
+          let linkResult: Token = self.linkExpression(None, &mut link, Some(vec![]));
           value[i].setDataType( linkResult.getDataType() );
           value[i].setData( linkResult.getData() );
         }

@@ -528,7 +528,9 @@ unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
         break 'exit;
       }
       // комментарии удаляем
-      lastTokenIndex = line.tokens.len()-1;
+      lastTokenIndex = line.tokens.len()-1; // todo: после того как разделители объединены в 1;
+                                            //       если разделитель зажат между комментариями,
+                                            //       то это один большой комментарий
       if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment {
         line.tokens.remove(lastTokenIndex);
         if line.tokens.is_empty() { // переходим к удалению пустой линии
