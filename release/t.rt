@@ -30,9 +30,9 @@ println( f"a.c() = [{a.c()}:{type(a.c())}]/[123:UInt]" ) # 4\n4\n123
 println( f"a.2.0 = [{a.2.0}:{type(a.2.0)}]/[3:UInt]" )
 println( f"a.c.0 = [{a.c.0}:{type(a.c.0)}]/[3:UInt]" )
 
-println( f"a.c.2   = [{a.c.2}:{type(a.c.2)}]/[d:Link]" )
+println( f"a.c.2   = [{a.c.2}:{type(a.c.2)}]/[5:Link]" )
 println( f"a.c.2.0 = [{a.c.2.0}:{type(a.c.2.0)}]/[5:UInt]" )
-println( f"a.c.d   = [{a.c.d}:{type(a.c.d)}]/[d:Link]" )
+println( f"a.c.d   = [{a.c.d}:{type(a.c.d)}]/[5:Link]" )
 println( f"a.c.d.0 = [{a.c.d.0}:{type(a.c.d.0)}]/[5:UInt]" )
 
 f = a.c.0

@@ -444,6 +444,7 @@ impl Structure
       { // если мы нашли цифру в ссылке, значит это номер на линию в структуре;
         // номер ссылкается только на пространство currentStructureLink
         link.remove(0);
+
         if let Some(ref currentStructureLock) = currentStructureLink 
         { // это структура, которая была передана предыдущем уровнем ссылки;
           // только в ней мы можем найти нужную линию
@@ -483,7 +484,31 @@ impl Structure
               } else 
               { // если дальше нет продолжения ссылки
                 if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Word 
-                { // если это слово, то оставляем как ссылку
+                { // если это слово, то это либо ссылка т.к. там много значений в ней;
+                  // либо это структура с одиночным вложением и мы можем его забрать сейчас.
+
+                  if let Some(childStructureLink) = currentStructure.getStructureByName( 
+                    &lineTokens[0].getData().unwrap_or_default() 
+                  )
+                  { // пробуем проверить что там 1 линия вложена в структуре;
+                    // после чего сможем посчитать её значение.
+                    let childStructure = childStructureLink.read().unwrap(); // todo: type
+                    if childStructure.lines.len() == 1 
+                    {
+                      if let Some(line) = childStructure.lines.get(0) 
+                      { // по сути это просто 0 линия через expression
+                        let mut lineTokens: Vec<Token> = 
+                          {
+                            line.read().unwrap()
+                              .tokens.clone()
+                          };
+                        drop(line);
+                        drop(childStructure);
+                        return self.expression(&mut lineTokens);
+                      }
+                    }
+                  }
+                  // если ничего не получилось, значит оставляем ссылку
                   return Token::new( Some(TokenType::Link), lineTokens[0].getData() );
                 } else 
                 { // если это не слово, то смотрим на результат expression
@@ -511,7 +536,7 @@ impl Structure
               if let Some(childStructureLink) = childStructureLink 
               {
                 let childStructure = childStructureLink.read().unwrap();
-                if childStructure.lines.len() > 1 { true } else { false }
+                if childStructure.lines.len() != 0 { true } else { false }
               } else { false }
             };
 
@@ -535,7 +560,7 @@ impl Structure
         }
         if let Some(structureLink) = structureLink
         { // это структура которую мы нашли по имени в self пространстве
-          if link.len() > 0
+          if link.len() != 0
           { // если ссылка ещё не закончилась, значит продолжаем её чтение
             return self.linkExpression(Some(structureLink), link, parameters);
           } else 
@@ -627,7 +652,6 @@ impl Structure
             expressionLineLink.read().unwrap()
               .tokens.clone()
           };
-        //println!("!!! expressionBufferTokens {:?}",expressionBufferTokens);
         // отправляем все токены линии как выражение
         if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
         { // записываем результат посчитанный между {}
