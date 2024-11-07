@@ -444,24 +444,42 @@ impl Structure
       { // если мы нашли цифру в ссылке, значит это номер на линию в структуре;
         // номер ссылкается только на пространство currentStructureLink
         link.remove(0);
-
         if let Some(ref currentStructureLock) = currentStructureLink 
         { // это структура, которая была передана предыдущем уровнем ссылки;
           // только в ней мы можем найти нужную линию
-          let currentStructure = currentStructureLock.read().unwrap(); // todo: type
-          if let Some(line) = currentStructure.lines.get(lineNumber) 
+          let currentStructure = currentStructureLock.read().unwrap(); // todo: это можно вынести в временный блок
+          if let Some(line) = currentStructure.lines.get(lineNumber)   //       для получения линии и выхода из read().unwrap()
           { // тогда просто берём такую линию по её номеру
             let mut lineTokens: Vec<Token> = 
               {
                 line.read().unwrap()
                   .tokens.clone()
               };
+            drop(line);
+
             if lineTokens.len() > 0 
             {
               if link.len() != 0 
               { // если дальше есть продолжение ссылки
                 link.insert(0, lineTokens[0].getData().unwrap_or_default());
-                return self.linkExpression(currentStructureLink.clone(), link, parameters);
+                drop(currentStructure);
+                let mut currentStructure = currentStructureLock.write().unwrap();
+                return currentStructure.linkExpression(None, link, parameters);
+              } else 
+              if let Some(parameters) = parameters 
+              { // если это был просто запуск метода, то запускаем его
+                drop(currentStructure);
+
+                let mut currentStructure = currentStructureLock.write().unwrap(); // todo: type
+                let mut parametersToken = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
+                parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
+
+                let mut expressionTokens: Vec<Token> = vec![
+                  Token::new( Some(TokenType::Word), lineTokens[0].getData() ),
+                  parametersToken
+                ];
+
+                return currentStructure.expression( &mut expressionTokens );
               } else 
               { // если дальше нет продолжения ссылки
                 if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Word 
@@ -510,10 +528,13 @@ impl Structure
             self.getStructureByName(&link[0]) 
           };
         //
+        link.remove(0);
+        if let Some(ref structureLink) = structureLink
+        {
+          let structure = structureLink.read().unwrap();
+        }
         if let Some(structureLink) = structureLink
         { // это структура которую мы нашли по имени в self пространстве
-          link.remove(0);
-
           if link.len() > 0
           { // если ссылка ещё не закончилась, значит продолжаем её чтение
             return self.linkExpression(Some(structureLink), link, parameters);
@@ -530,6 +551,7 @@ impl Structure
                       .tokens.clone()
                   };
                 drop(line);
+                drop(structure);
                 return self.expression(&mut lineTokens);
               }
             } else
@@ -550,7 +572,7 @@ impl Structure
                 return parent.expression( &mut expressionTokens );
               }
 
-              return self.expression( &mut expressionTokens );
+              return Token::newEmpty( Some(TokenType::None) );
             } else 
             { // если это просто ссылка, то оставляем её
               return Token::new( Some(TokenType::Link), Some(structure.name.clone()) );
@@ -605,6 +627,7 @@ impl Structure
             expressionLineLink.read().unwrap()
               .tokens.clone()
           };
+        //println!("!!! expressionBufferTokens {:?}",expressionBufferTokens);
         // отправляем все токены линии как выражение
         if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
         { // записываем результат посчитанный между {}
@@ -778,8 +801,7 @@ impl Structure
       if value[i].getDataType().unwrap_or_default() == TokenType::Link 
       { // это ссылка на структуру
         let expressions: Vec<Token> = self.getCallParameters(value, i);
-        // todo: это непонятное место, + с параметрами что-то;
-        //       возможно оно может работать и так
+        // todo: здесь надо написать вариант в котором ссылку вызвали с параметрами
         if expressions.len() > 0 
         { // если имеются параметры
           //let data: String = value[0].getData().unwrap_or_default();
@@ -793,7 +815,14 @@ impl Structure
           let mut link: Vec<String> = data.split('.')
                                         .map(|s| s.to_string())
                                         .collect();
-          let linkResult: Token = self.linkExpression(None, &mut link, Some(vec![]));
+          let linkResult: Token = 
+            if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+            { // если это запуск процедуры
+              self.linkExpression(None, &mut link, Some(vec![]))
+            } else 
+            { // если это обычная ссылка
+              self.linkExpression(None, &mut link, None)
+            };
           value[i].setDataType( linkResult.getDataType() );
           value[i].setData(     linkResult.getData() );
         }
