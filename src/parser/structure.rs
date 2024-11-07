@@ -459,13 +459,23 @@ impl Structure
             drop(line);
 
             if lineTokens.len() > 0 
-            {
+            { // если в линии нет хотя бы 1 токена, значит нам просто нечего вычислять;
               if link.len() != 0 
               { // если дальше есть продолжение ссылки
                 link.insert(0, lineTokens[0].getData().unwrap_or_default());
+
+                // то мы сначала проверяем что такая структура есть во внутреннем пространстве
+                if let Some(childStructureLink) = currentStructure.getStructureByName( 
+                  &lineTokens[0].getData().unwrap_or_default() 
+                )
+                {
+                  drop(currentStructure);
+                  let mut currentStructure = currentStructureLock.write().unwrap();
+                  return currentStructure.linkExpression(None, link, parameters);
+                }
+                // а если такой ссылки там не было, то значит она в self
                 drop(currentStructure);
-                let mut currentStructure = currentStructureLock.write().unwrap();
-                return currentStructure.linkExpression(None, link, parameters);
+                return self.linkExpression(currentStructureLink, link, parameters);
               } else 
               if let Some(parameters) = parameters 
               { // если это был просто запуск метода, то запускаем его
