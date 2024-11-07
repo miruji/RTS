@@ -456,11 +456,8 @@ impl Structure
                 line.read().unwrap()
                   .tokens.clone()
               };
-            //println!("  tokens {:?}",lineTokens);
             if lineTokens.len() > 0 
             {
-              //println!("  res");
-              
               if link.len() != 0 
               { // если дальше есть продолжение ссылки
                 link.insert(0, lineTokens[0].getData().unwrap_or_default());
@@ -475,7 +472,6 @@ impl Structure
                   return self.expression(&mut lineTokens);
                 }
               }
-
             } else 
             {
               return Token::newEmpty( Some(TokenType::None) );
@@ -487,17 +483,32 @@ impl Structure
       Err(_) => 
       { // если мы не нашли цифры в ссылке, значит это просто struct name;
         // они работают в пространстве первого self, но могут и внутри себя
-        let mut structureLink = self.getStructureByName(&link[0]);
-/* todo: почти работает
-        if structureLink.is_none() 
-        {
+        let mut structureLink = // todo: type
           if let Some(currentStructureLink) = currentStructureLink
-          {
+          { // если есть в локальном окружении
             let structure = currentStructureLink.read().unwrap(); // todo: type
-            structureLink = structure.getStructureByName(&link[0])
-          }
-        }
-*/
+            let hasLines: bool = 
+            {
+              let childStructureLink = structure.getStructureByName(&link[0]);
+              if let Some(childStructureLink) = childStructureLink 
+              {
+                let childStructure = childStructureLink.read().unwrap();
+                if childStructure.lines.len() > 1 { true } else { false }
+              } else { false }
+            };
+
+            if hasLines
+            {
+              structure.getStructureByName(&link[0])
+            } else 
+            {
+              self.getStructureByName(&link[0]) 
+            }
+          } else 
+          { // если нет в локальном окружении, 
+            // то просто берём из self
+            self.getStructureByName(&link[0]) 
+          };
         //
         if let Some(structureLink) = structureLink
         { // это структура которую мы нашли по имени в self пространстве
@@ -508,7 +519,7 @@ impl Structure
             return self.linkExpression(Some(structureLink), link, parameters);
           } else 
           { // если это конец ссылки, то берём структуру и работаем с ней
-            let structure = structureLink.read().unwrap();
+            let structure = structureLink.read().unwrap(); // todo: type
             if structure.lines.len() == 1 
             { // если это просто одиночное значение, то просто выдаём его
               if let Some(line) = structure.lines.get(0) 
@@ -532,11 +543,13 @@ impl Structure
                 parametersToken
               ];
 
-/* todo: почти работает
-              let parentStructureLink = structure.parent.clone().unwrap();
-              let mut parentStructure = parentStructureLink.write().unwrap();
-              println!("  in {} structure {} run {:?}",self.name,parentStructure.name,expressionTokens);
-*/
+              if let Some(structureParent) = structure.parent.clone()
+              {
+                let mut parent = structureParent.write().unwrap(); // todo: type
+                drop(structure);
+                return parent.expression( &mut expressionTokens );
+              }
+
               return self.expression( &mut expressionTokens );
             } else 
             { // если это просто ссылка, то оставляем её
@@ -712,7 +725,7 @@ impl Structure
             let mut link: Vec<String> = data.split('.')
                                           .map(|s| s.to_string())
                                           .collect();
-            let linkResult: Token  = self.linkExpression(None, &mut link, None);            // получаем результат от data
+            let linkResult: Token  = self.linkExpression(None, &mut link, None);      // получаем результат от data
             let linkType:   TokenType = linkResult.getDataType().unwrap_or_default(); // предполагаем изменение dataType
             if linkType == TokenType::Word 
             { // если это TokenType::Word то теперь это будет TokenType::Link
