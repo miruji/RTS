@@ -230,34 +230,29 @@ impl Structure
       {
         if name == childStructureLink.read().unwrap().name 
         {
-          return Some(childStructureLink.clone());
+          return Some( childStructureLink.clone() );
         }
       }
     }
     // check the parent structure if it exists
     if let Some(parentLink) = &self.parent 
     {
-      if let Ok(parentStructure) = parentLink.try_read() 
-      {
-        parentStructure.getStructureByName(name)
-      } else 
-      {
-        None
-      }
+      parentLink.read().unwrap()
+        .getStructureByName(name)
     } else { None }
   }
 
   // добавляет новую вложенную структуру в текущую структуру
   pub fn pushStructure(&mut self, mut structure: Structure) -> ()
   { 
-    // if self.structures == None, create new
     if self.structures.is_none() 
-    {
-      self.structures = Some(vec!());
-    }
-    // add new structure
+    { // если не было ещё структур,
+      // то создаём новый вектор
+      self.structures = Some( vec!(Arc::new(RwLock::new(structure))) );
+    } else
     if let Some(ref mut structures) = self.structures 
-    {
+    { // если уже есть структуры,
+      // то просто push делаем
       structures.push( Arc::new(RwLock::new(structure)) );
     }
   }
@@ -349,8 +344,9 @@ impl Structure
       {
         if structure.lines.len() > 0
         {
-          let line = structure.lines[0].read().unwrap();
-          self.expression(&mut line.tokens.clone())
+          self.expression(
+            &mut structure.lines[0].read().unwrap()
+              .tokens.clone())
         } else 
         {
           Token::newEmpty(Some(TokenType::None))
@@ -371,7 +367,7 @@ impl Structure
               }
             ))
           ];
-      } 
+      }
       //if op == TokenType::PlusEquals     { structure.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
       //if op == TokenType::MinusEquals    { structure.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
       //if op == TokenType::MultiplyEquals { structure.value = calculate(&TokenType::Multiply, &leftValue, &rightValue); } else 
@@ -413,11 +409,11 @@ impl Structure
           { // n-line structure
             if structure.lines.len() > idx 
             { // проверяем что не выходим за список линий
-              let result: Token = self.expression(
-                &mut structure.lines[idx]
-                  .write().unwrap()
-                  .tokens
-              );
+              let tokens = &mut structure.lines[idx] // todo: type
+                            .read().unwrap()
+                            .tokens.clone();
+              let _ = drop(structure);
+              let result: Token = self.expression(tokens);
               value[index].setData    ( result.getData().clone() );
               value[index].setDataType( result.getDataType().clone() );
             } else { setNone(value, index); } // если вышли за список
@@ -426,11 +422,11 @@ impl Structure
         { 
           if structure.lines.len() == 1 
           { // структура с одним вложением
-            let result: Token = self.expression(
-              &mut structure.lines[0]
-                .write().unwrap()
-                .tokens
-            );
+            let tokens = &mut structure.lines[0] // todo: type
+                          .read().unwrap()
+                          .tokens.clone();
+            let _ = drop(structure);
+            let result: Token = self.expression(tokens);
             value[index].setData    ( result.getData().clone() );
             value[index].setDataType( result.getDataType().clone() );
           } else 
@@ -439,14 +435,10 @@ impl Structure
             let mut linesResult: Vec<Token> = Vec::new();
             for line in &structure.lines 
             {
-              linesResult.push(
-                // в данном случае они дублируются чтобы использовать повторно
-                // todo: можно лучше?
-                self.expression(
-                  &mut line.write().unwrap()
-                    .tokens.clone()
-                )
-              );
+              let tokens = &mut line.read().unwrap() // todo: type
+                             .tokens.clone();
+              let _ = drop(line);
+              linesResult.push( self.expression(tokens) );
             }
             value[index] = Token::newNesting( Some(linesResult) );
             value[index].setDataType( Some(TokenType::Array) );
@@ -502,8 +494,8 @@ impl Structure
                 )
                 {
                   let _ = drop(currentStructure);
-                  let mut currentStructure: RwLockWriteGuard<'_, Structure> = currentStructureLock.write().unwrap();
-                  return currentStructure.linkExpression(None, link, parameters);
+                  return currentStructureLock.read().unwrap()
+                    .linkExpression(None, link, parameters);
                 }
                 // а если такой ссылки там не было, то значит она в self
                 let _ = drop(currentStructure);
@@ -512,8 +504,7 @@ impl Structure
               if let Some(parameters) = parameters 
               { // если это был просто запуск метода, то запускаем его
                 let _ = drop(currentStructure);
-
-                let mut currentStructure: RwLockWriteGuard<'_, Structure> = currentStructureLock.write().unwrap();
+                
                 let mut parametersToken: Token = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
                 parametersToken.setDataType( Some(TokenType::CircleBracketBegin) );
 
@@ -522,7 +513,8 @@ impl Structure
                   parametersToken
                 ];
 
-                return currentStructure.expression(&mut expressionTokens);
+                return currentStructureLock.read().unwrap()
+                  .expression(&mut expressionTokens);
               } else 
               { // если дальше нет продолжения ссылки
                 if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Word 
@@ -576,8 +568,8 @@ impl Structure
               let childStructureLink = structure.getStructureByName(&link[0]);
               if let Some(childStructureLink) = childStructureLink 
               {
-                let childStructure: RwLockReadGuard<'_, Structure> = childStructureLink.read().unwrap();
-                if childStructure.lines.len() != 0 { true } else { false }
+                if childStructureLink.read().unwrap()
+                  .lines.len() != 0 { true } else { false }
               } else { false }
             };
 
@@ -595,10 +587,6 @@ impl Structure
           };
         //
         link.remove(0);
-        if let Some(ref structureLink) = structureLink
-        {
-          let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-        }
         if let Some(structureLink) = structureLink
         { // это структура которую мы нашли по имени в self пространстве
           if link.len() != 0
@@ -632,9 +620,9 @@ impl Structure
 
               if let Some(structureParent) = structure.parent.clone()
               {
-                let mut parent: RwLockWriteGuard<'_, Structure> = structureParent.write().unwrap();
                 let _ = drop(structure);
-                return parent.expression(&mut expressionTokens);
+                return structureParent.read().unwrap()
+                  .expression(&mut expressionTokens);
               }
 
               return Token::newEmpty( Some(TokenType::None) );
@@ -875,7 +863,7 @@ impl Structure
           //));
         } else 
         { // без параметров
-          let data: String = value[i].getData().unwrap_or_default();
+          let     data: String = value[i].getData().unwrap_or_default();
           let mut link: Vec<String> = data.split('.')
                                         .map(|s| s.to_string())
                                         .collect();
@@ -988,10 +976,9 @@ impl Structure
         value.remove(i); // remove right value
         *valueLength -= 2;
         continue;
-      }
-
+      } else
       // value -value2
-      if tokenType == TokenType::Minus && matches!(tokenType, TokenType::Int | TokenType::Float) 
+      if matches!(tokenType, TokenType::Int | TokenType::Float) 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
@@ -1009,6 +996,8 @@ impl Structure
 
      Но кроме того, запускает не стандартные методы; 
      В нестандартных методах могут быть процедуры, которые не вернут результат.
+
+     todo: вынести все стандартные варианты в отдельный модуль
   */
   pub fn functionCall(&self, value: &mut Vec<Token>, valueLength: &mut usize, i: usize) -> ()
   {
@@ -1111,8 +1100,12 @@ impl Structure
               // получаем значение
               if let Some(structureLink) = self.getStructureByName(&expressions[0].getData().unwrap_or_default()) 
               {
-                let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-                value[i].setData( Some(structure.lines.len().to_string()) );
+                value[i].setData( 
+                  Some(
+                    structureLink.read().unwrap()
+                      .lines.len().to_string()
+                  ) 
+                );
               } else 
               { // результат 0 т.к. не нашли такой структуры
                 value[i].setData( Some(String::from("0")) );
@@ -1188,47 +1181,33 @@ impl Structure
 
      Но кроме того, запускает не стандартные методы; 
      Из нестандартных методов, процедуры могут вернуть результат, в таком случае, их следует считать функциями.
+
+     todo: вынести все стандартные варианты в отдельный модуль
   */
   pub fn procedureCall(&self, structureName: &str, expressions: Option< Vec<Token> >) -> ()
-  {
+  { 
     if structureName.starts_with(|c: char| c.is_lowercase()) 
     { // если название в нижнем регистре - то это точно процедура
       match structureName 
       { // проверяем на сходство стандартных функций
         "println" =>
         { // println
-          // expression tokens
-          if let Some(mut expressionValue) = expressions 
-          { // expression value
-            let expressionValue: Option<String> = self.expression(&mut expressionValue).getData();
-            if let Some(expressionValue) = expressionValue 
-            { // functional
-              formatPrint(&format!("{}\n",&expressionValue));
-            } else 
-            { // else -> skip
-              println!();
-            }
+          if let Some(expressions) = expressions 
+          { // todo: вывод всех expressions
+            formatPrint( &format!("{}\n",&expressions[0].getData().unwrap_or_default()) );
           } else 
-          { // else -> skip
+          { // в том случае, если мы не получили выводимое выражение
             println!();
           }
           io::stdout().flush().unwrap(); // forced withdrawal of old
         }
         "print" =>
         { // print
-          // expression tokens
-          if let Some(mut expressionValue) = expressions 
-          { // expression value
-            let expressionValue: Option< String > = self.expression(&mut expressionValue).getData();
-            if let Some(expressionValue) = expressionValue 
-            { // functional
-              formatPrint(&expressionValue);
-            } else 
-            { // else -> skip
-              print!("");
-            }
+          if let Some(expressions) = expressions 
+          { // todo: вывод всех expressions
+            formatPrint( &expressions[0].getData().unwrap_or_default() );
           } else 
-          { // else -> skip
+          { // в том случае, если мы не получили выводимое выражение
             print!("");
           }
           io::stdout().flush().unwrap(); // forced withdrawal of old
@@ -1257,7 +1236,8 @@ impl Structure
               searchStructure(
                 lineLink.clone(), 
                 parentLink.clone(), 
-                &mut lineIndex
+                &mut lineIndex,
+                false
               ); 
             }
           }
@@ -1278,19 +1258,16 @@ impl Structure
         */
         "sleep" =>
         { // sleep
-          // expression tokens
-          if let Some(mut expressionValue) = expressions 
+          if let Some(expressions) = expressions 
           { // expression value
-            let expressionValue: Option<String> = self.expression(&mut expressionValue).getData();
-            if let Some(expressionValue) = expressionValue 
-            { // functional
-              let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
-              if valueNumber > 0 
-              {
-                sleep( Duration::from_millis(valueNumber) );
-              }
-            } // если не было параметров, то просто пропускаем
-          }   //
+            let valueNumber: u64 = 
+              expressions[0].getData().unwrap_or_default()
+                .parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
+            if valueNumber > 0 
+            {
+              sleep( Duration::from_millis(valueNumber) );
+            }
+          } // если не было параметров, то просто пропускаем
         }
         "exit" =>
         { // exit

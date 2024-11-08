@@ -19,30 +19,36 @@ a
   'f'
 
 # get random word
-#
-  word -> String
-    b = 0
-    ? b < 4
-      rand = randUInt(0,len(a)-1)
-      print(f"{a[rand]}")
-      b += 1
-      go(1)
+word -> String
+  b = 0
+  res = ""
+  ? b < 4
+    rand = randUInt(0,len(a)-1)
+    res += {a[rand]}
+    println(res)
+    b += 1
+    go(1)
+  = res
 
 # get line
-#
   line
     c = 0
+    println(10)
     ? c < 8
+      println(1)
       word = word()
+      println(type(word))
       print(f"{word} ")
       c += 1
       go(1)
     println()
 
+println(22)
+println(word())
+
 # main
-d = 0
-? d < 32
-  #line()
-  println(d)
-  d += 1
-  go(1)
+  d = 0
+  ? d < 32
+    line()
+    d += 1
+    go(1)
