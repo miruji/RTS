@@ -450,7 +450,8 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 }
 // эта функция занимается чтением блоков по ссылке на них;
 // также необходимо передать переменную указателя чтения линии,
-// передать сколько всего линий вложено
+// передать сколько всего линий вложено.
+// todo: исправить переполнение стека
 pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) -> ()
 { // получаем сколько линий вложено в структуру
   let (lineIndex, linesLength): (*mut usize, usize) = 

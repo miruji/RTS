@@ -1016,81 +1016,6 @@ impl Structure
     if let Some(structureName) = value[i].getData() // todo: проверка на нижний регистр
     { // 
       /*
-      if functionName == "int" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-        { // functional
-          value[i].setData    ( Some(expressionData) );
-          value[i].setDataType( Some(TokenType::Int) );
-        } else 
-        { // error -> skip
-          value[i].setData    ( None );
-          value[i].setDataType( None );
-        }
-      } else 
-      if functionName == "char" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-        { // functional
-          value[i] = expressions[0].clone();
-
-          let newData: String = (expressionData.parse::<u8>().unwrap() as char).to_string();
-          value[i].setData( Some(newData) );
-
-          value[i].setDataType( Some(TokenType::Char) );
-        } else 
-        { // error -> skip
-          value[i].setData    ( None );
-          value[i].setDataType( None );
-        }
-      } else 
-      if functionName == "str" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if let Some(expressionData) = expressions.get(0).and_then(|expr| expr.getData())
-        { // functional
-          value[i].setData    ( Some(expressionData) );
-          value[i].setDataType( Some(TokenType::String ) );
-        } else
-        { // error -> skip
-          value[i].setData    ( None );
-          value[i].setDataType( None );
-        }
-      } else 
-      */
-      /*
-      if functionName == "input" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-
-        // functional
-        if expressions.len() > 0 
-        {
-          if let Some(expressionData) = expressions[0].getData() 
-          {
-            print!("{}",expressionData);
-            io::stdout().flush().unwrap(); // forced withdrawal of old
-          } // else -> skip
-        }   // else -> skip
-
-        value[i].setData( None );
-
-        if let Some(mut valueData) = value[i].getData() {
-          io::stdin().read_line(&mut valueData).expect("Input error"); // todo: delete error
-          value[i].setData( 
-            Some( valueData.trim_end().to_string() )
-          );
-        } else 
-        { // error -> skip
-          value[i].setData( 
-            None
-          );
-        }
-
-        value[i].setDataType( Some(TokenType::String) );
-      } else 
       if functionName == "exec"
       { // execute
         let expressions: Vec<Token> = self.getCallParameters(value, i);
@@ -1122,82 +1047,6 @@ impl Structure
           }
         }
       }
-      if functionName == "randUInt" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if expressions.len() > 1 
-        { // functional
-          let min: usize = 
-            if let Some(expressionData) = expressions[0].getData() {
-              expressionData.parse::<usize>().unwrap_or_default()
-            } else 
-            {
-              0
-            };
-          let max: usize = 
-            if let Some(expressionData) = expressions[1].getData() {
-              expressionData.parse::<usize>().unwrap_or_default()
-            } else 
-            {
-              0
-            };
-
-          let randomNumber: usize = 
-            if min < max 
-            {
-              rand::thread_rng().gen_range(min..=max)
-            } else 
-            {
-              0
-            };
-
-          value[i].setData    ( Some(randomNumber.to_string()) );
-          value[i].setDataType( Some(TokenType::UInt) );
-        } else 
-        { // error -> skip
-          value[i].setData    ( None );
-          value[i].setDataType( None );
-        }
-      } else 
-      if functionName == "len" 
-      { // get expressions
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if expressions.len() > 0
-        { // functional
-          if expressions[0].getDataType().unwrap_or_default() == TokenType::Array 
-          {
-            if let Some(memoryCellName) = expressions[0].getData() 
-            {
-              if let Some(memoryCellLink) = self.getStructureByName(&memoryCellName) 
-              {
-                let memoryCell: RwLockReadGuard<'_, Structure> = memoryCellLink.read().unwrap();
-                /*
-                value[i].setData(Some(
-                  memoryCell.value.tokens
-                    .clone().unwrap_or_default()
-                    .len().to_string()
-                ));
-                */
-              } else 
-              { // error -> skip
-                value[i].setData( Some(String::from("0")) );
-              }
-            } else 
-            { // error -> skip
-              value[i].setData( Some(String::from("0")) );
-            }
-          } else 
-          { // get basic cell len
-            // todo:
-            value[i].setData  ( Some(String::from("0")) );
-          }
-          value[i].setDataType( Some(TokenType::UInt) );
-        } else 
-        { // error -> skip
-          value[i].setData    ( None );
-          value[i].setDataType( None );
-        }
-      } else
       */
       let expressions: Vec<Token> = self.getCallParameters(value, i);
       // далее идут базовые методы;
@@ -1208,11 +1057,96 @@ impl Structure
         { // далее просто сверяем имя структуры в поисках базовой
           match structureName.as_str() 
           { // проверяем на сходство стандартных функций
+            "UInt" =>
+            { // получаем значение выражения в типе
+              // todo: Int, Float, UFloat
+              value[i].setDataType( Some(TokenType::UInt ) );
+              value[i].setData    ( Some(expressions[0].getData().unwrap_or_default()) );
+            } 
+            "String" =>
+            { // получаем значение выражение в типе String
+              value[i].setDataType( Some(TokenType::String ) );
+              value[i].setData    ( Some(expressions[0].getData().unwrap_or_default()) );
+            } 
+            "Char" =>
+            { // получаем значение выражения в типе Char
+              value[i].setDataType( Some(TokenType::Char) );
+              value[i].setData( 
+                Some(
+                  (expressions[0].getData().unwrap_or_default()
+                      .parse::<u8>().unwrap() as char
+                  ).to_string()
+                ) 
+              );
+            } 
             "type" =>
             { // todo: создать resultType() ?
               // для возвращения результата ожидаемого структурой
-              value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
               value[i].setDataType( Some(TokenType::String) );
+              value[i].setData    ( Some(expressions[0].getDataType().unwrap_or_default().to_string()) );
+            } 
+            "randUInt" if expressions.len() > 1 =>
+            { // возвращаем случайное число типа UInt от min до max
+              let min: usize = 
+                if let Some(expressionData) = expressions[0].getData() {
+                  expressionData.parse::<usize>().unwrap_or_default()
+                } else { 0 };
+              let max: usize = 
+                if let Some(expressionData) = expressions[1].getData() {
+                  expressionData.parse::<usize>().unwrap_or_default()
+                } else { 0 };
+              let randomNumber: usize = 
+                if min < max 
+                {
+                  rand::thread_rng().gen_range(min..=max)
+                } else { 0 };
+              value[i].setDataType( Some(TokenType::UInt) );
+              value[i].setData    ( Some(randomNumber.to_string()) );
+            }
+            "len" =>
+            { // получаем размер вложений в структуре
+
+              // результат только в UInt
+              value[i].setDataType( Some(TokenType::UInt) );
+              // получаем значение
+              if let Some(structureLink) = self.getStructureByName(&expressions[0].getData().unwrap_or_default()) 
+              {
+                let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
+                value[i].setData( Some(structure.lines.len().to_string()) );
+              } else 
+              { // результат 0 т.к. не нашли такой структуры
+                value[i].setData( Some(String::from("0")) );
+              }
+            }
+            "input" =>
+            { // получаем результат ввода
+
+              // результат может быть только String
+              value[i].setDataType( Some(TokenType::String) );
+
+              if let Some(expressionData) = expressions[0].getData() 
+              { // это может быть выведено перед вводом;
+                // todo: возможно потом это лучше убрать,
+                //       т.к. программист сам может вызвать 
+                //       такое через иные методы
+                print!("{}",expressionData);
+                io::stdout().flush().unwrap(); // forced withdrawal of old
+              }
+
+              let mut valueBuffer: String = String::new(); // временный буффер ввода
+              match io::stdin().read_line(&mut valueBuffer) 
+              { // читаем ввод
+                Ok(_) => 
+                { // успешно ввели и записали
+                  value[i].setData( 
+                    Some( valueBuffer.trim_end().to_string() )
+                  );
+                }
+                Err(e) => 
+                { // не удалось ввести, пустая строка
+                  value[i].setData( Some(String::new()) );
+                }
+              }
             } 
             _ => { break 'basicMethods; } // выходим, т.к. ожидается нестандартный метод
           }
@@ -1299,68 +1233,34 @@ impl Structure
           }
           io::stdout().flush().unwrap(); // forced withdrawal of old
         }
+        "clear" =>
+        { // clear
+          Command::new("clear")
+            .status(); // игнорируем ошибки
+          // todo: однако можно выдавать результат boolean при ошибке
+        }
         "go" =>
-        { // запускаем самого себя
-//          println!("go: self.name [{}] self.lines [{}]",self.name,self.lines.len());
-
+        { // запускаем линию выше заново
           if let Some(parentLink) = &self.parent 
           {
-            let parent = parentLink.read().unwrap();
-            let mut lineIndexBuffer = parent.lineIndex-1;
-//            println!("{}",lineIndexBuffer);
-            let lineLink = &parent.lines[lineIndexBuffer];
-            let line = lineLink.read().unwrap();
-//            println!("  tokens {:?}",line.tokens);
+            let (mut lineIndex, lineLink): (usize, Arc<RwLock<Line>>) = 
+            { // это более безопасный вариант, чтобы использование parent закончилось
+              // перед дальнейшим использованием ссылки на него
+              let parent: RwLockReadGuard<'_, Structure> = parentLink.read().unwrap();
+              let lineIndexBuffer: usize = parent.lineIndex-1;
 
+              // Получаем ссылку на линию
+              (lineIndexBuffer, parent.lines[lineIndexBuffer].clone())
+            };
             unsafe
-            { 
+            { // используем линию parent а также сам parent для нового запуска
               searchStructure(
                 lineLink.clone(), 
                 parentLink.clone(), 
-                &mut lineIndexBuffer
+                &mut lineIndex
               ); 
             }
           }
-          /*
-          if let Some(lineLink) = lineLink 
-          {
-            let line = lineLink.read().unwrap();
-            if let Some(lineParentLink) = &line.parent 
-            {
-              let parentLink = lineParentLink.read().unwrap();
-
-              if let Some(structureParentLink) = &self.parent 
-              {
-                let mut lineIndexBuffer: usize = 
-                {
-                  let structureParent = structureParentLink.read().unwrap();
-                  structureParent.lineIndex-1
-                };
-
-                unsafe
-                { 
-                  searchStructure(
-                    lineParentLink.clone(), 
-                    structureParentLink.clone(), 
-                    &mut lineIndexBuffer
-                  ); 
-                }
-              }
-            }
-          }
-          */
-
-          //self.expression(&mut vec![parameter.clone()]);
-          /*
-          if let Some(parentLink) = &line.parent 
-          {
-            if let Some(structureParent) = &self.parent 
-            {
-              // todo: check expressionValue
-              let mut lineIndexBuffer: usize = 0;
-              searchStructure(parentLink.clone(), structureParent.clone(), &mut lineIndexBuffer);
-            }
-          */
         }
         /*
         "ex" =>
@@ -1375,19 +1275,13 @@ impl Structure
           self.expression(&mut line.tokens.clone()).getData();
           // else -> skip
         }
-        "clear" =>
-        { // clear
-          Command::new("clear")
-            .status()
-            .expect("Failed to clear console"); // todo: move to functions ?
-        }
+        */
         "sleep" =>
         { // sleep
           // expression tokens
-          let expressionTokens: Option< Vec<Token> > = line.tokens[1].tokens.clone();
-          if let Some(mut expressionTokens) = expressionTokens 
+          if let Some(mut expressionValue) = expressions 
           { // expression value
-            let expressionValue: Option< String > = self.expression(&mut expressionTokens).getData();
+            let expressionValue: Option<String> = self.expression(&mut expressionValue).getData();
             if let Some(expressionValue) = expressionValue 
             { // functional
               let valueNumber: u64 = expressionValue.parse::<u64>().unwrap_or_default(); // todo: depends on Value.rs
@@ -1395,14 +1289,13 @@ impl Structure
               {
                 sleep( Duration::from_millis(valueNumber) );
               }
-            } // else -> skip
-          }   // else -> skip
+            } // если не было параметров, то просто пропускаем
+          }   //
         }
         "exit" =>
         { // exit
           unsafe{ _exitCode = true; }
         }
-        */
         _ =>
         { // если не было найдено совпадений среди стандартных процедур,
           // значит это нестандартный метод.
@@ -1446,6 +1339,6 @@ impl Structure
         } // конец custom метода
       }
       // всё успешно, это была стандартная процедура
-    } // если название структуры не с маленьких букв
+    } // если название структуры не в нижнем регистре
   }
 }

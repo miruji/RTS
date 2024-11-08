@@ -136,7 +136,7 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
     {
       result.push(byte1 as char);
       savedIndex += 1;
-      isLink = true;
+      if byte1 == b'.' { isLink = true; } // только если есть . то мы знаем что это ссылка
     } else 
     if isLetter(byte1)
     {
