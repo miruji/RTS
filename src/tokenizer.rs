@@ -508,6 +508,7 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
 
 // удаляет возможные вложенные комментарии по меткам;
 // это такие комментарии, которые имеют вложения
+// todo: не удаляет комментарии во вложенных блоках
 unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
 {
   let mut linesLinksLength: usize = linesLinks.len(); // количество ссылок строк

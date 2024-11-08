@@ -1247,7 +1247,7 @@ impl Structure
             { // это более безопасный вариант, чтобы использование parent закончилось
               // перед дальнейшим использованием ссылки на него
               let parent: RwLockReadGuard<'_, Structure> = parentLink.read().unwrap();
-              let lineIndexBuffer: usize = parent.lineIndex-1;
+              let lineIndexBuffer: usize = parent.lineIndex;
 
               // Получаем ссылку на линию
               (lineIndexBuffer, parent.lines[lineIndexBuffer].clone())

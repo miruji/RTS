@@ -259,6 +259,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
     // но может продолжить запускать блоки ниже, если такие там есть.
     // в этом моменте мы точно уверены что нашли первое условное вложение
     let mut conditions: Vec< Arc<RwLock<Line>> > = Vec::new();
+    let mut saveNewLineIndex: usize = 0;  // сдвиг вниз на сколько условных блоков мы увидели
     { // теперь мы ищем все условные вложения ниже
       let lines: Vec< Arc<RwLock<Line>> > = 
       { 
@@ -289,7 +290,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       }
       // в данном месте мы точно уверенны 
       // что conditions.len() > 1 из-за первого блока
-      *lineIndex += conditions.len()-1;
+      saveNewLineIndex = conditions.len()-1;
     }
     // после нахождения всех возможных условных блоков,
     // начинаем читать их условия и выполнять
@@ -323,7 +324,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             Arc::new(
             RwLock::new(
               Structure::new(
-                String::from("if-el"),
+                String::from("if-elif"),
                 condition.lines.clone().unwrap_or(vec![]),
                 Some(parentLink.clone())
               )
@@ -351,6 +352,10 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
         break; // end
       }
     }
+
+    // и только после прочтения всех блоков, 
+    // мы можем сдвигать указатель ниже
+    *lineIndex += saveNewLineIndex;
     return true;
   }
   return false;

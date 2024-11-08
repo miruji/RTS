@@ -1,6 +1,6 @@
 
 # array
-a = 
+a
   '0'
   '1'
   '2'
@@ -19,27 +19,30 @@ a =
   'f'
 
 # get random word
-word -> String
-  b = 0
-  ? b < 4
-    rand = randUInt(0,len(a)-1)
-    print(f"{a[rand]}")
-    b += 1
-    go(1)
+#
+  word -> String
+    b = 0
+    ? b < 4
+      rand = randUInt(0,len(a)-1)
+      print(f"{a[rand]}")
+      b += 1
+      go(1)
 
 # get line
-line
-  c = 0
-  ? c < 8
-    word = word()
-    print(f"{word} ")
-    c += 1
-    go(1)
-  println()
+#
+  line
+    c = 0
+    ? c < 8
+      word = word()
+      print(f"{word} ")
+      c += 1
+      go(1)
+    println()
 
 # main
 d = 0
 ? d < 32
-  line()
+  #line()
+  println(d)
   d += 1
   go(1)
