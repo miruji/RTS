@@ -136,6 +136,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             }
           } // если результата не было, то просто пропускаем
         } // если параметров и результата не было, то просто пропускаем
+
         // создаём новую структуру
         let mut newStructure: Structure = 
           Structure::new(
@@ -143,6 +144,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             lineLines,
             Some(parentLink.clone())
           );
+
         // ставим модификаторы на структуру;
         // параметры структуры, если они были
         if let Some(parameters) = &parameters 
@@ -158,48 +160,23 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             );
           }
         }
-        /*
-        // результат структуры, если он есть
-        newStructure.result = Some( Token::newEmpty(newStructureResultType.clone()) );
-        // создаём ссылку на новую структуру
-
-        // читаем структуру, чтобы найти результаты
-        readLines(Arc::new(RwLock::new( newStructure.clone() )), true);
-
-        // получаем редактируемую структуру родителя;
-        // добавляем новую дочернюю структуру
-        parentLink.write().unwrap()
-          .pushStructure(newStructure);
-
-        return true;
-        */
 
         // результат структуры, если он есть
         newStructure.result = Some( Token::newEmpty(newStructureResultType.clone()) );
-        // создаём ссылку на новую структуру
-        let newStructure: Arc<RwLock<Structure>> =
-          Arc::new(RwLock::new(
-            newStructure
-          ));
-        { // читаем структуру, чтобы найти результаты
-          readLines(newStructure.clone(), true);
+
+        { // добавляем новую структуру в родителя
+          parentLink.write().unwrap()
+            .pushStructure(newStructure);
         }
-        // получаем редактируемую структуру родителя
-        let mut parent: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
-        if let Some(ref mut parentStructures) = parent.structures 
-        { // если уже есть структуры в родителе,
-          // то просто push делаем
-          parentStructures.push(
-            newStructure
-          );
-        } else 
-        { // если не было ещё структур в родителе
-          // то создаём новый вектор
-          parent.structures = 
-            Some(vec![
-              newStructure
-            ]);
-        }
+        // просматриваем строки этой новой структуры;
+        // todo: в целом, это можно заменить на чтение при первом обращении к структуре;
+        //       сейчас же все структуры читаются (подготавливаются),
+        //       если попали на lineIndex указатель.
+        readLines(
+          parentLink.read().unwrap()
+            .getStructureByName(&newStructureName).unwrap(), // todo: плохой вариант, можно лучше
+          true
+        );
         return true;
       }
     } else 

@@ -142,18 +142,19 @@ fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value {
           .map(Value::UFloat)
           .unwrap_or(Value::UFloat(uf64::from(0.0))) 
       },
-      TokenType::Char   => 
-      { 
+      TokenType::Char  => 
+      { // todo: добавить поддержку операций с TokenType::formattedChar
         tokenData.parse::<char>()
           .map(|x| Value::Char(x))
           .unwrap_or(Value::Char('\0')) 
       },
-      TokenType::String => 
-      { 
+      TokenType::String | TokenType::FormattedString => 
+      { // todo: проверить стабильность работы TokenType::FormattedString 
         tokenData.parse::<String>()
           .map(|x| Value::String(x))
           .unwrap_or(Value::String("".to_string())) 
       },
+      // todo: добавить поддержку операций с TokenType::FormattedRawString
       TokenType::Bool   => 
       { 
         if tokenData == "1" { Value::UInt(1) } 
@@ -303,7 +304,6 @@ impl Structure
         Token::newEmpty(None)
       };
     */
-    let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
     // =
     if op == TokenType::Equals 
     {
@@ -322,9 +322,14 @@ impl Structure
       }
       if structureNesting.len() > 0 
       { // nesting
-        self.setStructureNesting(&structureNesting, &structure.lines, rightValue);
+        self.setStructureNesting(
+          &structureNesting, 
+          &structureLink.read().unwrap().lines, 
+          rightValue
+        );
       } else 
       { // not nesting
+        let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
         structure.lines = 
           vec![ 
             Arc::new(RwLock::new( 
@@ -340,8 +345,11 @@ impl Structure
     } else 
     { // += -= *= /=
       // todo: else
+
+      // получаем левую и правую часть
       let leftValue: Token = 
       {
+        let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
         if structure.lines.len() > 0
         {
           self.expression(
@@ -352,7 +360,10 @@ impl Structure
           Token::newEmpty(Some(TokenType::None))
         }
       };
-      let rightValue: Token = self.expression(&mut rightValue.clone()); // todo: возможно не надо клонировать токены
+      let rightValue: Token = self.expression(&mut rightValue.clone()); // todo: возможно не надо клонировать токены, но скорее надо
+
+      // далее обрабатываем саму операцию;
+      let mut structure: RwLockWriteGuard<'_, Structure> = structureLink.write().unwrap();
       if op == TokenType::PlusEquals 
       { 
         //println!("leftValue {} rightValue {}",leftValue,rightValue);
@@ -746,7 +757,7 @@ impl Structure
   /* Получает параметры при вызове структуры в качестве метода;
      т.е. получает переданные значения через expression
   */
-  fn getCallParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  fn getCallParameters(&self, value: &mut Vec<Token>, i: usize) -> Option< Vec<Token>  >
   {
     let mut result: Vec<Token> = Vec::new();
 
@@ -774,7 +785,8 @@ impl Structure
       }
     }
 
-    result
+    if result.len() == 0 { None }
+    else                 { Some(result) }
   }
 
   /* Основная функция, которая получает результат выражения состоящего из токенов;
@@ -852,9 +864,9 @@ impl Structure
       } else
       if value[i].getDataType().unwrap_or_default() == TokenType::Link 
       { // это ссылка на структуру
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
+        let expressions: Option< Vec<Token> > = self.getCallParameters(value, i);
         // todo: здесь надо написать вариант в котором ссылку вызвали с параметрами
-        if expressions.len() > 0 
+        if let Some(expressions) = expressions
         { // если имеются параметры
           //let data: String = value[0].getData().unwrap_or_default();
           //value[0].setDataType( Some(TokenType::String) );
@@ -1037,12 +1049,12 @@ impl Structure
         }
       }
       */
-      let expressions: Vec<Token> = self.getCallParameters(value, i);
+      let expressions: Option< Vec<Token> > = self.getCallParameters(value, i);
       // далее идут базовые методы;
       // эти методы ожидают аргументов
       'basicMethods: 
       { // это позволит выйти, если мы ожидаем не стандартные варианты
-        if expressions.len() > 0 
+        if let Some(ref expressions) = expressions
         { // далее просто сверяем имя структуры в поисках базовой
           match structureName.as_str() 
           { // проверяем на сходство стандартных функций
@@ -1152,7 +1164,7 @@ impl Structure
       }
       // если код не завершился ранее, то далее идут custom методы;
       { // передаём параметры, они также могут быть None
-        self.procedureCall(&structureName, Some(expressions));
+        self.procedureCall(&structureName, expressions);
         // если всё было успешно, то сдвигаем всё до 1 токена;
         *valueLength -= 1;
         value.remove(i+1);

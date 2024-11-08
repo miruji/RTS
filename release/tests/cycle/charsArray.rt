@@ -24,8 +24,7 @@ word -> String
   res = ""
   ? b < 4
     rand = randUInt(0,len(a)-1)
-    res += {a[rand]}
-    println(res)
+    res += f"{a[rand]}"
     b += 1
     go(1)
   = res
@@ -43,12 +42,17 @@ word -> String
       go(1)
     println()
 
-println(22)
-println(word())
+line
+  c = 0
+  ? c < 8
+    print(f"{word()} ")
+    c += 1
+    go(1)
+  println()
 
 # main
-  d = 0
-  ? d < 32
-    line()
-    d += 1
-    go(1)
+d = 0
+? d < 32
+  line()
+  d += 1
+  go(1)
