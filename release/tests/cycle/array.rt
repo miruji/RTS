@@ -7,6 +7,6 @@ a # final Array
 l = 0
 ? l < 3           # loop l -> a
   print(f"{l}: ")
-  println(a[l])   # println a[l]
+  println(a[0])
   l += 1
   go(1)

@@ -11,7 +11,7 @@ use crate::{
   logger::*,
   _argc, _argv, _debugMode, _exitCode,
   parser::structure::*,
-  tokenizer::{self, token::*, line::*}
+  tokenizer::{token::*, line::*}
 };
 
 use std::{
@@ -459,7 +459,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 // передать сколько всего линий вложено
 pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, structuresRead: bool) -> ()
 { // получаем сколько линий вложено в структуру
-  let mut linesLength: usize = 
+  let linesLength: usize = 
   { // делаем это через чтение структуры
     structureLink.read().unwrap()
       .lines.len()
@@ -492,9 +492,9 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut u
       { // ищем выражения
         if !structuresRead 
         { // читаем выражение в режиме изменения структуры
-          structureLink.write().unwrap()
+          structureLink.read().unwrap()
             .expression(
-              &mut lineLink.write().unwrap()
+              &mut lineLink.read().unwrap()
                 .tokens.clone()
             ); 
           // клонируем токены, для сохранения возможности повторного запуска

@@ -184,6 +184,7 @@ pub fn getStructureResultType(word: String) -> TokenType
   }
 }
 
+#[derive(Clone)]
 pub struct Structure 
 {
   pub           name: String,                        // unique name
@@ -285,7 +286,7 @@ impl Structure
   // для этого требует левую и правую часть выражения,
   // кроме того, требует передачи родительской структуры,
   // чтобы было видно возможные объявления в ней
-  pub fn structureOp(&mut self, structureLink: Arc<RwLock<Structure>>, op: TokenType, leftValue: Vec<Token>, rightValue: Vec<Token>) -> ()
+  pub fn structureOp(&self, structureLink: Arc<RwLock<Structure>>, op: TokenType, leftValue: Vec<Token>, rightValue: Vec<Token>) -> ()
   {
     match op {
       TokenType::Equals | TokenType::PlusEquals | TokenType::MinusEquals | 
@@ -339,7 +340,7 @@ impl Structure
       }
     } else 
     { // += -= *= /=
-      println!("  Else");
+      // todo: else
       //let leftValue: Token = structure.value.clone();
       //if op == TokenType::PlusEquals     { structure.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
       //if op == TokenType::MinusEquals    { structure.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
@@ -351,7 +352,7 @@ impl Structure
   // вроде как возвращает результат за место 
   // struct, array struct, array с одним вложением
   // todo: более подробное описание
-  fn replaceStructureByName(&mut self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
+  fn replaceStructureByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
   {
     fn setNone(value: &mut Vec<Token>, index: usize) 
     { // error -> skip
@@ -435,7 +436,7 @@ impl Structure
   /* Получает значение из ссылки на структуру;
      Ссылка на структуру может состоять как из struct name, так и просто из цифр.
   */
-  fn linkExpression(&mut self, currentStructureLink: Option< Arc<RwLock<Structure>>  >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
+  fn linkExpression(&self, currentStructureLink: Option< Arc<RwLock<Structure>>  >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
   {
     match link[0].parse::<usize>() 
     { // проверяем тип
@@ -455,7 +456,6 @@ impl Structure
                 line.read().unwrap()
                   .tokens.clone()
               };
-            drop(line);
 
             if lineTokens.len() > 0 
             { // если в линии нет хотя бы 1 токена, значит нам просто нечего вычислять;
@@ -468,17 +468,17 @@ impl Structure
                   &lineTokens[0].getData().unwrap_or_default() 
                 )
                 {
-                  drop(currentStructure);
+                  let _ = drop(currentStructure);
                   let mut currentStructure: RwLockWriteGuard<'_, Structure> = currentStructureLock.write().unwrap();
                   return currentStructure.linkExpression(None, link, parameters);
                 }
                 // а если такой ссылки там не было, то значит она в self
-                drop(currentStructure);
+                let _ = drop(currentStructure);
                 return self.linkExpression(currentStructureLink, link, parameters);
               } else 
               if let Some(parameters) = parameters 
               { // если это был просто запуск метода, то запускаем его
-                drop(currentStructure);
+                let _ = drop(currentStructure);
 
                 let mut currentStructure: RwLockWriteGuard<'_, Structure> = currentStructureLock.write().unwrap();
                 let mut parametersToken: Token = Token::newNesting( Some(Vec::new()) ); // todo: add parameters
@@ -511,8 +511,7 @@ impl Structure
                             line.read().unwrap()
                               .tokens.clone()
                           };
-                        drop(line);
-                        drop(childStructure);
+                        let _ = drop(childStructure);
                         return self.expression(&mut lineTokens);
                       }
                     }
@@ -584,8 +583,7 @@ impl Structure
                     line.read().unwrap()
                       .tokens.clone()
                   };
-                drop(line);
-                drop(structure);
+                let _ = drop(structure);
                 return self.expression(&mut lineTokens);
               }
             } else
@@ -602,7 +600,7 @@ impl Structure
               if let Some(structureParent) = structure.parent.clone()
               {
                 let mut parent: RwLockWriteGuard<'_, Structure> = structureParent.write().unwrap();
-                drop(structure);
+                let _ = drop(structure);
                 return parent.expression( &mut expressionTokens );
               }
 
@@ -625,7 +623,7 @@ impl Structure
      В основном всё сводится к получению токенов в {} через Token::readTokens(),
      после чего результат проходит через expression и мы получаем обычную строку на выходе.
   */
-  fn formatQuote(&mut self, tokenData: String) -> String 
+  fn formatQuote(&self, tokenData: String) -> String 
   {
     let mut result:           String    = String::new(); // это строка которая будет получена в конце
     let mut expressionBuffer: String    = String::new(); // буфер для выражения между {}
@@ -727,7 +725,7 @@ impl Structure
   /* Получает параметры при вызове структуры в качестве метода;
      т.е. получает переданные значения через expression
   */
-  fn getCallParameters(&mut self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
+  fn getCallParameters(&self, value: &mut Vec<Token>, i: usize) -> Vec<Token> 
   {
     let mut result: Vec<Token> = Vec::new();
 
@@ -762,7 +760,7 @@ impl Structure
      Сначала она проверяет что это single токен, но если нет, 
      то в цикле перебирает возможные варианты
   */
-  pub fn expression(&mut self, value: &mut Vec<Token>) -> Token 
+  pub fn expression(&self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len(); // получаем количество токенов в выражении
 
@@ -936,7 +934,7 @@ impl Structure
      Это зависимость для expression.
      Кроме того, может обрабатываеть отрицание при использовании TokenType::Minus
   */
-  fn expressionOp(&mut self, value: &mut Vec<Token>, valueLength: &mut usize, operations: &[TokenType]) 
+  fn expressionOp(&self, value: &mut Vec<Token>, valueLength: &mut usize, operations: &[TokenType]) 
   {
     let mut i: usize = 0;
     let mut token: Token;
@@ -979,7 +977,7 @@ impl Structure
      Но кроме того, запускает не стандартные методы; 
      В нестандартных методах могут быть процедуры, которые не вернут результат.
   */
-  pub fn functionCall(&mut self, value: &mut Vec<Token>, valueLength: &mut usize, i: usize) -> ()
+  pub fn functionCall(&self, value: &mut Vec<Token>, valueLength: &mut usize, i: usize) -> ()
   {
     // todo: uint float ufloat ...
     if let Some(structureName) = value[i].getData() // todo: проверка на нижний регистр
@@ -1224,11 +1222,10 @@ impl Structure
      Но кроме того, запускает не стандартные методы; 
      Из нестандартных методов, процедуры могут вернуть результат, в таком случае, их следует считать функциями.
   */
-  pub fn procedureCall(&mut self, structureName: &str, expressions: Option< Vec<Token> >) -> bool 
+  pub fn procedureCall(&self, structureName: &str, expressions: Option< Vec<Token> >) -> ()
   {
     if structureName.starts_with(|c: char| c.is_lowercase()) 
     { // если название в нижнем регистре - то это точно процедура
-      let mut result: bool = true; // ожидается, что он завершится успешно
       match structureName 
       { // проверяем на сходство стандартных функций
         "println" =>
@@ -1269,18 +1266,36 @@ impl Structure
           }
           io::stdout().flush().unwrap(); // forced withdrawal of old
         }
-        /*
         "go" =>
-        { // go block up
+        { // запускаем самого себя
+          println!("go: self.name [{}] self.lines [{}]",self.name,self.lines.len());
+
+          let mut lineIndexBuffer: usize = 0;
+          /*
+          unsafe
+          { 
+            readLines(
+              Arc::new(RwLock::new(self)), 
+              &mut lineIndexBuffer, 
+              false
+            ); 
+          }
+          */
+
+
+          //self.expression(&mut vec![parameter.clone()]);
+          /*
           if let Some(parentLink) = &line.parent 
           {
             if let Some(structureParent) = &self.parent 
             {
               // todo: check expressionValue
-              //searchCondition(parentLink.clone(), structureParent.clone());
+              let mut lineIndexBuffer: usize = 0;
+              searchStructure(parentLink.clone(), structureParent.clone(), &mut lineIndexBuffer);
             }
-          }
+          */
         }
+        /*
         "ex" =>
         { // exit block up
           println!("ex"); 
@@ -1361,13 +1376,10 @@ impl Structure
             // запускаем новую структуру
             let mut lineIndexBuffer: usize = 0;
             unsafe{ readLines(calledStructureLink, &mut lineIndexBuffer, false); }
-            return true;
           }
         } // конец custom метода
       }
       // всё успешно, это была стандартная процедура
-      return result;
     } // если название структуры не с маленьких букв
-    return false;
   }
 }

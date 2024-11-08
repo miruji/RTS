@@ -17,9 +17,6 @@ use std::{
 
 use crate::logger::*;
 
-use reqwest::Error;
-use serde_json::Value;
-
 mod logger;
 mod tokenizer;
 mod parser;
