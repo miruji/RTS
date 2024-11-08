@@ -166,8 +166,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             newStructure
           ));
         { // читаем структуру, чтобы найти результаты
-          let mut lineIndex: usize = 0; // указатель чтения линий
-          readLines(newStructure.clone(), &mut lineIndex, true);
+          readLines(newStructure.clone(), true);
         }
         // получаем редактируемую структуру родителя
         let mut parent: RwLockWriteGuard<'_, Structure> = parentLink.write().unwrap();
@@ -227,7 +226,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
           { // если мы не нашли похожую, то создаём новую и работаем с правой частью выражения
             let tokens: Vec<Token> = 
               vec![ // значение будет состоять из вычисленной правой части выражения
-                structure.expression( &mut rightValue.unwrap_or(vec![]).clone() ) // один токен
+                structure.expression(&mut rightValue.unwrap_or(vec![]).clone()) // один токен
               ];
             // закидываем новую структуру в родительскую структуру
             structure.pushStructure(
@@ -310,17 +309,16 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
           conditionTruth = 
           { // получаем string ответ от expression, true/false
             let expressionResult: Option<String> = 
-              parentLink.write().unwrap()                    // для этого берём родительскую линию;
+              parentLink.read().unwrap()                     // для этого берём родительскую линию;
                 .expression(&mut conditionTokens).getData(); // и её токены.
             // итоговый boolean результат
             if let Some(expressionResult) = expressionResult { expressionResult == "true" } 
             else                                             { false }
-          }
+          };
         }
         // если условие верно
         if conditionTruth 
         { // создаём новую временную структуру условного блока
-          let mut conditionLineIndex:   usize = 0;
           let structure: Arc<RwLock<Structure>> =
             Arc::new(
             RwLock::new(
@@ -331,7 +329,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
               )
             ));
           // после создания, читаем эту структуру
-          readLines(structure, &mut conditionLineIndex, false);
+          readLines(structure, false);
           break; // end
         }
       } else
@@ -339,7 +337,6 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       // значит это else блок
       if !conditionTruth 
       { // создаём новую временную структуру условного блока
-        let mut conditionLineIndex:   usize = 0;
         let structure: Arc<RwLock<Structure>> =
           Arc::new(
           RwLock::new(
@@ -350,7 +347,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
             )
           ));
         // после создания, читаем эту структуру
-        readLines(structure, &mut conditionLineIndex, false);
+        readLines(structure, false);
         break; // end
       }
     }
@@ -434,9 +431,6 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     }
   }
 
-  // это указатель текущей линии при чтении главной структуры
-  let mut lineIndex: usize = 0;
-
   // подготовка закончена, читаем линии
   let startTime: Instant = Instant::now(); // получаем текущее время для замера debug
   if unsafe{_debugMode} 
@@ -444,7 +438,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     logSeparator("Interpretation");
   }
   // передаём ссылку на структуру, указатель текущей линии и количество линий
-  readLines(_main.clone(), addr_of_mut!(lineIndex), false);
+  readLines(_main.clone(), false);
   // далее идут замеры
   if unsafe{_debugMode} 
   {
@@ -457,12 +451,15 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 // эта функция занимается чтением блоков по ссылке на них;
 // также необходимо передать переменную указателя чтения линии,
 // передать сколько всего линий вложено
-pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, structuresRead: bool) -> ()
+pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) -> ()
 { // получаем сколько линий вложено в структуру
-  let linesLength: usize = 
-  { // делаем это через чтение структуры
-    structureLink.read().unwrap()
-      .lines.len()
+  let (lineIndex, linesLength): (*mut usize, usize) = 
+  {
+    let structure = structureLink.read().unwrap(); // Читаем структуру
+    (
+      unsafe { &structure.lineIndex as *const usize as *mut usize }, 
+      structure.lines.len()
+    )
   };
 
   // выполнение программы происходит до тех пор, 

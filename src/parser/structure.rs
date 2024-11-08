@@ -7,7 +7,7 @@ use crate::{
   logger::*,
   _exitCode,
   tokenizer::{line::*, token::*, readTokens},
-  parser::{readLines, value::*, uf64::*},
+  parser::{searchStructure, readLines, value::*, uf64::*},
 };
 
 use std::{
@@ -197,6 +197,8 @@ pub struct Structure
       // else => function
   pub     structures: Option< Vec< Arc<RwLock<Structure>> > >,
   pub         parent: Option< Arc<RwLock<Structure>> >,
+
+  pub      lineIndex: usize,
 }
 impl Structure 
 {
@@ -209,12 +211,13 @@ impl Structure
   {
     Structure 
     {
-            name,
-           lines,
-      parameters: None, // todo: remove
-          result: None,
-      structures: None,
-          parent
+              name,
+             lines,
+        parameters: None, // todo: remove
+            result: None,
+        structures: None,
+            parent,
+      lineIndex: 0
     }
   }
 
@@ -309,7 +312,6 @@ impl Structure
     // =
     if op == TokenType::Equals 
     {
-//      println!("  Equals, leftValue {:?}",leftValue);
       let mut structureNesting: Vec<Token> = Vec::new();
       for value in leftValue 
       {
@@ -317,7 +319,9 @@ impl Structure
         {
           if let Some(mut valueTokens) = value.tokens 
           {
-            structureNesting.push( self.expression(&mut valueTokens) );
+            structureNesting.push( 
+              self.expression(&mut valueTokens) 
+            );
           }
         }
       }
@@ -341,7 +345,33 @@ impl Structure
     } else 
     { // += -= *= /=
       // todo: else
-      //let leftValue: Token = structure.value.clone();
+      let leftValue: Token = 
+      {
+        if structure.lines.len() > 0
+        {
+          let line = structure.lines[0].read().unwrap();
+          self.expression(&mut line.tokens.clone())
+        } else 
+        {
+          Token::newEmpty(Some(TokenType::None))
+        }
+      };
+      let rightValue: Token = self.expression(&mut rightValue.clone()); // todo: возможно не надо клонировать токены
+      if op == TokenType::PlusEquals 
+      { 
+        //println!("leftValue {} rightValue {}",leftValue,rightValue);
+        structure.lines = 
+          vec![ 
+            Arc::new(RwLock::new( 
+              Line {
+                tokens: vec![ calculate(&TokenType::Plus, &leftValue, &rightValue) ],
+                indent: 0,
+                lines:  None,
+                parent: None
+              }
+            ))
+          ];
+      } 
       //if op == TokenType::PlusEquals     { structure.value = calculate(&TokenType::Plus,     &leftValue, &rightValue); } else 
       //if op == TokenType::MinusEquals    { structure.value = calculate(&TokenType::Minus,    &leftValue, &rightValue); } else 
       //if op == TokenType::MultiplyEquals { structure.value = calculate(&TokenType::Multiply, &leftValue, &rightValue); } else 
@@ -372,23 +402,26 @@ impl Structure
             value[index+1]
               .tokens
               .as_mut()
-              .and_then(|tokens| self.expression(tokens).getData()?.parse::<usize>().ok());
+              .and_then(|tokens| 
+                self.expression(tokens)
+                  .getData()?.parse::<usize>().ok()
+              );
           value.remove(index+1);
           *length -= 1;
 
           if let Some(idx) = arrayIndex 
           { // n-line structure
-            let result: Token = self.expression(
-              &mut structure.lines[idx]
-                .write().unwrap()
-                .tokens
-            );
-            value[index].setData    ( result.getData().clone() );
-            value[index].setDataType( result.getDataType().clone() );
-          } else 
-          {
-            setNone(value, index);
-          }
+            if structure.lines.len() > idx 
+            { // проверяем что не выходим за список линий
+              let result: Token = self.expression(
+                &mut structure.lines[idx]
+                  .write().unwrap()
+                  .tokens
+              );
+              value[index].setData    ( result.getData().clone() );
+              value[index].setDataType( result.getDataType().clone() );
+            } else { setNone(value, index); } // если вышли за список
+          } else { setNone(value, index); }   // если нет индекса
         } else 
         { 
           if structure.lines.len() == 1 
@@ -489,7 +522,7 @@ impl Structure
                   parametersToken
                 ];
 
-                return currentStructure.expression( &mut expressionTokens );
+                return currentStructure.expression(&mut expressionTokens);
               } else 
               { // если дальше нет продолжения ссылки
                 if lineTokens[0].getDataType().unwrap_or_default() == TokenType::Word 
@@ -601,7 +634,7 @@ impl Structure
               {
                 let mut parent: RwLockWriteGuard<'_, Structure> = structureParent.write().unwrap();
                 let _ = drop(structure);
-                return parent.expression( &mut expressionTokens );
+                return parent.expression(&mut expressionTokens);
               }
 
               return Token::newEmpty( Some(TokenType::None) );
@@ -1192,7 +1225,7 @@ impl Structure
       }
       // если код не завершился ранее, то далее идут custom методы;
       { // передаём параметры, они также могут быть None
-        self.procedureCall( &structureName, Some(expressions) );
+        self.procedureCall(&structureName, Some(expressions));
         // если всё было успешно, то сдвигаем всё до 1 токена;
         *valueLength -= 1;
         value.remove(i+1);
@@ -1268,20 +1301,54 @@ impl Structure
         }
         "go" =>
         { // запускаем самого себя
-          println!("go: self.name [{}] self.lines [{}]",self.name,self.lines.len());
+//          println!("go: self.name [{}] self.lines [{}]",self.name,self.lines.len());
 
-          let mut lineIndexBuffer: usize = 0;
+          if let Some(parentLink) = &self.parent 
+          {
+            let parent = parentLink.read().unwrap();
+            let mut lineIndexBuffer = parent.lineIndex-1;
+//            println!("{}",lineIndexBuffer);
+            let lineLink = &parent.lines[lineIndexBuffer];
+            let line = lineLink.read().unwrap();
+//            println!("  tokens {:?}",line.tokens);
+
+            unsafe
+            { 
+              searchStructure(
+                lineLink.clone(), 
+                parentLink.clone(), 
+                &mut lineIndexBuffer
+              ); 
+            }
+          }
           /*
-          unsafe
-          { 
-            readLines(
-              Arc::new(RwLock::new(self)), 
-              &mut lineIndexBuffer, 
-              false
-            ); 
+          if let Some(lineLink) = lineLink 
+          {
+            let line = lineLink.read().unwrap();
+            if let Some(lineParentLink) = &line.parent 
+            {
+              let parentLink = lineParentLink.read().unwrap();
+
+              if let Some(structureParentLink) = &self.parent 
+              {
+                let mut lineIndexBuffer: usize = 
+                {
+                  let structureParent = structureParentLink.read().unwrap();
+                  structureParent.lineIndex-1
+                };
+
+                unsafe
+                { 
+                  searchStructure(
+                    lineParentLink.clone(), 
+                    structureParentLink.clone(), 
+                    &mut lineIndexBuffer
+                  ); 
+                }
+              }
+            }
           }
           */
-
 
           //self.expression(&mut vec![parameter.clone()]);
           /*
@@ -1374,8 +1441,7 @@ impl Structure
               }
             }
             // запускаем новую структуру
-            let mut lineIndexBuffer: usize = 0;
-            unsafe{ readLines(calledStructureLink, &mut lineIndexBuffer, false); }
+            unsafe{ readLines(calledStructureLink, false); }
           }
         } // конец custom метода
       }
