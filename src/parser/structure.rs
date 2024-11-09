@@ -1060,8 +1060,13 @@ impl Structure
           { // проверяем на сходство стандартных функций
             "UInt" =>
             { // получаем значение выражения в типе
-              // todo: Int, Float, UFloat
+              // todo: Float, UFloat
               value[i].setDataType( Some(TokenType::UInt ) );
+              value[i].setData    ( Some(expressions[0].getData().unwrap_or_default()) );
+            } 
+            "Int" =>
+            { // получаем значение выражения в типе
+              value[i].setDataType( Some(TokenType::Int ) );
               value[i].setData    ( Some(expressions[0].getData().unwrap_or_default()) );
             } 
             "String" =>
