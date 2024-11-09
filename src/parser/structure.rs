@@ -420,9 +420,9 @@ impl Structure
           { // n-line structure
             if structure.lines.len() > idx 
             { // проверяем что не выходим за список линий
-              let tokens = &mut structure.lines[idx] // todo: type
-                            .read().unwrap()
-                            .tokens.clone();
+              let tokens: &mut Vec<Token> = &mut structure.lines[idx]
+                                              .read().unwrap()
+                                              .tokens.clone();
               let _ = drop(structure);
               let result: Token = self.expression(tokens);
               value[index].setData    ( result.getData().clone() );
@@ -433,9 +433,9 @@ impl Structure
         { 
           if structure.lines.len() == 1 
           { // структура с одним вложением
-            let tokens = &mut structure.lines[0] // todo: type
-                          .read().unwrap()
-                          .tokens.clone();
+            let tokens: &mut Vec<Token> = &mut structure.lines[0]
+                                            .read().unwrap()
+                                            .tokens.clone();
             let _ = drop(structure);
             let result: Token = self.expression(tokens);
             value[index].setData    ( result.getData().clone() );
@@ -446,8 +446,8 @@ impl Structure
             let mut linesResult: Vec<Token> = Vec::new();
             for line in &structure.lines 
             {
-              let tokens = &mut line.read().unwrap() // todo: type
-                             .tokens.clone();
+              let tokens: &mut Vec<Token> = &mut line.read().unwrap()
+                                              .tokens.clone();
               let _ = drop(line);
               linesResult.push( self.expression(tokens) );
             }
@@ -576,7 +576,7 @@ impl Structure
             let structure: RwLockReadGuard<'_, Structure> = currentStructureLink.read().unwrap();
             let hasLines: bool = 
             {
-              let childStructureLink = structure.getStructureByName(&link[0]);
+              let childStructureLink: Option< Arc<RwLock<Structure>> > = structure.getStructureByName(&link[0]);
               if let Some(childStructureLink) = childStructureLink 
               {
                 if childStructureLink.read().unwrap()

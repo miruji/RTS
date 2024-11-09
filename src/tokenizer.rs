@@ -17,10 +17,10 @@ use std::{
 
 // проверяет buffer по index и так пропускае возможные комментарии
 // потом они будут удалены по меткам
-unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -> ()
+unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> ()
 {
   *index += 1;
-  while *index < bufferLength && buffer[*index] != b'\n' 
+  while *index < *bufferLength && buffer[*index] != b'\n' 
   {
     *index += 1;
   }
@@ -28,8 +28,8 @@ unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: usize) -
 
 // проверяет что байт является одиночным знаком;
 // доступным для синтаксиса
-fn isSingleChar(c: u8) -> bool {
-  matches!(c, 
+fn isSingleChar(c: &u8) -> bool {
+  matches!(*c, 
     b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
     b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
     b'(' | b')' | b'{' | b'}' | b'[' | b']' | 
@@ -38,28 +38,29 @@ fn isSingleChar(c: u8) -> bool {
 }
 
 // проверяет что байт является числом
-fn isDigit(c: u8) -> bool 
+fn isDigit(c: &u8) -> bool 
 {
-  c >= b'0' && c <= b'9'
+  *c >= b'0' && *c <= b'9'
 }
 // проверяет buffer по index и так находит возможные 
 // примитивные численные типы данных;
 // e: UInt, Int, UFloat, Float, Rational, Complex
 // todo: ввести Complex числа
-unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
+unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
-  let mut result: String = String::new();
+  let mut result: String = String::from(buffer[savedIndex] as char);
+  savedIndex += 1;
 
-  let mut      dot = false; // dot check
-  let mut negative = false; // negative check
-  let mut rational = false; // reational check
+  let mut      dot: bool = false; // dot check
+  let mut negative: bool = false; // negative check
+  let mut rational: bool = false; // reational check
 
-  while savedIndex < bufferLength 
+  while savedIndex < *bufferLength 
   {
     let byte1: u8 = buffer[savedIndex]; // current char
     let byte2: u8 =                     // next char
-      if savedIndex+1 < bufferLength 
+      if savedIndex+1 < *bufferLength 
       {
         buffer[savedIndex+1]
       } else 
@@ -74,12 +75,12 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
       negative = true;
       savedIndex += 1;
     } else
-    if isDigit(byte1) 
+    if isDigit(&byte1) 
     { // UInt
       result.push(byte1 as char);
       savedIndex += 1;
     } else 
-    if byte1 == b'.' && !dot && isDigit(byte2) &&
+    if byte1 == b'.' && !dot && isDigit(&byte2) &&
        savedIndex > 1 && buffer[*index-1] != b'.' // fixed for a.0.1
     { // UFloat
       if rational 
@@ -91,7 +92,7 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: usize) -> To
       savedIndex += 1;
     } else
     if byte1 == b'/' && byte2 == b'/' && !dot && 
-       (savedIndex+2 < bufferLength && isDigit(buffer[savedIndex+2])) 
+       (savedIndex+2 < *bufferLength && isDigit(&buffer[savedIndex+2])) 
     { // Rational
       rational = true;
       result.push_str("//");
@@ -121,18 +122,19 @@ fn isLetter(c: u8) -> bool
 }
 // проверяет buffer по index и так находит возможные слова;
 // из них также выделяет сразу определяемые зарезервированные
-unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
+unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
-  let mut result: String = String::new();
+  let mut result: String = String::from(buffer[savedIndex] as char);
+  savedIndex += 1;
   let mut isLink: bool = false;
 
-  while savedIndex < bufferLength 
+  while savedIndex < *bufferLength 
   {
     let byte1: u8 = buffer[savedIndex]; // current char
 
     // todo: use match case
-    if (isDigit(byte1) || byte1 == b'.') && !result.is_empty()
+    if (isDigit(&byte1) || byte1 == b'.') && !result.is_empty()
     {
       result.push(byte1 as char);
       savedIndex += 1;
@@ -166,110 +168,70 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Toke
 
 // проверяет buffer по index и так находит возможные 
 // Char, String, RawString
-unsafe fn getQuotes(buffer: &[u8], index: &mut usize,) -> Token 
+unsafe fn getQuotes(buffer: &[u8], index: &mut usize) -> Token 
 {
-  let byte1: u8 = buffer[*index]; // quote byte
-  let mut result = String::new();
+  let byte1: u8 = buffer[*index]; // начальный символ кавычки
+  let mut result: String = String::new();
 
-  if buffer[*index] == byte1 
+  *index += 1;
+
+  let length = buffer.len();
+  while *index < length 
   {
-    let mut open:             bool = false;
-    let mut noSlash:          bool;
-    let mut backslashCounter: usize;
+    let byte2: u8 = buffer[*index]; // текущий байт
+    // Ошибка: конец строки внутри кавычек
+    if byte2 == b'\n' { return Token::newEmpty(None); }
 
-    let length: usize = buffer.len();
-    while *index < length 
+    if byte2 == byte1 
     {
-      let byte2: u8 = buffer[*index]; // current byte
-
-      // check endline error
-      if byte2 == b'\n' 
+      // Проверка обратных слэшей перед закрывающей кавычкой
+      let mut backslash_count = 0;
+      let mut i = *index-1;
+      while i > 0 && buffer[i] == b'\\' 
       {
-        // quotes were not closed
-        // skipped it!
-        return Token::newEmpty(None);
+        backslash_count += 1;
+        i -= 1;
       }
 
-      // read quote
-      // todo: use match case ?
-      if byte2 != byte1 
+      // Нечетное количество обратных слэшей — кавычка экранирована
+      if backslash_count%2 == 1 
       {
         result.push(byte2 as char);
-      } else
-      if byte2 == byte1 
+      } else 
       {
-        noSlash = true;
-        // check back slash of end quote
-        if buffer[*index-1] == b'\\' 
-        {
-          backslashCounter = 1;
-          for i in (0..*index-1).rev() 
-          {
-            if buffer[i] == b'\\' 
-            {
-              backslashCounter += 1;
-            } else 
-            {
-              break;
-            }
-          }
-          if backslashCounter % 2 == 1 
-          {
-            // add slash (\' \" \`)
-            result.push(byte2 as char);
-            noSlash = false;
-          }
-        }
-        //
-        if open && noSlash 
-        {
-          *index += 1;
-          break;
-        } else 
-        {
-          open = true;
-        }
+        *index += 1; // завершение строки
+        break;
       }
-      *index += 1;
-    }
-  }
-  // next return
-  if byte1 == b'\'' 
-  {
-    return if result.len() > 1 
-    {
-      // single quotes can only contain 1 character
-      // skipped it!
-      Token::newEmpty(None)
     } else 
     {
-      Token::new( Some(TokenType::Char), Some(result) )
+      result.push(byte2 as char);
     }
-  } else if byte1 == b'"' 
+
+    *index += 1;
+  }
+
+  // Проверяем тип кавычки и возвращаем соответствующий токен
+  match byte1 
   {
-    Token::new( Some(TokenType::String), Some(result) )
-  } else if byte1 == b'`' 
-  {
-    Token::new( Some(TokenType::RawString), Some(result) )
-  } else 
-  {
-    Token::newEmpty(None)
+    b'\'' => 
+    { // Одинарные кавычки должны содержать только один символ
+      if result.len() != 1 { Token::newEmpty(None) }
+      else { Token::new(Some(TokenType::Char), Some(result)) }
+    }
+    b'"' => Token::new(Some(TokenType::String), Some(result)),
+    b'`' => Token::new(Some(TokenType::RawString), Some(result)),
+    _ => Token::newEmpty(None),
   }
 }
 
 // проверяет buffer по index и так находит возможные 
 // двойные и одиночные операторы
-unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> Token 
+unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let currentByte: u8 = buffer[*index]; // current byte
   let nextByte: u8 =                    // next byte or \0
-    if *index+1 < bufferLength 
-    { 
-      buffer[*index+1]
-    } else 
-    { 
-      b'\0'
-    };
+    if *index+1 < *bufferLength { buffer[*index+1] } 
+    else                        { b'\0'};
 
   let mut increment = |count: usize| 
   { // index increment for single & duble operators
@@ -280,80 +242,82 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: usize) -> 
   {
     b'+' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::PlusEquals) ) }
-      else if nextByte == b'+' 
-        { increment(2); Token::newEmpty( Some(TokenType::UnaryPlus) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Plus) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::PlusEquals) ) }
+        b'+' => { increment(2); Token::newEmpty( Some(TokenType::UnaryPlus) ) }
+        _    => { increment(1); Token::newEmpty( Some(TokenType::Plus) ) }
+      }
     }
     b'-' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::MinusEquals) ) }
-      else if nextByte == b'-' 
-        { increment(2); Token::newEmpty( Some(TokenType::UnaryMinus) ) }
-      else if nextByte == b'>' 
-        { increment(2); Token::newEmpty( Some(TokenType::Pointer) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Minus) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::MinusEquals) ) }
+        b'-' => { increment(2); Token::newEmpty( Some(TokenType::UnaryMinus) ) }
+        b'>' => { increment(2); Token::newEmpty( Some(TokenType::Pointer) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Minus) ) }
+      }
     }
     b'*' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::MultiplyEquals) ) }
-      else if nextByte == b'*' 
-        { increment(2); Token::newEmpty( Some(TokenType::UnaryMultiply) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Multiply) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::MultiplyEquals) ) }
+        b'*' => { increment(2); Token::newEmpty( Some(TokenType::UnaryMultiply) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Multiply) ) }
+      }
     }
     b'/' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::DivideEquals) ) }
-      else if nextByte == b'/' 
-        { increment(2); Token::newEmpty( Some(TokenType::UnaryDivide) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Divide) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::DivideEquals) ) }
+        b'/' => { increment(2); Token::newEmpty( Some(TokenType::UnaryDivide) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Divide) ) }
+      }
     }
     b'%' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
-      else if nextByte == b'%' 
-        { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Modulo) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
+        b'%' => { increment(2); Token::newEmpty( Some(TokenType::Modulo) ) } // todo: add new type in Token
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Modulo) ) }
+      }
     }
     b'^' => 
     {
-           if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
-      else if nextByte == b'^' 
-        { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Disjoint) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
+        b'^' => { increment(2); Token::newEmpty( Some(TokenType::Exponent) ) } // todo: add new type in Token
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Disjoint) ) }
+      }
     }
     b'>' => 
     {
-      if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::GreaterThanOrEquals) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::GreaterThan) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::GreaterThanOrEquals) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::GreaterThan) ) }
+      }
     }
     b'<' => 
     {
-      if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::LessThanOrEquals) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::LessThan) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::LessThanOrEquals) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::LessThan) ) }
+      }
     }
     b'!' => 
     {
-      if nextByte == b'=' 
-        { increment(2); Token::newEmpty( Some(TokenType::NotEquals) ) }
-      else 
-        { increment(1); Token::newEmpty( Some(TokenType::Exclusion) ) }
+      match nextByte 
+      {
+        b'=' => { increment(2); Token::newEmpty( Some(TokenType::NotEquals) ) }
+        _ =>    { increment(1); Token::newEmpty( Some(TokenType::Exclusion) ) }
+      }
     }
     b'&' => { increment(1); Token::newEmpty( Some(TokenType::Joint) ) }
     b'|' => { increment(1); Token::newEmpty( Some(TokenType::Inclusion) ) }
@@ -554,7 +518,7 @@ unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
 }
 
 // выводит токен, его тип данных
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize) -> ()
+pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> ()
 {
   let lineIndentString: String = " ".repeat(lineIndent*2+1); // отступ для линии
   let identString:      String = " ".repeat(indent*2+1);     // отступ для вложения токенов
@@ -637,13 +601,13 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: usize, indent: usize
     // если есть вложения у токена, то просто рекурсивно обрабатываем их
     if let Some(tokens) = &token.tokens
     {
-      outputTokens(tokens, lineIndent, indent+1)
+      outputTokens(tokens, lineIndent, &(indent+1))
     }
   }
 }
 // выводит информацию о линии;
 // также токены линии
-pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) -> ()
+pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize) -> ()
 {
   let identStr1: String = " ".repeat(indent*2);      // это отступ для главной строки
   let identStr2: String = format!("{} ", identStr1); // а это для дочерних токенов
@@ -659,13 +623,13 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: usize) 
     } else 
     { // заголовок для начала вложенных токенов
       formatPrint(&format!("{}\\b┣ \\fg(#90df91)Tokens\\c\n",identStr2));
-      outputTokens(&line.tokens, indent, 1); // выводим вложенные токены
+      outputTokens(&line.tokens, &indent, &1); // выводим вложенные токены
     }
     
     if let Some(lineLines) = &line.lines
     { // заголовок для начала вложенных линий
       formatPrint(&format!("{}\\b┗ \\fg(#90df91)Lines\\c\n",identStr2));
-      outputLines(lineLines, indent+1); // выводим вложенные линии
+      outputLines(lineLines, &(indent+1)); // выводим вложенные линии
     }
   }
   //
@@ -768,16 +732,16 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       } else
       if byte == b'#' 
       { // ставим метку на комментарий в линии, по ним потом будут удалены линии
-        deleteComment(&buffer, &mut index, bufferLength); // пропускает комментарий
+        deleteComment(&buffer, &mut index, &bufferLength); // пропускает комментарий
         lineTokens.push( Token::newEmpty( Some(TokenType::Comment) ) );
       } else
-      if isDigit(byte) || (byte == b'-' && index+1 < bufferLength && isDigit(buffer[index+1])) 
+      if isDigit(&byte) || (byte == b'-' && index+1 < bufferLength && isDigit(&buffer[index+1])) 
       { // получаем все возможные численные примитивные типы данных
-        lineTokens.push( getNumber(&buffer, &mut index, bufferLength) );
+        lineTokens.push( getNumber(&buffer, &mut index, &bufferLength) );
       } else
       if isLetter(byte) 
       { // получаем все возможные и зарезервированные слова
-        lineTokens.push( getWord(&buffer, &mut index, bufferLength) );
+        lineTokens.push( getWord(&buffer, &mut index, &bufferLength) );
       } else
       if byte == b'\'' || byte == b'"' || byte == b'`' 
       { // получаем Char, String, RawString
@@ -791,18 +755,21 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
               if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
                  backToken.getData().unwrap_or_default() == "f" 
               {
-                let newDataType: TokenType = token.getDataType().unwrap_or_default();
-                if newDataType == TokenType::RawString 
+                match token.getDataType().unwrap_or_default()
                 {
-                 token.setDataType( Some(TokenType::FormattedRawString) ); 
-                } else
-                if newDataType == TokenType::String 
-                { 
-                  token.setDataType( Some(TokenType::FormattedString) ); 
-                } else
-                if newDataType == TokenType::Char 
-                { 
-                  token.setDataType( Some(TokenType::FormattedChar) ); 
+                  TokenType::RawString =>
+                  {
+                   token.setDataType( Some(TokenType::FormattedRawString) ); 
+                  }
+                  TokenType::String =>
+                  { 
+                    token.setDataType( Some(TokenType::FormattedString) ); 
+                  }
+                  TokenType::Char =>
+                  { 
+                    token.setDataType( Some(TokenType::FormattedChar) ); 
+                  }
+                  _ => {}
                 }
                 lineTokens[lineTokensLength-1] = token; // replace the last token in place
               } else 
@@ -819,15 +786,13 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
         }
       } else
       // получаем возможные двойные и одиночные символы
-      if isSingleChar(byte) 
+      if isSingleChar(&byte) 
       {
-        let token: Token = getOperator(&buffer, &mut index, bufferLength);
-        if token.getDataType() != None
+        let token: Token = getOperator(&buffer, &mut index, &bufferLength);
+        match token.getDataType()
         {
-            lineTokens.push(token);
-        } else 
-        {
-          index += 1;
+          None => { index += 1; } 
+          _ => { lineTokens.push(token); }
         }
       } else 
       { // если мы ничего не нашли из возможного, значит этого нет в синтаксисе;
@@ -847,7 +812,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   {
     let endTime:  Instant  = Instant::now();    // получаем текущее время
     let duration: Duration = endTime-startTime; // получаем сколько всего прошло
-    outputLines(&linesLinks,2); // выводим полученное AST дерево из линий
+    outputLines(&linesLinks,&2); // выводим полученное AST дерево из линий
     //
     println!("     ┃");
     log("ok",&format!("xDuration: {:?}",duration));

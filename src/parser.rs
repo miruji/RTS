@@ -207,7 +207,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
           // получаем родительскую структуру
           
           // ищем в родительской структуре, есть ли там похожая на structureName
-          let structureLink = // todo: type
+          let structureLink: Option< Arc<RwLock<Structure>> > =
           { 
             parentLink.read().unwrap()
               .getStructureByName(&structureName) 
@@ -465,7 +465,7 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: b
 { // получаем сколько линий вложено в структуру
   let (lineIndex, linesLength): (*mut usize, usize) = 
   {
-    let structure = structureLink.read().unwrap(); // Читаем структуру
+    let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap(); // Читаем структуру
     (
       unsafe { &structure.lineIndex as *const usize as *mut usize }, 
       structure.lines.len()
