@@ -334,7 +334,7 @@ impl Structure
           vec![ 
             Arc::new(RwLock::new( 
               Line {
-                tokens: rightValue,
+                tokens: vec![ self.expression(&mut rightValue.clone()) ],
                 indent: 0,
                 lines:  None,
                 parent: None
@@ -990,7 +990,7 @@ impl Structure
         continue;
       } else
       // value -value2
-      if matches!(tokenType, TokenType::Int | TokenType::Float) 
+      if matches!(TokenType::Minus, ref operations) && matches!(tokenType, TokenType::Int | TokenType::Float) 
       {
         value[i-1] = calculate(&TokenType::Plus, &value[i-1], &value[i]);
 
@@ -1066,11 +1066,13 @@ impl Structure
             } 
             "String" =>
             { // получаем значение выражение в типе String
+              // todo: подумать над formatted типами
               value[i].setDataType( Some(TokenType::String ) );
               value[i].setData    ( Some(expressions[0].getData().unwrap_or_default()) );
             } 
             "Char" =>
             { // получаем значение выражения в типе Char
+              // todo: проверить работу
               value[i].setDataType( Some(TokenType::Char) );
               value[i].setData( 
                 Some(
