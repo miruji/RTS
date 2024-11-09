@@ -475,9 +475,10 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: b
   // выполнение программы происходит до тех пор, 
   // пока не будет всё прочитано, либо 
   // пока не будет вызван _exitCode на true
+  let mut lineLink: Arc<RwLock<Line>>;
   while _exitCode == false && *lineIndex < linesLength 
   { // если мы читаем строки, то создаём сразу ссылку на текущую линию
-    let lineLink: Arc<RwLock<Line>> = 
+    lineLink = 
     { // получаем её через чтение текущей структуры;
       // берём линию по индексу линии
       structureLink.read().unwrap()

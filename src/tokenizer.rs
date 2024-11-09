@@ -28,7 +28,8 @@ unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: &usize) 
 
 // проверяет что байт является одиночным знаком;
 // доступным для синтаксиса
-fn isSingleChar(c: &u8) -> bool {
+fn isSingleChar(c: &u8) -> bool 
+{
   matches!(*c, 
     b'+' | b'-' | b'*' | b'/' | b'=' | b'%' | b'^' |
     b'>' | b'<' | b'?' | b'!' | b'&' | b'|' | 
@@ -56,10 +57,12 @@ unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> T
   let mut negative: bool = false; // negative check
   let mut rational: bool = false; // reational check
 
+  let mut byte1: u8; // текущий символ
+  let mut byte2: u8; // следующий символ
   while savedIndex < *bufferLength 
   {
-    let byte1: u8 = buffer[savedIndex]; // current char
-    let byte2: u8 =                     // next char
+    byte1 = buffer[savedIndex]; // значение текущего символа
+    byte2 =                     // значение следующего символа
       if savedIndex+1 < *bufferLength 
       {
         buffer[savedIndex+1]
@@ -129,9 +132,10 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Tok
   savedIndex += 1;
   let mut isLink: bool = false;
 
+  let mut byte1: u8; // текущий символ
   while savedIndex < *bufferLength 
   {
-    let byte1: u8 = buffer[savedIndex]; // current char
+    byte1 = buffer[savedIndex]; // значение текущего символа
 
     // todo: use match case
     if (isDigit(&byte1) || byte1 == b'.') && !result.is_empty()
@@ -176,35 +180,38 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize) -> Token
   *index += 1;
 
   let length = buffer.len();
+  let mut byte2: u8;
   while *index < length 
   {
-    let byte2: u8 = buffer[*index]; // текущий байт
+    byte2 = buffer[*index]; // текущий байт
     // Ошибка: конец строки внутри кавычек
-    if byte2 == b'\n' { return Token::newEmpty(None); }
-
-    if byte2 == byte1 
+    match byte2 
     {
-      // Проверка обратных слэшей перед закрывающей кавычкой
-      let mut backslash_count = 0;
-      let mut i = *index-1;
-      while i > 0 && buffer[i] == b'\\' 
+      b'\n' => { return Token::newEmpty(None); }
+      byte if byte == byte1 => // Явно проверяем, что это не конец
       {
-        backslash_count += 1;
-        i -= 1;
-      }
+        // Проверка обратных слэшей перед закрывающей кавычкой
+        let mut backslash_count = 0;
+        let mut i = *index-1;
 
-      // Нечетное количество обратных слэшей — кавычка экранирована
-      if backslash_count%2 == 1 
-      {
-        result.push(byte2 as char);
-      } else 
-      {
-        *index += 1; // завершение строки
-        break;
+        while i > 0 && buffer[i] == b'\\' 
+        {
+          backslash_count += 1;
+          i -= 1;
+        }
+
+        // Нечетное количество обратных слэшей — кавычка экранирована
+        match backslash_count%2 
+        {
+          1 => result.push(byte2 as char), // экранированная кавычка
+          _ => 
+          {
+            *index += 1; // завершение строки
+            break;
+          }
+        }
       }
-    } else 
-    {
-      result.push(byte2 as char);
+      _ => { result.push(byte2 as char); }
     }
 
     *index += 1;
@@ -215,8 +222,11 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize) -> Token
   {
     b'\'' => 
     { // Одинарные кавычки должны содержать только один символ
-      if result.len() != 1 { Token::newEmpty(None) }
-      else { Token::new(Some(TokenType::Char), Some(result)) }
+      match result.len() 
+      {
+        1 => { Token::new(Some(TokenType::Char), Some(result)) }
+        _ => { Token::newEmpty(None) }
+      } 
     }
     b'"' => Token::new(Some(TokenType::String), Some(result)),
     b'`' => Token::new(Some(TokenType::RawString), Some(result)),
@@ -478,9 +488,10 @@ unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
   let mut linesLinksLength: usize = linesLinks.len(); // количество ссылок строк
   let mut lastTokenIndex:   usize;                    // это указатель на метку где TokenType::Comment
 
+  let mut deleteLine: bool;
   while index < linesLinksLength 
   {
-    let mut deleteLine: bool  = false; // состояние удаления текущей линии
+    deleteLine = false; // состояние удаления текущей линии
     'exit: 
     { // прерывание чтобы не нарушать мутабельность
       let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
@@ -542,61 +553,69 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usi
       };
 
     tokenType = token.getDataType().unwrap_or_default(); // тип токена
-    if let Some(tokenData) = token.getData()
-    { // проверяем что за токен
-      if matches!(tokenType, TokenType::Char | TokenType::FormattedChar) 
-      { // если токен это Char | FormattedChar
-        log("parserToken",&format!(
-          "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
+    match token.getData() 
+    {
+      Some(tokenData) => 
+      { // если токен содержит данные
+        match tokenType 
+        { // проверяем что за токен
+          TokenType::Char | TokenType::FormattedChar =>
+          { // если токен это Char | FormattedChar
+            log("parserToken",&format!(
+              "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
+              lineIndentString,
+              c,
+              identString,
+              tokenData,
+              tokenType.to_string()
+            ));
+          }
+          TokenType::String | TokenType::FormattedString =>
+          { // если токен это String | FormattedString
+            log("parserToken",&format!(
+              "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
+              lineIndentString,
+              c,
+              identString,
+              tokenData,
+              tokenType.to_string()
+            ));
+          }
+          TokenType::RawString | TokenType::FormattedRawString =>
+          { // если токен это RawString | FormattedRawString
+            log("parserToken",&format!(
+              "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
+              lineIndentString,
+              c,
+              identString,
+              tokenData,
+              tokenType.to_string()
+            ));
+          }
+          _ => 
+          { // если это обычный токен
+            log("parserToken",&format!(
+              "{}{}{}{}  |{}",
+              lineIndentString,
+              c,
+              identString,
+              tokenData,
+              tokenType.to_string()
+            ));
+          }
+        }
+      }
+      _ => 
+      { // если это токен только с типом, то выводим тип как символ
+        formatPrint(&format!(
+          "{}{}{}{}\n",
           lineIndentString,
           c,
           identString,
-          tokenData,
-          tokenType.to_string()
-        ));
-      } else
-      if matches!(tokenType, TokenType::String | TokenType::FormattedString) 
-      { // если токен это String | FormattedString
-        log("parserToken",&format!(
-          "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
-          lineIndentString,
-          c,
-          identString,
-          tokenData,
-          tokenType.to_string()
-        ));
-      } else
-      if matches!(tokenType, TokenType::RawString | TokenType::FormattedRawString) 
-      { // если токен это RawString | FormattedRawString
-        log("parserToken",&format!(
-          "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
-          lineIndentString,
-          c,
-          identString,
-          tokenData,
-          tokenType.to_string()
-        ));
-      } else 
-      { // если это обычный токен
-        log("parserToken",&format!(
-          "{}{}{}{}  |{}",
-          lineIndentString,
-          c,
-          identString,
-          tokenData,
           tokenType.to_string()
         ));
       }
-    } else 
-    { // если это токен только с типом, то выводим тип как символ
-      formatPrint(&format!(
-        "{}{}{}{}\n",
-        lineIndentString,
-        c,
-        identString,
-        tokenType.to_string()
-      ));
-    }
+    } 
 
     // если есть вложения у токена, то просто рекурсивно обрабатываем их
     if let Some(tokens) = &token.tokens
@@ -612,19 +631,24 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize)
   let identStr1: String = " ".repeat(indent*2);      // это отступ для главной строки
   let identStr2: String = format!("{} ", identStr1); // а это для дочерних токенов
 
-  for (i, line) in linesLinks.iter().enumerate() 
+  let mut line: RwLockReadGuard<'_, Line>;
+  for (i, lineLink) in linesLinks.iter().enumerate() 
   { // проходи по линиям через чтение
-    let line: RwLockReadGuard<'_, Line> = line.read().unwrap();
+    line = lineLink.read().unwrap();
     log("parserBegin", &format!("{} {}",identStr1,i));
 
-    if (&line.tokens).len() == 0 
-    { // заголовок для разделителей
-      formatPrint(&format!("{}\\b┗ \\fg(#90df91)Separator\\c\n",identStr2));
-    } else 
-    { // заголовок для начала вложенных токенов
-      formatPrint(&format!("{}\\b┣ \\fg(#90df91)Tokens\\c\n",identStr2));
-      outputTokens(&line.tokens, &indent, &1); // выводим вложенные токены
-    }
+    match (&line.tokens).len() 
+    {
+      0 => 
+      { // заголовок для разделителей
+        formatPrint(&format!("{}\\b┗ \\fg(#90df91)Separator\\c\n",identStr2));
+      } 
+      _ =>
+      { // заголовок для начала вложенных токенов
+        formatPrint(&format!("{}\\b┣ \\fg(#90df91)Tokens\\c\n",identStr2));
+        outputTokens(&line.tokens, &indent, &1); // выводим вложенные токены
+      }
+    } 
     
     if let Some(lineLines) = &line.lines
     { // заголовок для начала вложенных линий
@@ -657,9 +681,10 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
   let mut linesLinks:     Vec< Arc<RwLock<Line>> > = Vec::new(); // это ссылки на готовые линии 
   let mut readLineIndent: bool                     = true;       // флаг на проверку есть ли indent сейчас
 
+  let mut byte: u8;
   while index < bufferLength 
   { // читаем байты
-    let byte: u8 = buffer[index]; // текущий байт
+    byte = buffer[index]; // текущий байт
 
     // проверяем отступы, они могут быть указаны пробелами;
     // либо readLineIndent будет true после конца строки предыдущей линии
@@ -743,7 +768,7 @@ pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Li
       { // получаем все возможные и зарезервированные слова
         lineTokens.push( getWord(&buffer, &mut index, &bufferLength) );
       } else
-      if byte == b'\'' || byte == b'"' || byte == b'`' 
+      if matches!(byte, b'\'' | b'"' | b'`') 
       { // получаем Char, String, RawString
         let mut token: Token = getQuotes(&buffer, &mut index);
         if token.getDataType() != None 
