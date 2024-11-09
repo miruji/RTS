@@ -1,10 +1,9 @@
-<p align="left">
-   <img src="logo.svg" alt="RTS" align="left" width="75">
-   <h1>Real-Time Script</h1>
-   <p align="justify">A reactive, free-form, high-level scripting language that runs in interpreter mode and <s>converts scripts directly into machine code</s>.</p>
-</p>
+<img src="logo.svg" alt="RTS" align="left" width="70">
+<h1>Real-Time Script</h1>
 
-### Introduction
+A reactive, free-form, high-level scripting language that runs in interpreter mode and ~~converts scripts directly into machine code~~.
+
+<h3 align="center">Introduction</h3>
 > Currently, RTS generates machine code by calling Rust functions. But according to the original plan, it should work in real-time code interpretation mode directly into machine code, which will give a significant performance increase. However, for this you need to either translate everything in real time through a separate module, or rewrite the code in the same GASS language (GAS Script), which will be assembled into machine code in advance. The main idea here is to avoid compilation garbage, reduce the number of instructions to a minimum and also make even fewer leaks compared to the same Rust; GAS (GNU Assembler) is most suitable for this.
 
 The language uses the Latin alphabet as a technical one and any other language as explanatory-accompanying, more understandable to the developer.
@@ -12,7 +11,8 @@ The language uses the Latin alphabet as a technical one and any other language a
 
 It is expected to write programs of any complexity and completely free structures, running them in interpretation mode. At its core, the programmer has to choose between writing everything from scratch, even some basic functions, or importing ready-made solutions from a package manager.
 
-### Why an interpreter?
+<h3 align="center">Why an interpreter?</h3>
+
 > RTS is the final link in the chain from assembler to compiled language to interpreted language.
 
 How interpretation and RTS work:
@@ -37,7 +37,7 @@ How interpretation and RTS work:
 The code is read from top to bottom line by line and taking into account the level of nesting.
 > RTS treats indentation as creating a new block of lines of code. You can also give the attachment a name. The type of structure itself will depend on its content.
 
-### Package Manager
+<h3 align="center">Package Manager</h3>
 RTS has a package manager that allows you to easily manage libraries.
 
 Its main task is to maintain global storage for the user locally and provide the ability to create new packages and send them to the server. More detailed information about creating and managing packages can be found in the [Packages Section](https://realtime.su/packages)
