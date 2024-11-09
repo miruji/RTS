@@ -1,5 +1,8 @@
-# RTS (Real-Time Script)
-A reactive, free-form, high-level scripting language that runs in interpreter mode and ~~converts scripts directly into machine code~~.
+<p align="left">
+   <img src="logo.svg" alt="RTS" align="left" width="75">
+   <h1>Real-Time Script</h1>
+   <p align="justify">A reactive, free-form, high-level scripting language that runs in interpreter mode and <s>converts scripts directly into machine code</s>.</p>
+</p>
 
 ### Introduction
 > Currently, RTS generates machine code by calling Rust functions. But according to the original plan, it should work in real-time code interpretation mode directly into machine code, which will give a significant performance increase. However, for this you need to either translate everything in real time through a separate module, or rewrite the code in the same GASS language (GAS Script), which will be assembled into machine code in advance. The main idea here is to avoid compilation garbage, reduce the number of instructions to a minimum and also make even fewer leaks compared to the same Rust; GAS (GNU Assembler) is most suitable for this.
