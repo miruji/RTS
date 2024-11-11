@@ -9,17 +9,17 @@ packitString = "\fg(#ffffff)\bpackit:\c "
 
 #
 # packit version
-? argv[1] = "v"
+? argv[0] = "v"
   println(f"{packitString}Version 0.2.0")
   exit(0)
 #
 # Synchronize package (update/download)
-? argv[1] = "s"
+? argv[0] = "s"
   target
   ? argc < 2
     target = ""
   ?
-    target = argv[2]
+    target = argv[1]
     println(f"{packitString}Synchronize package '{target}'")
   
   ? argc = 2
@@ -29,13 +29,13 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     println(f"{packitString}Requires 2nd parameter as target")
     exit(1)
 # Synchronize all packages
-? argv[1] = "sa"
+? argv[0] = "sa"
   println(f"{packitString}Synchronize all packages")
   exec("sudo pacman --noconfirm -S archlinux-keyring")
   exec("sudo pacman --noconfirm -Syu")
 #
 # Remove package
-? argv[1] = "r"
+? argv[0] = "r"
   target
   ? argc < 2
     target = ""
@@ -49,12 +49,12 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     println(f"{packitString}Requires 2nd parameter as target")
     exit(1)
 # Remove package with dependencies
-? argv[1] = "rd"
+? argv[0] = "rd"
   target
   ? argc < 2
     target = ""
   ?
-    target = argv[2]
+    target = argv[1]
     println(f"{packitString}Remove package '{target}' with dependencies")
   
   ? argc = 2
@@ -63,12 +63,12 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     println(f"{packitString}Requires 2nd parameter as target")
     exit(1)
 # Remove package with dependencies, configuration
-? argv[1] = "rdc"
+? argv[0] = "rdc"
   target
   ? argc < 2
     target = ""
   ?
-    target = argv[2]
+    target = argv[1]
     println(f"{packitString}Remove package '{target}' with dependencies, configuration")
   
   ? argc = 2
@@ -78,25 +78,25 @@ packitString = "\fg(#ffffff)\bpackit:\c "
     exit(1)
 #
 # Litter packages
-? argv[1] = "l"
+? argv[0] = "l"
   println(f"{packitString}Show litter packages")
   exec("pacman -Qdtq")
 # Clear litter packages
-? argv[1] = "lc"
+? argv[0] = "lc"
   println(f"{packitString}Clear litter packages")
   exec("sudo pacman --noconfirm -Rdd $(pacman -Qdtq)")
   # todo: Check litter list
 #
 # Clear cache, leaving latest
-? argv[1] = "c"
+? argv[0] = "c"
   println(f"{packitString}Clear cache, leaving latest")
   exec("sudo pacman --noconfirm -Sc")
 # Clear cache all
-? argv[1] = "ca"
+? argv[0] = "ca"
   println(f"{packitString}Clear cache, all")
   exec("sudo pacman --noconfirm -Scc")
 #
-? argv[1] = "h"
+? argv[0] = "h"
   println(f"{packitString}All commands:")
   
   println("  v     packit version")
