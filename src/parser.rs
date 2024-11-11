@@ -391,44 +391,58 @@ pub fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
   }
 
   // присваиваем в главную структуру argc & argv
-  // todo: переписать закоментированные части, чтобы оно работало
   {
     let mut main: RwLockWriteGuard<'_, Structure> = _main.write().unwrap();
-    main.lines = tokenizerLinesLinks.clone();
+    main.lines = tokenizerLinesLinks; // также присваиваем линии от Tokenizer
     // argc
-    /*
     main.pushStructure(
-      MemoryCell::new(
-        String::from("argc"),
-        MemoryCellMode::LockedFinal,
-        TokenType::UInt,
-        Token::newNesting(
-          Some( vec![
-            Token::new( Some(TokenType::UInt), Some(_argc.to_string()) )
-          ] )
-        )
+      Structure::new(
+        String::from("argc"),   // todo: LockedFinal
+        vec![                   // в линии структуры
+          Arc::new(RwLock::new( // добавляем линию с 1 токеном
+            Line {
+              tokens: vec![
+                Token::new( 
+                  Some(TokenType::UInt), 
+                  Some(unsafe{_argc.to_string()}) 
+                )
+              ],
+              indent: 0,
+              lines:  None,
+              parent: None
+            }
+          ))
+        ],
+        Some( _main.clone() ), // ссылаемся на родителя
       )
     );
-    */
     // argv
-    let mut argv: Vec<Token> = Vec::new();
+    let mut argv: Vec< Arc<RwLock<Line>> > = Vec::new();
     for a in unsafe{&_argv}
     {
       argv.push(
-        Token::new( Some(TokenType::String), Some(String::from(a)) )
+        Arc::new(RwLock::new( // добавляем линию с 1 токеном
+          Line {
+            tokens: vec![
+              Token::new( 
+                Some(TokenType::String), 
+                Some(String::from(a)) 
+              )
+            ],
+            indent: 0,
+            lines:  None,
+            parent: None
+          }
+        ))
       );
     }
-    /*
     main.pushStructure(
       Structure::new(
-        String::from("argv"),
-        //MemoryCellMode::LockedFinal,
-        //TokenType::Array,
-        Some(argv),
-        None
+        String::from("argv"),  // todo: LockedFinal
+        argv,                  // в линии структуры добавляем все argv линии
+        Some( _main.clone() ), // ссылаемся на родителя
       )
     );
-    */
   }
 
   unsafe{

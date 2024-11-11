@@ -96,26 +96,26 @@ async fn main() -> io::Result<()>
   use crate::packageApi::packageApi;
 
   // args to key-values
-  let mut args: Vec<(String, Vec<String>)> = Vec::new();
-  let input:    Vec<String>                = env::args().collect();
+  let mut args: (String, Vec<String>) = (String::new(), Vec::new());
+  let input:    Vec<String> = env::args().collect();
   if input.len() > 1 
   {
     // first argument is treated as key, others as values
     let command: String      = input[1].clone();
     let values:  Vec<String> = input.iter().skip(2).cloned().collect();
     // store key and values in args vector
-    args.push((command.clone(), values.clone()));
+    args = (command.clone(), values.clone());
   } else { help() }
   
   // read key
   let mut runFile: bool = false;
   let mut buffer:  Vec<u8> = Vec::new();
 
-  let valuesLength: usize = (args[0].1).len();
+  let valuesLength: usize = (args.1).len();
 
-  if !args.is_empty() 
+  if !args.0.is_empty() 
   {
-    let key: &str = args[0].0.as_str();
+    let key: &str = args.0.as_str();
     match key
     {
       "version" => 
@@ -126,7 +126,7 @@ async fn main() -> io::Result<()>
       "help" => help(),
       "package" =>
       { // package
-        packageApi(&args[0].1,valuesLength).await;
+        packageApi(&args.1,valuesLength).await;
         logExit(0);
       },
       _ if (key == "run" || key == "drun") && valuesLength >= 1 =>
@@ -139,9 +139,9 @@ async fn main() -> io::Result<()>
         // run file
         unsafe
         {
-          _argc = valuesLength;
-          _argv = args[0].1.clone();
-          _filePath = args[0].1[0].clone();
+          _argc = valuesLength-1;
+          _argv = (args.1)[1..].to_vec();
+          _filePath = args.1[0].clone();
         }
 
         // todo: check filePath file type
@@ -226,7 +226,6 @@ async fn main() -> io::Result<()>
   {
     if lastByte != b'\n' 
     {
-      println!("add last \\n");
       buffer.push(b'\n');
     }
   }
