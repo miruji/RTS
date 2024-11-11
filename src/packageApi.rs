@@ -13,6 +13,34 @@ use crate::{log, logExit};
 use reqwest::Error;
 use serde_json::Value;
 
+/*
+async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
+  let url = format!("https://realtime.su/api/packages/{}", packageId);
+  let response = reqwest::get(&url).await?;
+  let package = response.json::<Value>().await?;
+  Ok(package)
+}
+// install package
+async fn packageInstall(values: &Vec<String>) -> () {
+  log("ok", &format!("Installing packages {:?}", values));
+
+  for name in values {
+    match fetchPackage(name).await {
+      Ok(package) => {
+        log("ok", &format!("Fetched package for {}: {}", name, package));
+
+        if let Some(pkgName) = package.get("name") {
+          log("ok", &format!("Package name: {}", pkgName));
+        }
+      }
+      Err(err) => {
+        log("error", &format!("Error fetching package {}: {}", name, err));
+      }
+    }
+  }
+}
+*/
+
 // основная функция для обращения ко всем остальным
 pub async fn packageApi(values: &Vec<String>, valuesLength: usize) -> () 
 { // check values length

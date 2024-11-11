@@ -17,7 +17,7 @@ use std::{
 
 // проверяет buffer по index и так пропускае возможные комментарии
 // потом они будут удалены по меткам
-unsafe fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> ()
+fn deleteComment(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> ()
 {
   *index += 1;
   while *index < *bufferLength && buffer[*index] != b'\n' 
@@ -47,7 +47,7 @@ fn isDigit(c: &u8) -> bool
 // примитивные численные типы данных;
 // e: UInt, Int, UFloat, Float, Rational, Complex
 // todo: ввести Complex числа
-unsafe fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
+fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
   let mut result: String = String::from(buffer[savedIndex] as char);
@@ -125,7 +125,7 @@ fn isLetter(c: u8) -> bool
 }
 // проверяет buffer по index и так находит возможные слова;
 // из них также выделяет сразу определяемые зарезервированные
-unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
+fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
   let mut result: String = String::from(buffer[savedIndex] as char);
@@ -172,7 +172,7 @@ unsafe fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Tok
 
 // проверяет buffer по index и так находит возможные 
 // Char, String, RawString
-unsafe fn getQuotes(buffer: &[u8], index: &mut usize) -> Token 
+fn getQuotes(buffer: &[u8], index: &mut usize) -> Token 
 {
   let byte1: u8 = buffer[*index]; // начальный символ кавычки
   let mut result: String = String::new();
@@ -236,7 +236,7 @@ unsafe fn getQuotes(buffer: &[u8], index: &mut usize) -> Token
 
 // проверяет buffer по index и так находит возможные 
 // двойные и одиночные операторы
-unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
+fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let currentByte: u8 = buffer[*index]; // current byte
   let nextByte: u8 =                    // next byte or \0
@@ -354,7 +354,7 @@ unsafe fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: &usize) ->
 // e: () [] {}
 // от начальной скобки до закрывающей
 // её особенность в рекурсивном вызове себя для дочерних токенов
-unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
+fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   for token in tokens.iter_mut() 
   { // чтение токенов
@@ -369,7 +369,7 @@ unsafe fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType
 // эта функция является дочерней bracketNesting 
 // и занимается только самим вложением токенов 
 // от начальной скобки до закрывающей
-unsafe fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
+fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenType) -> ()
 {
   let mut brackets: Vec::<usize> = Vec::new();   // nested brackets
   let mut tokensLength: usize    = tokens.len(); // tokens length
@@ -483,7 +483,7 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
 // удаляет возможные вложенные комментарии по меткам;
 // это такие комментарии, которые имеют вложения
 // todo: не удаляет комментарии во вложенных блоках
-unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
+fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
 {
   let mut linesLinksLength: usize = linesLinks.len(); // количество ссылок строк
   let mut lastTokenIndex:   usize;                    // это указатель на метку где TokenType::Comment
@@ -529,7 +529,7 @@ unsafe fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut ind
 }
 
 // выводит токен, его тип данных
-pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> ()
+pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> ()
 {
   let lineIndentString: String = " ".repeat(lineIndent*2+1); // отступ для линии
   let identString:      String = " ".repeat(indent*2+1);     // отступ для вложения токенов
@@ -626,7 +626,7 @@ pub unsafe fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usi
 }
 // выводит информацию о линии;
 // также токены линии
-pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize) -> ()
+pub fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize) -> ()
 {
   let identStr1: String = " ".repeat(indent*2);      // это отступ для главной строки
   let identStr2: String = format!("{} ", identStr1); // а это для дочерних токенов
@@ -662,7 +662,7 @@ pub unsafe fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize)
 // основная функция для чтения токенов и получения чистых линий из них;
 // токены в этот момент не только сгруппированы в линии, но и имеют 
 // предварительные базовые типы данных.
-pub unsafe fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
+pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
 {
   if debugMode 
   {

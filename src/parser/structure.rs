@@ -680,9 +680,8 @@ impl Structure
         expressionBuffer += "\n"; // это нужно чтобы успешно завершить чтение линии Tokenizer::readTokens()
 
         let expressionLineLink: &Arc<RwLock< Line >> = 
-          unsafe{ // получаем результат выражения в виде ссылки на буферную линию
-            &readTokens(expressionBuffer.as_bytes().to_vec(), false)[0]
-          };
+          // получаем результат выражения в виде ссылки на буферную линию
+          &readTokens(expressionBuffer.as_bytes().to_vec(), false)[0];
 
         // получаем линию на чтение;
         // получаем все токены линии
@@ -1250,15 +1249,13 @@ impl Structure
               // Получаем ссылку на линию
               (lineIndexBuffer, parent.lines[lineIndexBuffer].clone())
             };
-            unsafe
-            { // используем линию parent а также сам parent для нового запуска
-              searchStructure(
-                lineLink.clone(), 
-                parentLink.clone(), 
-                &mut lineIndex,
-                false
-              ); 
-            }
+            // используем линию parent а также сам parent для нового запуска
+            searchStructure(
+              lineLink.clone(), 
+              parentLink.clone(), 
+              &mut lineIndex,
+              false
+            ); 
           }
         }
         /*
@@ -1330,7 +1327,7 @@ impl Structure
               }
             }
             // запускаем новую структуру
-            unsafe{ readLines(calledStructureLink, false); }
+            readLines(calledStructureLink, false);
           }
         } // конец custom метода
       }

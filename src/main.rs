@@ -84,34 +84,6 @@ fn help() -> ()
   log("ok","package local-delete");
   logExit(0);
 }
-// 
-/*
-async fn fetchPackage(packageId: &str) -> Result<Value, Error> {
-  let url = format!("https://realtime.su/api/packages/{}", packageId);
-  let response = reqwest::get(&url).await?;
-  let package = response.json::<Value>().await?;
-  Ok(package)
-}
-// install package
-async fn packageInstall(values: &Vec<String>) -> () {
-  log("ok", &format!("Installing packages {:?}", values));
-
-  for name in values {
-    match fetchPackage(name).await {
-      Ok(package) => {
-        log("ok", &format!("Fetched package for {}: {}", name, package));
-
-        if let Some(pkgName) = package.get("name") {
-          log("ok", &format!("Package name: {}", pkgName));
-        }
-      }
-      Err(err) => {
-        log("error", &format!("Error fetching package {}: {}", name, err));
-      }
-    }
-  }
-}
-*/
 // main
 #[tokio::main]
 async fn main() -> io::Result<()> 
@@ -137,7 +109,7 @@ async fn main() -> io::Result<()>
   
   // read key
   let mut runFile: bool = false;
-  let mut  buffer: Vec<u8> = Vec::new();
+  let mut buffer:  Vec<u8> = Vec::new();
 
   let valuesLength: usize = (args[0].1).len();
 
@@ -236,11 +208,6 @@ async fn main() -> io::Result<()>
     {
       Ok(_) => 
       {
-        // add endl if it doesn't exist
-        if !buffer.ends_with(&[b'\n']) 
-        {
-          buffer.push(b'\n');
-        }
         if unsafe{_debugMode} 
         {
           log("ok",&format!("Reading the file [{}] was successful",unsafe{&*_filePath}));
@@ -254,20 +221,26 @@ async fn main() -> io::Result<()>
     }
   }
 
-  // read
-  unsafe 
+  // проверяем что в конце был \n, если нет, то добавляем его
+  if let Some(&lastByte) = buffer.last() 
   {
-    parseLines( readTokens(buffer, _debugMode) );
+    if lastByte != b'\n' 
+    {
+      println!("add last \\n");
+      buffer.push(b'\n');
+    }
   }
 
-  // duration
+  // Начинаем чтение кода
+  parseLines( readTokens(buffer, unsafe{_debugMode}) );
+  
   if unsafe{_debugMode} 
-  {
+  { // Замеры всего прошедшего времени работы
     let endTime:  Instant  = Instant::now();
     let duration: Duration = endTime-startTime;
     log("ok",&format!("All duration [{:?}]",duration));
   }
-  // ** to release test, use hyperfine/perf
+  // ** Для дополнительных текстов можно использовать hyperfine/perf
 
   //
   Ok(())

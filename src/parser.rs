@@ -44,7 +44,7 @@ fn isMathOperator(dataType: TokenType) -> bool
 // эта функция должна искать return для структур
 // e:  = value
 // это явно показывает, что это не просто валяющееся значение
-unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<Structure>>) -> bool 
+fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<Structure>>) -> bool 
 {
   let mut lineTokens: Vec<Token> = 
   {
@@ -81,7 +81,7 @@ unsafe fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<St
 // - вложенная структура (типо array/vector/list, как удобно)
 // - линейное выражение (типо a = 10)
 // - условный блок (типо if/elif/else)
-unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, structuresRead: bool) -> bool 
+fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure>>, lineIndex: *mut usize, structuresRead: bool) -> bool 
 {
   // todo: line можно вынести, чтобы потом не было .read().unwrap();
   //       для этого надо сразу забрать все нужные значения здесь.
@@ -270,7 +270,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
       };
       let linesLength: usize = lines.len(); // количество линий родительской структуры
       { // смотрим линии внизу
-        let mut i: usize = *lineIndex;
+        let mut i: usize = unsafe{*lineIndex};
         while i < linesLength 
         { // если line index < lines length, то читаем вниз линии,
           // и если там первый токен не имеет TokenType::Question,
@@ -359,7 +359,7 @@ unsafe fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<St
 
     // и только после прочтения всех блоков, 
     // мы можем сдвигать указатель ниже
-    *lineIndex += saveNewLineIndex;
+    unsafe{*lineIndex += saveNewLineIndex}
     return true;
   }
   return false;
@@ -382,7 +382,7 @@ lazy_static!
 // это основная функция для парсинга строк;
 // она разделена на подготовительную часть,
 // и часть запуска readLine()
-pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
+pub fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 { // начинается подготовка к запуску
 
   if unsafe{_debugMode} 
@@ -412,7 +412,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     */
     // argv
     let mut argv: Vec<Token> = Vec::new();
-    for a in &_argv 
+    for a in unsafe{&_argv}
     {
       argv.push(
         Token::new( Some(TokenType::String), Some(String::from(a)) )
@@ -431,12 +431,14 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
     */
   }
 
-  if unsafe{_debugMode} 
-  {
-    log("ok",&format!("argc [{}]",_argc));
-    if _argc > 0 
+  unsafe{
+    if _debugMode 
     {
-      log("ok",&format!("argv {:?}",_argv));
+      log("ok",&format!("argc [{}]",_argc));
+      if _argc > 0 
+      {
+        log("ok",&format!("argv {:?}",_argv));
+      }
     }
   }
 
@@ -461,7 +463,7 @@ pub unsafe fn parseLines(tokenizerLinesLinks: Vec< Arc<RwLock<Line>> >) -> ()
 // также необходимо передать переменную указателя чтения линии,
 // передать сколько всего линий вложено.
 // todo: исправить переполнение стека
-pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) -> ()
+pub fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) -> ()
 { // получаем сколько линий вложено в структуру
   let (lineIndex, linesLength): (*mut usize, usize) = 
   {
@@ -476,20 +478,20 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: b
   // пока не будет всё прочитано, либо 
   // пока не будет вызван _exitCode на true
   let mut lineLink: Arc<RwLock<Line>>;
-  while _exitCode == false && *lineIndex < linesLength 
+  while unsafe{_exitCode == false} && unsafe{*lineIndex < linesLength}
   { // если мы читаем строки, то создаём сразу ссылку на текущую линию
     lineLink = 
     { // получаем её через чтение текущей структуры;
       // берём линию по индексу линии
       structureLink.read().unwrap()
-        .lines[*lineIndex].clone()
+        .lines[unsafe{*lineIndex}].clone()
     };
     // после чего проверяем, если линия пустая на токены, 
     // то не читаем и идём дальше
     if lineLink.read().unwrap()
         .tokens.len() == 0 
     {
-      *lineIndex += 1;
+      unsafe{*lineIndex += 1}
       continue;
     }
     // если всё хорошо, то начинаем читать через специальные функции;
@@ -510,9 +512,9 @@ pub unsafe fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: b
       }
     }
     // идём дальше
-    *lineIndex += 1;
+    unsafe{*lineIndex += 1}
   }
   // сбрасываем указатель линий для текущей структуры на 0
   // для того чтобы можно было запускать повторно
-  *lineIndex = 0;
+  unsafe{*lineIndex = 0}
 }
