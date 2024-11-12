@@ -1015,39 +1015,6 @@ impl Structure
     // todo: uint float ufloat ...
     if let Some(structureName) = value[i].getData() // todo: проверка на нижний регистр
     { // 
-      /*
-      if functionName == "exec"
-      { // execute
-        let expressions: Vec<Token> = self.getCallParameters(value, i);
-        if expressions.len() > 0 
-        { // functional
-          let expressionValue: Option< String > = expressions[0].getData();
-          if let Some(expressionValue) = expressionValue 
-          { // functional
-            let mut parts: SplitWhitespace<'_> = expressionValue.split_whitespace();
-
-            let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
-            let    args: Vec<&str> = parts.collect();
-
-            let output: Output = 
-              Command::new(command)
-                .args(&args)
-                .output()
-                .expect("Failed to execute process"); // todo: no errors
-            let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
-            if !outputString.is_empty() 
-            { // result
-              value[i].setData    ( Some(outputString) );
-              value[i].setDataType( Some(TokenType::String) );
-            }
-          } else 
-          { // error -> skip
-            value[i].setData    ( None );
-            value[i].setDataType( None );
-          }
-        }
-      }
-      */
       let expressions: Option< Vec<Token> > = self.getCallParameters(value, i);
       // далее идут базовые методы;
       // эти методы ожидают аргументов
@@ -1159,6 +1126,26 @@ impl Structure
                 }
               }
             } 
+            "exec" => 
+            { // execute
+              let data: String = expressions[0].getData().unwrap_or_default();
+              let mut parts: SplitWhitespace<'_> = data.split_whitespace();
+
+              let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
+              let    args: Vec<&str> = parts.collect();
+
+              let output: Output = 
+                Command::new(command)
+                  .args(&args)
+                  .output()
+                  .expect("Failed to execute process"); // todo: no errors
+              let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
+              if !outputString.is_empty() 
+              { // result
+                value[i].setData    ( Some(outputString) );
+                value[i].setDataType( Some(TokenType::String) );
+              }
+            }
             _ => { break 'basicMethods; } // выходим, т.к. ожидается нестандартный метод
           }
           // если всё было успешно, то сдвигаем всё до 1 токена;
@@ -1262,14 +1249,6 @@ impl Structure
         "ex" =>
         { // exit block up
           println!("ex"); 
-        }
-        */
-        /*
-        "exec" =>
-        { // execute
-          // run function
-          self.expression(&mut line.tokens.clone()).getData();
-          // else -> skip
         }
         */
         "sleep" =>

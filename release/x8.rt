@@ -1,0 +1,2 @@
+
+println( exec("echo 123") ) # 123\n
