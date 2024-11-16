@@ -2,9 +2,9 @@
   class
 
 Human                  # if upper first char + consr procedure
-  age: U               # private final locked-Unsigned
-  public ~~money: U    # public var unlocked-Unsigned, type may change
-  constr(age: U)       # constructor procedure <- Unsigned final age
+  age: UInt            # private final locked-Unsigned
+  public ~~money: UInt # public var unlocked-Unsigned, type may change
+  constr(age: UInt)    # constructor procedure <- Unsigned final age
     this.age = age     # now Human.age is a constant
   destr                # destructor
     println("Deleted")

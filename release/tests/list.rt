@@ -1,8 +1,11 @@
 #
   list
 
-obj                   # if lower first char
-  "name": "test name" # items "key" -> value
-  "id": 10
+obj             # if lower first char
+  name
+    "test name" # items "key" -> value
+  id
+    10
 
-println(obj.name, obj.id) # get key value
+println(obj.name) # get key value
+println(obj.id)   # get key value

@@ -1,23 +1,23 @@
 #
   if-else
-
+  
   **
     = (== not allowed)
-
+  
   declarate kinds:
     ? condition
       next lines
-
+  
     ? condition
       next lines
     ? condition
       enxt lines
-
+  
     ? condition
       next lines
     ?
       next lines
-
+  
     ? condition
       next lines
     ? condition
