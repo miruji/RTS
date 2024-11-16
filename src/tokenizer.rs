@@ -507,29 +507,44 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
   let mut lastTokenIndex:   usize;                    // это указатель на метку где TokenType::Comment
 
   let mut deleteLine: bool;
+  let mut line: RwLockWriteGuard<'_, Line>;
+
   while index < linesLinksLength 
   {
     deleteLine = false; // состояние удаления текущей линии
     'exit: 
     { // прерывание чтобы не нарушать мутабельность
-      let mut line: RwLockWriteGuard<'_, Line> = linesLinks[index].write().unwrap();
+      line = linesLinks[index].write().unwrap();
       if let Some(ref mut lineLines) = line.lines
       { // рекурсивно обрабатываем вложенные линии
         deleteNestedComment(lineLines, index);
       }
       // пропускаем разделители, они нужны для синтаксиса
-      if line.tokens.is_empty() { // todo: разделители стоит объединять в один если они идут подряд
+      if line.tokens.is_empty() 
+      { // todo: разделители стоит объединять в один если они идут подряд
+        if index+1 < linesLinksLength 
+        { // если есть линия ниже, то мы можем предполагать, что 
+          // она может быть тоже разделителем;
+          if linesLinks[index+1].write().unwrap()
+               .tokens.is_empty() 
+           { // если токенов в следующей линии не было, значит точно separator;
+             // повторение подобных условий оставит 1 separator линию по итогу;
+              deleteLine = true;
+           }
+        }
         break 'exit;
       }
       // комментарии удаляем
       lastTokenIndex = line.tokens.len()-1; // todo: после того как разделители объединены в 1;
                                             //       если разделитель зажат между комментариями,
                                             //       то это один большой комментарий
-      if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment {
+      if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment 
+      {
         line.tokens.remove(lastTokenIndex);
-        if line.tokens.is_empty() { // переходим к удалению пустой линии
-          deleteLine = true;        // линия была удалена
-          break 'exit;              // выходим из прерывания
+        if line.tokens.is_empty() 
+        { // переходим к удалению пустой линии
+          deleteLine = true; // линия была удалена
+          break 'exit;       // выходим из прерывания
         }
       }
     }
@@ -537,6 +552,7 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
     // её можно спокойно удалить
     if deleteLine 
     {
+      drop(line);
       linesLinks.remove(index);
       linesLinksLength -= 1;
       continue;
