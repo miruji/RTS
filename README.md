@@ -1,15 +1,27 @@
 <img src="logo.svg" alt="RTS" align="left" width="70">
 <h1>Real-Time Script</h1>
 
-A reactive, free-form, high-level scripting language that runs in interpreter mode and ~~converts scripts directly into machine code~~.
+Reactive Programming Language of Free Data Structures
 
 <h3 align="center">Introduction</h3>
-> Currently, RTS generates machine code by calling Rust functions. But according to the original plan, it should work in real-time code interpretation mode directly into machine code, which will give a significant performance increase. However, for this you need to either translate everything in real time through a separate module, or rewrite the code in the same GASS language (GAS Script), which will be assembled into machine code in advance. The main idea here is to avoid compilation garbage, reduce the number of instructions to a minimum and also make even fewer leaks compared to the same Rust; GAS (GNU Assembler) is most suitable for this.
+
+RTS uses its own reactive programming paradigm of free data structures. This differs from classical approaches such as procedural, object-oriented, functional programming and others. The main feature is that the programmer is given the freedom to write any data structures, their reactive interaction and trouble-free operation. RTS negates the concept of errors, there is only unexpected behavior. Thus, the code directly depends on the goals, imagination and skill of the programmer.
 
 The language uses the Latin alphabet as a technical one and any other language as explanatory-accompanying, more understandable to the developer.
 > This is associated with the widespread use of the Latin alphabet in exact sciences and global distribution. In one English word, there can be many meanings, and the generalizing meaning is clearly visible. However, this does not exclude porting the syntax to other world languages. The original form should be taken as an international standard.
 
 It is expected to write programs of any complexity and completely free structures, running them in interpretation mode. At its core, the programmer has to choose between writing everything from scratch, even some basic functions, or importing ready-made solutions from a package manager.
+
+The goals and objectives of RTS:
+> * Rapid Deployment: Simplified setup and project launch;
+> * Global Repository: Centralized management of dependencies and packages;
+> * Interpretation: Ability to execute code on the fly, speeding up development;
+> * Multitasking: Running multiple projects simultaneously;
+> * Machine Code: Direct execution on the processor for maximum performance;
+> * Flexible Data Management: Unrestricted structures allow working with data without strict limitations;
+> * Reactivity: Automatic processing of changes.
+
+Thus, RTS is ideal for tasks that require rapid deployment, support for running multiple projects simultaneously, high performance, and reliability. It automates processes in systems with dynamic changes, while also providing freedom for further development.
 
 <h3 align="center">Why an interpreter?</h3>
 
