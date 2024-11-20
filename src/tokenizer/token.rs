@@ -82,7 +82,7 @@ pub enum TokenType
   Array,    // Array
 
   Bool,      // Bool
-  Joint,     // & (and)Joint
+  Joint,     // & (and) Joint
   Disjoint,  // ^
   Inclusion, // | (or)
   Exclusion, // ! (not)

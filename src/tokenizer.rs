@@ -504,7 +504,8 @@ fn lineNesting(linesLinks: &mut Vec< Arc<RwLock<Line>> >) -> ()
 fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usize) -> ()
 {
   let mut linesLinksLength: usize = linesLinks.len(); // количество ссылок строк
-  let mut lastTokenIndex:   usize;                    // это указатель на метку где TokenType::Comment
+  let mut lastTokenIndex:   usize; // это указатель на метку где TokenType::Comment
+  // это может быть либо последний токен, либо первый токен в большом комментарии;
 
   let mut deleteLine: bool;
   let mut line: RwLockWriteGuard<'_, Line>;
@@ -515,13 +516,19 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
     'exit: 
     { // прерывание чтобы не нарушать мутабельность
       line = linesLinks[index].write().unwrap();
+
       if let Some(ref mut lineLines) = line.lines
       { // рекурсивно обрабатываем вложенные линии
-        deleteNestedComment(lineLines, index);
+        deleteNestedComment(lineLines, 0);
       }
-      // пропускаем разделители, они нужны для синтаксиса
-      if line.tokens.is_empty() 
-      { // todo: разделители стоит объединять в один если они идут подряд
+      
+      if line.tokens.is_empty()
+      { // пропускаем разделители, они нужны для синтаксиса
+
+        // если разделитель имеет вложения
+        if line.lines.is_some() { break 'exit; } // выходим из прерывания
+
+        // проверяем на скопление разделителей
         if index+1 < linesLinksLength 
         { // если есть линия ниже, то мы можем предполагать, что 
           // она может быть тоже разделителем;
@@ -532,15 +539,31 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
               deleteLine = true;
            }
         }
-        break 'exit;
+
+        // обычный разделитель
+        break 'exit; // выходим из прерывания
       }
-      // комментарии удаляем
-      lastTokenIndex = line.tokens.len()-1; // todo: после того как разделители объединены в 1;
-                                            //       если разделитель зажат между комментариями,
-                                            //       то это один большой комментарий
+      
+      lastTokenIndex = line.tokens.len()-1;
       if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment 
-      {
+      { // удаляем комментарии
         line.tokens.remove(lastTokenIndex);
+
+        let removeNestedLines: bool = 
+        { // проверяем если есть вложенные линии;
+          // а также, что комментарий не удалится весь 
+          // и продолжается на вложенные линии;
+          if let Some(lineLines) = &line.lines 
+          {
+            if lastTokenIndex != 0 { true } 
+            else                   { false }
+          } else { false }
+        };
+        if removeNestedLines 
+        {
+          line.lines = None;
+        }
+
         if line.tokens.is_empty() 
         { // переходим к удалению пустой линии
           deleteLine = true; // линия была удалена

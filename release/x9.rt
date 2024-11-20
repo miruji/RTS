@@ -1,10 +1,19 @@
 #
-	test
+  1
 
 
 
-	test2
+  2  # nested seprator
 
-	test3
+  3  # nested seprator
 
 println("end")
+
+#
+  1
+  2
+
+  3  # nested seprator
+    # nested seprator 2
+    # 123
+      321
