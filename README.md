@@ -13,13 +13,13 @@ The language uses the Latin alphabet as a technical one and any other language a
 It is expected to write programs of any complexity and completely free structures, running them in interpretation mode. At its core, the programmer has to choose between writing everything from scratch, even some basic functions, or importing ready-made solutions from a package manager.
 
 The goals and objectives of RTS:
-> * Rapid Deployment: Simplified setup and project launch;
-> * Global Repository: Centralized management of dependencies and packages;
-> * Interpretation: Ability to execute code on the fly, speeding up development;
-> * Multitasking: Running multiple projects simultaneously;
-> * Machine Code: Direct execution on the processor for maximum performance;
-> * Flexible Data Management: Unrestricted structures allow working with data without strict limitations;
-> * Reactivity: Automatic processing of changes.
+* Rapid Deployment: Simplified setup and project launch;
+* Global Repository: Centralized management of dependencies and packages;
+* Interpretation: Ability to execute code on the fly, speeding up development;
+* Multitasking: Running multiple projects simultaneously;
+* Machine Code: Direct execution on the processor for maximum performance;
+* Flexible Data Management: Unrestricted structures allow working with data without strict limitations;
+* Reactivity: Automatic processing of changes.
 
 Thus, RTS is ideal for tasks that require rapid deployment, support for running multiple projects simultaneously, high performance, and reliability. It automates processes in systems with dynamic changes, while also providing freedom for further development.
 
