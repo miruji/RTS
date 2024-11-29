@@ -4,4 +4,6 @@ ab(a: UInt, b: Int) -> UInt
   = a + b
 
 c = ab(11, -20)
-println(f"= {c}:{type(c)}") # 9
+println(f"= {c}:{type(c)}") # 0
+
+exit(с = 0)

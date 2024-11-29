@@ -9,7 +9,7 @@ pub mod structure;
 
 use crate::{
   logger::*,
-  _argc, _argv, _debugMode, _exitCode,
+  _argc, _argv, _debugMode, _exit, _exitCode,
   parser::structure::*,
   tokenizer::{token::*, line::*}
 };
@@ -492,7 +492,7 @@ pub fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) ->
   // пока не будет всё прочитано, либо 
   // пока не будет вызван _exitCode на true
   let mut lineLink: Arc<RwLock<Line>>;
-  while unsafe{_exitCode == false} && unsafe{*lineIndex < linesLength}
+  while unsafe{_exit == false} && unsafe{*lineIndex < linesLength}
   { // если мы читаем строки, то создаём сразу ссылку на текущую линию
     lineLink = 
     { // получаем её через чтение текущей структуры;

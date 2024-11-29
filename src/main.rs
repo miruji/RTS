@@ -41,7 +41,8 @@ pub static mut _debugMode: bool = false;          // debug flag
 pub static mut _argc: usize       = 0;            // arhuments count
 pub static mut _argv: Vec<String> = Vec::new();   // arguments vector
 
-pub static mut _exitCode: bool = false; // todo: remove
+pub static mut _exitCode: i32 = 0;      // Значение которое вернёт программа при завершении;
+pub static mut _exit:     bool = false; // Завершилась ли программа ?
 // version
 lazy_static! 
 {
@@ -239,8 +240,8 @@ async fn main() -> io::Result<()>
     let duration: Duration = endTime-startTime;
     log("ok",&format!("All duration [{:?}]",duration));
   }
-  // ** Для дополнительных текстов можно использовать hyperfine/perf
+  // ** Для дополнительных тестов можно использовать hyperfine/perf
 
-  //
-  Ok(())
+  // Возвращаем код завершения
+  logExit(unsafe{_exitCode});
 }

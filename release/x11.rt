@@ -1,0 +1,12 @@
+
+files
+  a
+    "./tests/method/ab.rt"
+    0
+  b
+    "./tests/method/xy.rt"
+    -5
+
+l = 1
+println(f"{files.[0].0}:{type(files.[0].0)}") # files.a.0
+println(f"{files.[l].0}:{type(files.[l].0)}") # files.b.0

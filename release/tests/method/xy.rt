@@ -5,3 +5,5 @@ xy(x: UInt, y: Int) -> String
 
 result = xy(25, 30)
 println(f"= {result}:{type(result)}") # -5
+
+exit(result = -5)

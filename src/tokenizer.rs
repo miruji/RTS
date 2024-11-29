@@ -46,7 +46,8 @@ fn isDigit(c: &u8) -> bool
 // проверяет buffer по index и так находит возможные 
 // примитивные численные типы данных;
 // e: UInt, Int, UFloat, Float, Rational, Complex
-// todo: ввести Complex числа
+// todo: Ввести Complex числа;
+// todo: Ввести работу float с .1 или . как 0.0
 fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token 
 {
   let mut savedIndex: usize = *index; // index buffer
@@ -138,7 +139,8 @@ fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
     byte1 = buffer[savedIndex]; // значение текущего символа
 
     // todo: use match case
-    if (isDigit(&byte1) || byte1 == b'.') && !result.is_empty()
+    if (isDigit(&byte1) || byte1 == b'.') || // Либо число, либо . как ссылка
+       (isLink && byte1 == b'[' || byte1 == b']') // В случае ссылки мы можем читать динамические []
     {
       result.push(byte1 as char);
       savedIndex += 1;

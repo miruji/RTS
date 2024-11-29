@@ -5,14 +5,14 @@
 
 use crate::{
   logger::*,
-  _exitCode,
+  _exit, _exitCode,
   tokenizer::{line::*, token::*, readTokens},
   parser::{searchStructure, readLines, value::*, uf64::*},
 };
 
 use std::{
   io::{self, Write},
-  process::{Command, Output},
+  process::{Command, Output, ExitStatus},
   str::SplitWhitespace,
   sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
   thread::sleep,
@@ -82,6 +82,7 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
   };
   // после того как значение было получено,
   // смотрим какой точно тип выдать новому токену
+  // todo: if -> match
   if resultType != TokenType::Bool 
   {
     if leftTokenDataType == TokenType::String || rightTokenDataType == TokenType::String 
@@ -114,7 +115,8 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
 }
 // зависимость для calculate
 // считает значение левой и правой части выражения
-fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value {
+fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value 
+{
   return
     match tokenDataType {
       TokenType::Int    => 
@@ -386,51 +388,21 @@ impl Structure
     }
   }
 
-  // вроде как возвращает результат за место 
-  // struct, array struct, array с одним вложением
-  // todo: более подробное описание
+  // Вычисляем значение для struct имени типа TokenType::Word 
   fn replaceStructureByName(&self, value: &mut Vec<Token>, length: &mut usize, index: usize) -> ()
   {
     fn setNone(value: &mut Vec<Token>, index: usize) 
-    { // error -> skip
+    { // Возвращаем пустое значение
       value[index].setData    (None);
       value[index].setDataType(None);
     }
 
-    if let Some(structureName) = value[index].getData()  // todo: use getStructureByName()
+    if let Some(structureName) = value[index].getData() 
     {
       if let Some(structureLink) = self.getStructureByName(&structureName) 
       {
         let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
-        if index+1 < *length && 
-           value[index+1].getDataType().unwrap_or_default() == TokenType::SquareBracketBegin 
-        { // array
-          let arrayIndex: Option<usize> = 
-            value[index+1]
-              .tokens
-              .as_mut()
-              .and_then(|tokens| 
-                self.expression(tokens)
-                  .getData()?.parse::<usize>().ok()
-              );
-          value.remove(index+1);
-          *length -= 1;
-
-          if let Some(idx) = arrayIndex 
-          { // n-line structure
-            if structure.lines.len() > idx 
-            { // проверяем что не выходим за список линий
-              let tokens: &mut Vec<Token> = &mut structure.lines[idx]
-                                              .read().unwrap()
-                                              .tokens.clone();
-              let _ = drop(structure);
-              let result: Token = self.expression(tokens);
-              value[index].setData    ( result.getData().clone() );
-              value[index].setDataType( result.getDataType().clone() );
-            } else { setNone(value, index); } // если вышли за список
-          } else { setNone(value, index); }   // если нет индекса
-        } else 
-        { 
+        { // Если это просто обращение к имени структуры
           if structure.lines.len() == 1 
           { // структура с одним вложением
             let tokens: &mut Vec<Token> = &mut structure.lines[0]
@@ -472,8 +444,16 @@ impl Structure
   /* Получает значение из ссылки на структуру;
      Ссылка на структуру может состоять как из struct name, так и просто из цифр.
   */
-  fn linkExpression(&self, currentStructureLink: Option< Arc<RwLock<Structure>>  >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
+  fn linkExpression(&self, currentStructureLink: Option< Arc<RwLock<Structure>> >, link: &mut Vec<String>, parameters: Option< Vec<Token> >) -> Token
   {
+    // Обработка динамического выражение
+    if link[0].starts_with('[')
+    { // Получаем динамическое выражение между []
+      link[0] = format!("{{{}}}", &link[0][1..link[0].len()-1]);
+      // Получаем новую строку значения из обработки выражения
+      link[0] = self.formatQuote(link[0].clone());
+    }
+    // Обработка пути
     match link[0].parse::<usize>() 
     { // проверяем тип
       Ok(lineNumber) => 
@@ -670,41 +650,43 @@ impl Structure
     while i < charsLength 
     { // читаем символы
       c = chars[i];
-      if c == '{' 
-      { // начинаем чтение выражения
-        expressionRead = true;
-      } else
-      if c == '}' 
-      { // заканчиваем чтение выражения
-        expressionRead = false;
-        expressionBuffer += "\n"; // это нужно чтобы успешно завершить чтение линии Tokenizer::readTokens()
-
-        let expressionLineLink: &Arc<RwLock< Line >> = 
-          // получаем результат выражения в виде ссылки на буферную линию
-          &readTokens(expressionBuffer.as_bytes().to_vec(), false)[0];
-
-        // получаем линию на чтение;
-        // получаем все токены линии
-        let mut expressionBufferTokens: Vec<Token> = 
-          {
-            expressionLineLink.read().unwrap()
-              .tokens.clone()
-          };
-        // отправляем все токены линии как выражение
-        if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
-        { // записываем результат посчитанный между {}
-          result += &expressionData;
+      match c 
+      {
+        '{' =>
+        { // начинаем чтение выражения
+          expressionRead = true;
         }
-        // обнуляем буфер, вдруг далее ещё есть выражения между {}
-        expressionBuffer = String::new();
-      } else 
-      { // запись символов кроме {}
-        if expressionRead 
-        { // если флаг чтения активен, то записываем символы выражения
-          expressionBuffer.push(c);
-        } else 
-        { // если флаг чтения не активен, то это просто символы
-          result.push(c);
+        '}' =>
+        { // заканчиваем чтение выражения
+          expressionRead = false;
+          expressionBuffer += "\n"; // это нужно чтобы успешно завершить чтение линии Tokenizer::readTokens()
+
+          let mut expressionBufferTokens: Vec<Token> = 
+          {
+            readTokens(
+              expressionBuffer.as_bytes().to_vec(), 
+              false
+            )[0] // Получаем результат выражения в виде ссылки на буферную линию
+              .read().unwrap() // Читаем ссылку и
+              .tokens.clone()  // получаем все токены линии
+          };
+          // отправляем все токены линии как выражение
+          if let Some(expressionData) = self.expression(&mut expressionBufferTokens).getData() 
+          { // записываем результат посчитанный между {}
+            result += &expressionData;
+          }
+          // обнуляем буфер, вдруг далее ещё есть выражения между {}
+          expressionBuffer = String::new();
+        }
+        _ => 
+        { // запись символов кроме {}
+          if expressionRead 
+          { // если флаг чтения активен, то записываем символы выражения
+            expressionBuffer.push(c);
+          } else 
+          { // если флаг чтения не активен, то это просто символы
+            result.push(c);
+          }
         }
       }
       // продолжаем чтение символов строки
@@ -854,10 +836,10 @@ impl Structure
       if value[i].getDataType().unwrap_or_default() == TokenType::Word 
       { // это либо метод, либо просто слово-структура
         if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-        { // запускает метод
+        { // Запускает метод
           self.functionCall(value, &mut valueLength, i);
         } else 
-        { // вычисляем значение для struct, array struct, array struct с одним вложением
+        { // Вычисляем значение для struct имени типа TokenType::Word 
           self.replaceStructureByName(value, &mut valueLength, i);
         }
       } else
@@ -1127,7 +1109,7 @@ impl Structure
               }
             } 
             "exec" => 
-            { // execute
+            { // Запускает что-то и возвращает строковый output работы
               let data: String = expressions[0].getData().unwrap_or_default();
               let mut parts: SplitWhitespace<'_> = data.split_whitespace();
 
@@ -1146,7 +1128,27 @@ impl Structure
                 value[i].setDataType( Some(TokenType::String) );
               }
             }
-            _ => { break 'basicMethods; } // выходим, т.к. ожидается нестандартный метод
+            "execs" => 
+            { // Запускает что-то и возвращает кодовый результат работы
+              // todo: Возможно изменение: Следует ли оставлять вывод stdout & stderr ?
+              //       -> Возможно следует сделать отдельные методы для подобных операций.
+              let data: String = expressions[0].getData().unwrap_or_default();
+              let mut parts: SplitWhitespace<'_> = data.split_whitespace();
+
+              let command: &str      = parts.next().expect("No command found in expression"); // todo: no errors
+              let    args: Vec<&str> = parts.collect();
+
+              let status: ExitStatus = 
+                Command::new(command)
+                  .args(&args)
+                  .stdout(std::process::Stdio::null())
+                  .stderr(std::process::Stdio::null())
+                  .status()
+                  .expect("Failed to execute process"); // todo: no errors
+              value[i].setData    ( Some(status.code().unwrap_or(-1).to_string()) );
+              value[i].setDataType( Some(TokenType::String) );
+            }
+            _ => { break 'basicMethods; } // Выходим, т.к. ожидается нестандартный метод
           }
           // если всё было успешно, то сдвигаем всё до 1 токена;
           // этот токен останется с полученным значением
@@ -1265,8 +1267,21 @@ impl Structure
           } // если не было параметров, то просто пропускаем
         }
         "exit" =>
-        { // exit
-          unsafe{ _exitCode = true; }
+        { // Завершает программу с определённым кодом или кодом ошибки;
+          unsafe{ _exit = true; } // В любом случае мы завершаем программу
+          if let Some(expressions) = expressions 
+          {
+            unsafe{ // Либо это ожидаемый в параметрах код завершения;
+              _exitCode = 
+                expressions[0]
+                  .getData().unwrap_or_default()
+                  .parse::<i32>().unwrap_or(1);
+            }
+          } else {
+            unsafe{ // Либо это возврат кода ошибки;
+              _exitCode = 1; 
+            }
+          }
         }
         _ =>
         { // если не было найдено совпадений среди стандартных процедур,

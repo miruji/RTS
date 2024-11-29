@@ -1,7 +1,7 @@
 #
   variable
   
-  memoryCellName   -> final    locked
+  memoryCellName   -> final    locked -> constant locked
   memoryCellName~  -> variable locked
   memoryCellName~~ -> variable unlocked
 
@@ -9,7 +9,7 @@
   a            # locked final
   a = 10       # now a is a constant Unsigned
   
-  b: UInt = 20 # final locked-Unsigned
+  b: UInt = 20 # constant locked-Unsigned
                # negative values will not be able 
                # to change the type to Integer
   

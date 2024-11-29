@@ -2,6 +2,10 @@
   Has both debug functions and for normal work
 */
 
+use crate::{
+  _debugMode,
+};
+
 use termion::color::{Bg, Fg, Rgb, Reset};
 use termion::style;
 
@@ -175,15 +179,28 @@ pub fn logSeparator(text: &str) -> ()
     text
   ));
 }
-// exit log
+// Завершает программу и при необходимости в debug режиме
+// возвращает описание выхода;
 pub fn logExit(code: i32) -> !
 {
+  // В данном случае завершение успешно;
   if code == 0 {
-    formatPrint("   \\b┗\\fg(#1ae96b) Exit 0\\c \\fg(#f0f8ff)\\b:)\\c\n");
+    if unsafe{_debugMode}
+    {
+      formatPrint("   \\b┗\\fg(#1ae96b) Exit 0\\c \\fg(#f0f8ff)\\b:)\\c\n");
+    }
     std::process::exit(0);
   }
-  // else
-  formatPrint("   \\b┗\\fg(#e91a34) Exit 1\\c \\fg(#f0f8ff)\\b:(\\c\n");
+  // В данном случае завершение не является успешное;
+  if unsafe{_debugMode}
+  { 
+    formatPrint(
+      &format!(
+        "   \\b┗\\fg(#e91a34) Exit {}\\c \\fg(#f0f8ff)\\b:(\\c\n", 
+        code
+      )
+    );
+  }
   std::process::exit(code);
 }
 // basic style log
