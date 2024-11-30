@@ -4,6 +4,7 @@ println("\bRTS Tests\cb")
 files
   "./tests/method/ab.rt"
   "./tests/method/xy.rt"
+  "./tests/dynamicLink.rt"
 #  "./tests/cycle/array.rt"
 #  "./tests/cycle/charsArray.rt"
 #  "./tests/cycle/colorNumbers.rt"
@@ -14,7 +15,7 @@ l = 0
   file = f"./rts run {files.[l]}"
   print(f"  [{file}] ")
   res = UInt( execs(file) )
-  ? res = 1
+  ? res = 0
     println("[\fg(#1ae96b)\bOK\c]")
   ?
     println("[\fg(#e91a34)\bERR\c]")

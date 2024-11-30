@@ -315,7 +315,7 @@ fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure
               parentLink.read().unwrap()                     // для этого берём родительскую линию;
                 .expression(&mut conditionTokens).getData(); // и её токены.
             // итоговый boolean результат
-            if let Some(expressionResult) = expressionResult { expressionResult == "true" } 
+            if let Some(expressionResult) = expressionResult { expressionResult == "1" } 
             else                                             { false }
           };
         }

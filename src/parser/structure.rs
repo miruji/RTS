@@ -41,42 +41,50 @@ pub fn calculate(op: &TokenType, leftToken: &Token, rightToken: &Token) -> Token
     TokenType::Inclusion           => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue.toBool() || rightValue.toBool()).to_string() 
+      if leftValue.toBool() || rightValue.toBool() { String::from("1") } 
+      else                                         { String::from("0") }
     }
     TokenType::Joint               => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue.toBool() && rightValue.toBool()).to_string() 
+      if leftValue.toBool() && rightValue.toBool() { String::from("1") } 
+      else                                         { String::from("0") }
     }
     TokenType::Equals              => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue == rightValue).to_string() 
+      if leftValue == rightValue { String::from("1") } 
+      else                       { String::from("0") }
     }
     TokenType::NotEquals           => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue != rightValue).to_string() 
+      if leftValue != rightValue { String::from("1") } 
+      else                       { String::from("0") }
     }
     TokenType::GreaterThan         => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue > rightValue).to_string() 
+      if leftValue > rightValue { String::from("1") } 
+      else                      { String::from("0") }
     }
     TokenType::LessThan            => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue < rightValue).to_string() 
+      if leftValue < rightValue { String::from("1") } 
+      else                      { String::from("0") }
     }
     TokenType::GreaterThanOrEquals => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue >= rightValue).to_string() 
+      if leftValue >= rightValue { String::from("1") } 
+      else                       { String::from("0") }
     }
     TokenType::LessThanOrEquals    => 
     { 
       resultType = TokenType::Bool; 
-      (leftValue <= rightValue).to_string() 
+      if leftValue <= rightValue { String::from("1") } 
+      else                       { String::from("0") }
     }
     _ => "0".to_string(),
   };
@@ -159,8 +167,8 @@ fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value
       // todo: добавить поддержку операций с TokenType::FormattedRawString
       TokenType::Bool   => 
       { 
-        if tokenData == "1" { Value::UInt(1) } 
-        else                { Value::UInt(0) } 
+        if tokenData == "0" { Value::UInt(0) } 
+        else                { Value::UInt(1) } 
       },
       _ => Value::UInt(0),
     };
