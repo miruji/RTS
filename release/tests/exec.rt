@@ -1,6 +1,8 @@
 
 a = exec("echo 123")
 
-println(a)
-? a = "123\n"
-  println(111)
+res = 0
+? a != "123\n"
+  res = 1
+
+exit(res)

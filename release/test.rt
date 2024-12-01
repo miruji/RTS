@@ -14,6 +14,7 @@ files
   "./tests/dynamicLink.rt"
   "./tests/arguments.rt 1 2"
   "./tests/randUInt.rt"
+  "./tests/exec.rt"
 #  "./tests/cycle/array.rt"
 #  "./tests/cycle/charsArray.rt"
 #  "./tests/cycle/colorNumbers.rt"

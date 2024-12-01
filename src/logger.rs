@@ -12,7 +12,6 @@ use termion::style;
 // hex str -> termion::color::Rgb
 fn hexToTermionColor(hex: &str) -> Option<Rgb> {
   if hex.len() != 6 { return None; }
-
   Some(Rgb(
     u8::from_str_radix(&hex[0..2], 16).ok()?, 
     u8::from_str_radix(&hex[2..4], 16).ok()?, 
@@ -54,7 +53,8 @@ static mut _string:        String      = String::new();
   \cfg  clear foreground
   \cbg  clear background
 */
-fn formatString(string: &str) -> String 
+// todo: if -> match
+pub fn formatString(string: &str) -> String 
 {
   unsafe
   {
@@ -65,12 +65,19 @@ fn formatString(string: &str) -> String
     _stringLength = _stringChars.len();
 
     while _i < _stringLength 
-    {
-      // special
-      if _stringChars[_i] == '\\' && _i+1 < _stringLength 
+    { // special 
+      if _stringChars[_i] == '\\' && _i+1 < _stringLength &&
+         ((_i == 0) || (_i > 0 && _stringChars[_i-1] != '\\')) // Проверяем на экранировние
       {
         match _stringChars[_i+1] 
         {
+          // todo: Добавить \t и другие варианты
+          'n' => 
+          {
+            _i += 2;
+            _result.push_str("\n");
+            continue;
+          }
           'b' => 
           {
             if _i+2 < _stringLength && _stringChars[_i+2] == 'g' 
@@ -93,7 +100,7 @@ fn formatString(string: &str) -> String
               _i += 2;
               continue;
             }
-          },
+          }
           'f' => 
           {
             if _i+2 < _stringLength && _stringChars[_i+2] == 'g' 
@@ -111,7 +118,7 @@ fn formatString(string: &str) -> String
                 _i += _string.len()+1;
                 continue;
             }
-          },
+          }
           'c' => 
           { // clear
             if _i+2 < _stringLength && _stringChars[_i+2] == 'b' 
@@ -154,10 +161,11 @@ fn formatString(string: &str) -> String
               ));
               continue;
             }
-          },
+          }
           _ => 
           {
-            _i += 2;
+            _result.push_str("\\");
+            _i += 1;
             continue;
           }
         }

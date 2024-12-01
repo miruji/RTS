@@ -192,10 +192,13 @@ fn getQuotes(buffer: &[u8], index: &mut usize) -> Token
     // Ошибка: конец строки внутри кавычек
     match byte2 
     {
+      // Возврат строки не возможен, поскольку она может выйти за скобки и т.п. 
+      // если он достиг конца строки уже;
       b'\n' => { return Token::newEmpty(None); }
-      byte if byte == byte1 => // Явно проверяем, что это не конец
-      {
-        // Проверка обратных слэшей перед закрывающей кавычкой
+      // Если мы нашли символ похожий на первый, значит закрываем,
+      // но возможно это экранированная кавычка, и не закрываем.
+      byte if byte == byte1 =>
+      { // Проверка обратных слэшей перед закрывающей кавычкой
         backslashCount = 0;
         i = *index-1;
 
@@ -216,6 +219,7 @@ fn getQuotes(buffer: &[u8], index: &mut usize) -> Token
           }
         }
       }
+      // Все иные символы, входящие между кавычек;
       _ => { result.push(byte2 as char); }
     }
 
@@ -830,6 +834,7 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
       if matches!(byte, b'\'' | b'"' | b'`') 
       { // получаем Char, String, RawString
         let mut token: Token = getQuotes(&buffer, &mut index);
+        token.setData(Some( formatString(&token.getData().unwrap_or_default()) ));
         if token.getDataType() != None 
         { // if formatted quotes
           let lineTokensLength: usize = lineTokens.len();

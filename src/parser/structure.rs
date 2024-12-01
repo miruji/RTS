@@ -1159,7 +1159,6 @@ impl Structure
               if !outputString.is_empty() 
               { // result
                 value[i].setData    ( Some(outputString) );
-                println!("[{}]",value[i].getData().unwrap_or_default());
                 value[i].setDataType( Some(TokenType::String) );
               }
             }
@@ -1236,7 +1235,7 @@ impl Structure
         { // println
           if let Some(expressions) = expressions 
           { // todo: вывод всех expressions
-            formatPrint( &format!("{}\n",&expressions[0].getData().unwrap_or_default()) );
+            println!("{}",&expressions[0].getData().unwrap_or_default());
           } else 
           { // в том случае, если мы не получили выводимое выражение
             println!();
@@ -1247,7 +1246,7 @@ impl Structure
         { // print
           if let Some(expressions) = expressions 
           { // todo: вывод всех expressions
-            formatPrint( &expressions[0].getData().unwrap_or_default() );
+            print!("{}",&expressions[0].getData().unwrap_or_default());
           } else 
           { // в том случае, если мы не получили выводимое выражение
             print!("");
