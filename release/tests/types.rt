@@ -1,0 +1,29 @@
+
+# Проверяем все примитивные типы по порядку
+res = 0
+? type(0) != "UInt"
+  res = 1
+? type(-1) != "Int"
+  res = 1
+? type(0.0) != "UFloat"
+  res = 1
+? type(-0.1) != "Float"
+  res = 1
+? type('A') != 'Char'
+  res = 1
+? type("ABC") != 'String'
+  res = 1
+? type(`ABCD`) != "RawString"
+  res = 1
+? type(f'A') != 'Char'
+  res = 1
+? type(f"ABC") != "String"
+  res = 1
+? type(f`ABCD`) != "RawString"
+  res = 1
+
+# todo: Дописать недостающие типы,
+#       Кроме того type мог бы возвращать UInt или свой тип StructureType
+
+# Если не было ошибок при проверке, то всё правильно
+exit(res)

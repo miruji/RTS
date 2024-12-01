@@ -158,13 +158,12 @@ fn getValue(tokenData: String, tokenDataType: &TokenType) -> Value
           .map(|x| Value::Char(x))
           .unwrap_or(Value::Char('\0')) 
       },
-      TokenType::String | TokenType::FormattedString => 
-      { // todo: проверить стабильность работы TokenType::FormattedString 
+      TokenType::String => 
+      {
         tokenData.parse::<String>()
           .map(|x| Value::String(x))
           .unwrap_or(Value::String("".to_string())) 
       },
-      // todo: добавить поддержку операций с TokenType::FormattedRawString
       TokenType::Bool   => 
       { 
         if tokenData == "0" { Value::UInt(0) } 
@@ -785,7 +784,7 @@ impl Structure
   pub fn expression(&self, value: &mut Vec<Token>) -> Token 
   {
     let mut valueLength: usize = value.len(); // получаем количество токенов в выражении
-
+    // todo: Возможно следует объединить с нижним циклом, всё равно проверять токены по очереди
     // 1 токен
     'isSingleToken: 
     { // если это будет не одиночный токен, 
@@ -822,8 +821,16 @@ impl Structure
           TokenType::FormattedRawString | TokenType::FormattedString | TokenType::FormattedChar =>
           { // если это форматные варианты Char, String, RawString;
             if let Some(valueData) = value[0].getData() 
-            {  // получаем data этого токена и сразу вычисляем его значение
+            { // Получаем data этого токена и сразу вычисляем его значение
               value[0].setData( Some(self.formatQuote(valueData)) );
+              // Получаем новый тип без formatted
+              match value[0].getDataType().unwrap_or_default() 
+              {
+                TokenType::FormattedRawString => { value[0].setDataType( Some(TokenType::RawString) ); }
+                TokenType::FormattedString    => { value[0].setDataType( Some(TokenType::String) ); }
+                TokenType::FormattedChar      => { value[0].setDataType( Some(TokenType::Char) ); }
+                _ => { value[0].setDataType( None ); }
+              }
             }
           }
           _ => { break 'isSingleToken; } // выходим т.к. все варианты не прошли
@@ -841,87 +848,106 @@ impl Structure
     { // проверяем на использование методов,
       // на использование ссылок на структуру,
       // на использование простого выражения в скобках
-      if value[i].getDataType().unwrap_or_default() == TokenType::Word 
-      { // это либо метод, либо просто слово-структура
-        if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-        { // Запускает метод
-          self.functionCall(value, &mut valueLength, i);
-        } else 
-        { // Вычисляем значение для struct имени типа TokenType::Word 
-          self.replaceStructureByName(value, &mut valueLength, i);
+      match value[i].getDataType().unwrap_or_default() 
+      {
+        TokenType::FormattedRawString | TokenType::FormattedString | TokenType::FormattedChar =>
+        { // если это форматные варианты Char, String, RawString;
+          if let Some(valueData) = value[0].getData() 
+          { // Получаем data этого токена и сразу вычисляем его значение
+            value[0].setData( Some(self.formatQuote(valueData)) );
+            // Получаем новый тип без formatted
+            match value[0].getDataType().unwrap_or_default() 
+            {
+              TokenType::FormattedRawString => { value[0].setDataType( Some(TokenType::RawString) ); }
+              TokenType::FormattedString    => { value[0].setDataType( Some(TokenType::String) ); }
+              TokenType::FormattedChar      => { value[0].setDataType( Some(TokenType::Char) ); }
+              _ => { value[0].setDataType( None ); }
+            }
+          }
         }
-      } else
-      if value[i].getDataType().unwrap_or_default() == TokenType::Link 
-      { // это ссылка на структуру
-        let expressions: Option< Vec<Token> > = self.getCallParameters(value, i);
-        // todo: здесь надо написать вариант в котором ссылку вызвали с параметрами
-        if let Some(expressions) = expressions
-        { // если имеются параметры
-          //let data: String = value[0].getData().unwrap_or_default();
-          //value[0].setDataType( Some(TokenType::String) );
-          //value[0].setData(Some(
-          //  self.linkExpression(&mut data.split('.').collect(), None)
-          //));
-        } else 
-        { // без параметров
-          let     data: String = value[i].getData().unwrap_or_default();
-          let mut link: Vec<String> = data.split('.')
-                                        .map(|s| s.to_string())
-                                        .collect();
-          let linkResult: Token = 
-            if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-            { // если это запуск процедуры
-              self.linkExpression(None, &mut link, Some(vec![]))
+        TokenType::Word =>
+        { // это либо метод, либо просто слово-структура
+          if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+          { // Запускает метод
+            self.functionCall(value, &mut valueLength, i);
+          } else 
+          { // Вычисляем значение для struct имени типа TokenType::Word 
+            self.replaceStructureByName(value, &mut valueLength, i);
+          }
+        } 
+        TokenType::Link =>
+        { // это ссылка на структуру
+          let expressions: Option< Vec<Token> > = self.getCallParameters(value, i);
+          // todo: здесь надо написать вариант в котором ссылку вызвали с параметрами
+          if let Some(expressions) = expressions
+          { // если имеются параметры
+            //let data: String = value[0].getData().unwrap_or_default();
+            //value[0].setDataType( Some(TokenType::String) );
+            //value[0].setData(Some(
+            //  self.linkExpression(&mut data.split('.').collect(), None)
+            //));
+          } else 
+          { // без параметров
+            let     data: String = value[i].getData().unwrap_or_default();
+            let mut link: Vec<String> = data.split('.')
+                                          .map(|s| s.to_string())
+                                          .collect();
+            let linkResult: Token = 
+              if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+              { // если это запуск процедуры
+                self.linkExpression(None, &mut link, Some(vec![]))
+              } else 
+              { // если это обычная ссылка
+                self.linkExpression(None, &mut link, None)
+              };
+            value[i].setDataType( linkResult.getDataType() );
+            value[i].setData(     linkResult.getData() );
+          }
+        } 
+        TokenType::Minus =>
+        { // это выражение в круглых скобках, но перед ними отрицание -
+          if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
+          { // считаем выражение внутри скобок
+            value[i] = 
+              if let Some(mut tokenTokens) = value[i+1].tokens.clone() 
+              { // если получилось то оставляем его
+                self.expression(&mut tokenTokens)
+              } else
+              { // если не получилось, то просто None
+                Token::newEmpty(None)
+              };
+            // удаляем скобки
+            value.remove(i+1); // remove UInt
+            valueLength -= 1;
+            // меняем отрицание
+            let tokenData: String = value[i].getData().unwrap_or_default();
+            if tokenData.starts_with(|c: char| c == '-') 
+            { // если это было отрицательное выражение,
+              // то делаем его положительным
+              value[i].setData( 
+                Some( tokenData.chars().skip(1).collect() ) 
+              );
             } else 
-            { // если это обычная ссылка
-              self.linkExpression(None, &mut link, None)
-            };
-          value[i].setDataType( linkResult.getDataType() );
-          value[i].setData(     linkResult.getData() );
-        }
-      } else
-      if value[i].getDataType().unwrap_or_default() == TokenType::Minus 
-      { // это выражение в круглых скобках, но перед ними отрицание -
-        if i+1 < valueLength && value[i+1].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-        { // считаем выражение внутри скобок
+            { // если это не было отрицательным выражением,
+              // то делаем его отрицательным
+              value[i].setData( 
+                Some( format!("-{}", tokenData) )
+              );
+            }
+          }
+        } 
+        TokenType::CircleBracketBegin =>
+        { // это просто выражение в круглых скобках
           value[i] = 
-            if let Some(mut tokenTokens) = value[i+1].tokens.clone() 
+            if let Some(mut tokenTokens) = value[i].tokens.clone() 
             { // если получилось то оставляем его
               self.expression(&mut tokenTokens)
             } else
             { // если не получилось, то просто None
               Token::newEmpty(None)
-            };
-          // удаляем скобки
-          value.remove(i+1); // remove UInt
-          valueLength -= 1;
-          // меняем отрицание
-          let tokenData: String = value[i].getData().unwrap_or_default();
-          if tokenData.starts_with(|c: char| c == '-') 
-          { // если это было отрицательное выражение,
-            // то делаем его положительным
-            value[i].setData( 
-              Some( tokenData.chars().skip(1).collect() ) 
-            );
-          } else 
-          { // если это не было отрицательным выражением,
-            // то делаем его отрицательным
-            value[i].setData( 
-              Some( format!("-{}", tokenData) )
-            );
-          }
+            }
         }
-      } else
-      if value[i].getDataType().unwrap_or_default() == TokenType::CircleBracketBegin 
-      { // это просто выражение в круглых скобках
-        value[i] = 
-          if let Some(mut tokenTokens) = value[i].tokens.clone() 
-          { // если получилось то оставляем его
-            self.expression(&mut tokenTokens)
-          } else
-          { // если не получилось, то просто None
-            Token::newEmpty(None)
-          }
+        _ => {}
       }
       i += 1;
     }

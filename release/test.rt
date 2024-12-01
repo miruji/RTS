@@ -2,8 +2,11 @@
 println("\bRTS Tests\cb")
 
 files
-  "./tests/method/ab.rt"
-  "./tests/method/xy.rt"
+  "./tests/types.rt"
+  "./tests/formattedString.rt"
+  "./tests/methods.rt"
+  "./tests/ab.rt"
+  "./tests/xy.rt"
   "./tests/dynamicLink.rt"
 #  "./tests/cycle/array.rt"
 #  "./tests/cycle/charsArray.rt"

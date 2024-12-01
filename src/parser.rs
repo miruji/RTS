@@ -63,11 +63,23 @@ fn searchReturn(lineLink: Arc<RwLock<Line>>, structureLink: Arc<RwLock<Structure
     // собственно, структура ожидает какой-то тип в результате, 
     // либо это может быть TokenType:None. Но мы просто будем менять data
 
-    // используем expression, чтобы получить результат выражения
-    let newResultData: Option<String> = structure.expression(&mut lineTokens).getData();
-    if let Some(structureResult) = &mut structure.result 
-    { // присваиваем новую data результату
-      structureResult.setData( newResultData );
+    match structure.result
+    {
+      Some(_) =>
+      { // Вариант, в котором результат ожидает возвращение определённого типа данных;
+        // Используем expression, чтобы получить результат выражения;
+        let newResultData: Option<String> = structure.expression(&mut lineTokens).getData();
+        if let Some(structureResult) = &mut structure.result 
+        { // Присваиваем новую data результату;
+          structureResult.setData( newResultData );
+        }
+      }
+      _ => 
+      { // Вариант, в котором тип результата был не указан;
+        // Используем expression, чтобы получить результат выражения;
+        // Присваиваем новый результат;
+        structure.result = Some( structure.expression(&mut lineTokens) );
+      }
     }
 
     // всё успешно, это был результат
@@ -161,8 +173,12 @@ fn searchStructure(lineLink: Arc<RwLock<Line>>, parentLink: Arc<RwLock<Structure
           }
         }
 
-        // результат структуры, если он есть
-        newStructure.result = Some( Token::newEmpty(newStructureResultType.clone()) );
+        // Ставим результат структуры, если он есть
+        newStructure.result = match newStructureResultType 
+        {
+          Some(_) => Some( Token::newEmpty(newStructureResultType.clone()) ),
+          None    => None,
+        };
 
         { // добавляем новую структуру в родителя
           parentLink.write().unwrap()
@@ -512,10 +528,10 @@ pub fn readLines(structureLink: Arc<RwLock<Structure>>, structuresRead: bool) ->
     // ищем структуры
     if !searchStructure(lineLink.clone(), structureLink.clone(), lineIndex, structuresRead) 
     { // ищем return
-      if !searchReturn(lineLink.clone(), structureLink.clone()) 
-      { // ищем выражения
-        if !structuresRead 
-        { // читаем выражение
+      if !structuresRead 
+      { // читаем выражение
+        if !searchReturn(lineLink.clone(), structureLink.clone()) 
+        { // ищем выражения
           structureLink.read().unwrap()
             .expression(
               &mut lineLink.read().unwrap()
