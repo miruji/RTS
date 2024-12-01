@@ -7,7 +7,13 @@ files
   "./tests/methods.rt"
   "./tests/ab.rt"
   "./tests/xy.rt"
+  "./tests/staticLink0.rt"
+  "./tests/staticLink1.rt"
+  "./tests/staticLink2.rt"
+  "./tests/staticLink3.rt"
   "./tests/dynamicLink.rt"
+  "./tests/arguments.rt 1 2"
+  "./tests/randUInt.rt"
 #  "./tests/cycle/array.rt"
 #  "./tests/cycle/charsArray.rt"
 #  "./tests/cycle/colorNumbers.rt"
@@ -22,6 +28,7 @@ l = 0
     println("[\fg(#1ae96b)\bOK\c]")
   ?
     println("[\fg(#e91a34)\bERR\c]")
+    exit(res)
   
   l += 1
   go(1)

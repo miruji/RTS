@@ -1159,6 +1159,7 @@ impl Structure
               if !outputString.is_empty() 
               { // result
                 value[i].setData    ( Some(outputString) );
+                println!("[{}]",value[i].getData().unwrap_or_default());
                 value[i].setDataType( Some(TokenType::String) );
               }
             }

@@ -7,7 +7,7 @@ res = 0
 ? f"{a}ello" != "Hello"
   res = 1
 ? f"W{b}rld!" != "World!"
-  res = 1
+  res = 2
 
 # Если не было ошибок при проверке, то всё правильно
 exit(res)

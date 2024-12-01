@@ -1,0 +1,6 @@
+
+a = exec("echo 123")
+
+println(a)
+? a = "123\n"
+  println(111)

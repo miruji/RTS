@@ -4,23 +4,23 @@ res = 0
 ? type(0) != "UInt"
   res = 1
 ? type(-1) != "Int"
-  res = 1
+  res = 2
 ? type(0.0) != "UFloat"
-  res = 1
+  res = 3
 ? type(-0.1) != "Float"
-  res = 1
-? type('A') != 'Char'
-  res = 1
-? type("ABC") != 'String'
-  res = 1
+  res = 4
+? type('A') != "Char"
+  res = 5
+? type("ABC") != "String"
+  res = 6
 ? type(`ABCD`) != "RawString"
-  res = 1
-? type(f'A') != 'Char'
-  res = 1
+  res = 7
+? type(f'A') != "Char"
+  res = 8
 ? type(f"ABC") != "String"
-  res = 1
+  res = 9
 ? type(f`ABCD`) != "RawString"
-  res = 1
+  res = 10
 
 # todo: Дописать недостающие типы,
 #       Кроме того type мог бы возвращать UInt или свой тип StructureType

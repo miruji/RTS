@@ -106,12 +106,12 @@ impl ToString for TokenType
       TokenType::Comment => String::from("Comment"), // #
       
       // quotes
-      TokenType::RawString          => String::from("Raw String"),           // `
-      TokenType::String             => String::from("String"),               // "
-      TokenType::Char               => String::from("Char"),                 // '
-      TokenType::FormattedRawString => String::from("Formatted Raw String"), // f``
-      TokenType::FormattedString    => String::from("Formatted String"),     // f""
-      TokenType::FormattedChar      => String::from("Formatted Char"),       // f''
+      TokenType::RawString          => String::from("RawString"),          // `
+      TokenType::String             => String::from("String"),             // "
+      TokenType::Char               => String::from("Char"),               // '
+      TokenType::FormattedRawString => String::from("FormattedRawString"), // f``
+      TokenType::FormattedString    => String::from("FormattedString"),    // f""
+      TokenType::FormattedChar      => String::from("FormattedChar"),      // f''
      
       // single math
       TokenType::Plus     => String::from("+"), // +

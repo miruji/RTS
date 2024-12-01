@@ -18,7 +18,7 @@ res = 0
 ? files.[0].0 != "test1.rt" # Проверяем на files.a.0 = "test1.rt"
   res = 1
 ? files.[l].0 != "test2.rt" # Проверяем на files.b.0 = "test2.rt"
-  res = 1
+  res = 2
 
 # Если не было ошибок при проверке, то всё правильно
 exit(res)
