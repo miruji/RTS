@@ -625,7 +625,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> 
           TokenType::Char | TokenType::FormattedChar =>
           { // если токен это Char | FormattedChar
             log("parserToken",&format!(
-              "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\fg(#f0f8ff)\\b'\\c  |{}",
+              "{}{}{}\\fg(#f0f8ff)\\b'\\c{}\\c\\fg(#f0f8ff)\\b'\\c  |{}",
               lineIndentString,
               c,
               identString,
@@ -636,7 +636,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> 
           TokenType::String | TokenType::FormattedString =>
           { // если токен это String | FormattedString
             log("parserToken",&format!(
-              "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\fg(#f0f8ff)\\b\"\\c  |{}",
+              "{}{}{}\\fg(#f0f8ff)\\b\"\\c{}\\c\\fg(#f0f8ff)\\b\"\\c  |{}",
               lineIndentString,
               c,
               identString,
@@ -647,7 +647,7 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> 
           TokenType::RawString | TokenType::FormattedRawString =>
           { // если токен это RawString | FormattedRawString
             log("parserToken",&format!(
-              "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\fg(#f0f8ff)\\b`\\c  |{}",
+              "{}{}{}\\fg(#f0f8ff)\\b`\\c{}\\c\\fg(#f0f8ff)\\b`\\c  |{}",
               lineIndentString,
               c,
               identString,
@@ -834,37 +834,36 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
       if matches!(byte, b'\'' | b'"' | b'`') 
       { // получаем Char, String, RawString
         let mut token: Token = getQuotes(&buffer, &mut index);
-        token.setData(Some( formatString(&token.getData().unwrap_or_default()) ));
         if token.getDataType() != None 
         { // if formatted quotes
           let lineTokensLength: usize = lineTokens.len();
           if lineTokensLength > 0 
           {
-              let backToken: &Token = &lineTokens[lineTokensLength-1];
-              if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
-                 backToken.getData().unwrap_or_default() == "f" 
+            let backToken: &Token = &lineTokens[lineTokensLength-1];
+            if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
+               backToken.getData().unwrap_or_default() == "f" 
+            {
+              match token.getDataType().unwrap_or_default()
               {
-                match token.getDataType().unwrap_or_default()
+                TokenType::RawString =>
                 {
-                  TokenType::RawString =>
-                  {
-                   token.setDataType( Some(TokenType::FormattedRawString) ); 
-                  }
-                  TokenType::String =>
-                  { 
-                    token.setDataType( Some(TokenType::FormattedString) ); 
-                  }
-                  TokenType::Char =>
-                  { 
-                    token.setDataType( Some(TokenType::FormattedChar) ); 
-                  }
-                  _ => {}
+                 token.setDataType( Some(TokenType::FormattedRawString) ); 
                 }
-                lineTokens[lineTokensLength-1] = token; // replace the last token in place
-              } else 
-              { // basic quote
-                lineTokens.push(token);
+                TokenType::String =>
+                { 
+                  token.setDataType( Some(TokenType::FormattedString) ); 
+                }
+                TokenType::Char =>
+                { 
+                  token.setDataType( Some(TokenType::FormattedChar) ); 
+                }
+                _ => {}
               }
+              lineTokens[lineTokensLength-1] = token; // replace the last token in place
+            } else 
+            { // basic quote
+              lineTokens.push(token);
+            }
           } else 
           { // basic quote
             lineTokens.push(token);

@@ -1094,22 +1094,45 @@ impl Structure
               value[i].setData    ( Some(randomNumber.to_string()) );
             }
             "len" =>
-            { // получаем размер вложений в структуре
-
-              // результат только в UInt
-              value[i].setDataType( Some(TokenType::UInt) );
-              // получаем значение
-              if let Some(structureLink) = self.getStructureByName(&expressions[0].getData().unwrap_or_default()) 
+            { // Получаем размер структуры;
+              match expressions[0].getDataType().unwrap_or_default() 
               {
-                value[i].setData( 
-                  Some(
-                    structureLink.read().unwrap()
-                      .lines.len().to_string()
-                  ) 
-                );
-              } else 
-              { // результат 0 т.к. не нашли такой структуры
-                value[i].setData( Some(String::from("0")) );
+                TokenType::None => 
+                { // Результат 0
+                  value[i] = Token::new( Some(TokenType::UInt),Some(String::from("0")) );
+                }
+                TokenType::Char => 
+                { // Получаем размер символа
+                  value[i] = Token::new( Some(TokenType::UInt),Some(String::from("1")) );
+                }
+                TokenType::String | TokenType::RawString => 
+                { // Получаем размер строки
+                  value[i] = Token::new( 
+                    Some(TokenType::UInt),
+                    Some(
+                      expressions[0].getData().unwrap_or_default()
+                        .chars().count().to_string()
+                    ) 
+                  );
+                }
+                _ => 
+                { // Получаем размер вложений в структуре
+                  // Результат только в UInt
+                  value[i].setDataType( Some(TokenType::UInt) );
+                  // Получаем значение
+                  if let Some(structureLink) = self.getStructureByName(&expressions[0].getData().unwrap_or_default()) 
+                  {
+                    value[i].setData( 
+                      Some(
+                        structureLink.read().unwrap()
+                          .lines.len().to_string()
+                      ) 
+                    );
+                  } else 
+                  { // Результат 0 т.к. не нашли такой структуры
+                    value[i].setData( Some(String::from("0")) );
+                  }
+                }
               }
             }
             "input" =>
@@ -1158,7 +1181,7 @@ impl Structure
               let outputString: String = String::from_utf8_lossy(&output.stdout).to_string();
               if !outputString.is_empty() 
               { // result
-                value[i].setData    ( Some(outputString) );
+                value[i].setData    ( Some(outputString.trim_end().to_string()) );
                 value[i].setDataType( Some(TokenType::String) );
               }
             }
@@ -1235,7 +1258,7 @@ impl Structure
         { // println
           if let Some(expressions) = expressions 
           { // todo: вывод всех expressions
-            println!("{}",&expressions[0].getData().unwrap_or_default());
+            formatPrint( &format!("{}\n",&expressions[0].getData().unwrap_or_default()) );
           } else 
           { // в том случае, если мы не получили выводимое выражение
             println!();
@@ -1246,7 +1269,7 @@ impl Structure
         { // print
           if let Some(expressions) = expressions 
           { // todo: вывод всех expressions
-            print!("{}",&expressions[0].getData().unwrap_or_default());
+            formatPrint( &expressions[0].getData().unwrap_or_default() );
           } else 
           { // в том случае, если мы не получили выводимое выражение
             print!("");

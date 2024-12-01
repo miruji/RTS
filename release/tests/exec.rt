@@ -1,8 +1,8 @@
 
-a = exec("echo 123")
+a = exec("echo -n 123")
 
 res = 0
-? a != "123\n"
+? a != "123"
   res = 1
 
 exit(res)
