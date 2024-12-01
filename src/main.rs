@@ -44,28 +44,7 @@ pub static mut _argv: Vec<String> = Vec::new();   // arguments vector
 pub static mut _exitCode: i32 = 0;      // Значение которое вернёт программа при завершении;
 pub static mut _exit:     bool = false; // Завершилась ли программа ?
 // version
-lazy_static! 
-{
-  pub static ref _version: String = getVersion(env!("CARGO_PKG_VERSION"));
-}
-// get cargo version
-fn getVersion(version: &str) -> String 
-{
-  let mut result: String     = String::new();
-
-  let digits:     Vec<&str>  = version.split('.').collect();
-  let digitsSize: usize      = digits.len()-1;
-  let mut i:      usize      = 0;
-
-  while i < digitsSize 
-  {
-    let digit = digits[i];
-    if digit != "0"   { result.push_str(digit); }
-    if i < digitsSize { result.push('.'); }
-    i += 1;
-  }
-  result
-}
+pub static _version: &str = "231206.0";
 // help
 fn help() -> ()
 {
@@ -121,7 +100,7 @@ async fn main() -> io::Result<()>
     {
       "version" => 
       { // get version
-        log("ok", &format!("RTS v{}", *_version));
+        log("ok", &format!("RTS v{}", _version));
         logExit(0);
       }
       "help" => help(),
