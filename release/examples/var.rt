@@ -1,5 +1,5 @@
 #
-  variable
+  todo: Нерабочий пример на момент 241202
   
   memoryCellName   -> final    locked -> constant locked
   memoryCellName~  -> variable locked

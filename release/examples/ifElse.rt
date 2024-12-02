@@ -1,29 +1,7 @@
-#
-  if-else
-  
-  **
-    = (== not allowed)
-  
-  declarate kinds:
-    ? condition
-      next lines
-  
-    ? condition
-      next lines
-    ? condition
-      enxt lines
-  
-    ? condition
-      next lines
-    ?
-      next lines
-  
-    ? condition
-      next lines
-    ? condition
-      next lines
-    ?
-      next lines
+
+# В RTS условные блоки полностью комбинируемые;
+  Условие начинается с ? как обычный вопрос при общении;
+  Условие может быть if/elif/else в зависимости от положения;
 
 a = 2              # final Unsigned
 ? a = 0            # a equal 0 ?

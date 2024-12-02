@@ -954,11 +954,16 @@ impl Structure
 
     // далее идут варианты математических и логических операций
 
-    // проверка на логические операции
+    // проверка на логические операции 1
     self.expressionOp(value, &mut valueLength, 
-      &[TokenType::Inclusion, TokenType::Joint, TokenType::Equals, 
-        TokenType::NotEquals, TokenType::GreaterThan, TokenType::LessThan,
+      &[TokenType::Equals, TokenType::NotEquals, 
+        TokenType::GreaterThan, TokenType::LessThan,
         TokenType::GreaterThanOrEquals, TokenType::LessThanOrEquals]
+    );
+
+    // проверка на логические операции 2
+    self.expressionOp(value, &mut valueLength, 
+      &[TokenType::Inclusion, TokenType::Joint]
     );
     
     // проверка * и /

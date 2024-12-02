@@ -1,16 +1,18 @@
-#
-  if-else + logical operators
-  
-  operators:
-    and (&& not allowed)
-    or  (|| not allowed)
-    =   (== not allowed)
-    !
-    !=
 
-a = 11 # final Unsigned
-b = 11 # final Unsigned
-? (a = 10 or b = 10) and (a-b != 10)
-  println("and + or")
+# RTS поддерживает:
+  | как операция or
+  & как операция and
+  > а так же >=
+  < а так же <=
+  = проверка на равенство
+  != проверка на неравенство
+  ! проверка на нет (не работает на момент 241202)
+  
+  todo: RTS стремится к использованию полного диапазона условий логики;
+
+a = 11 # const-UInt
+b = 11 # const-UInt
+? (a = 10 & b = 10) | (a-b != 10)
+  println("or")
 ?
   println("else")
