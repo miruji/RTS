@@ -551,40 +551,58 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
       }
       
       lastTokenIndex = line.tokens.len()-1;
-      if line.tokens[lastTokenIndex].getDataType().unwrap_or_default() == TokenType::Comment 
-      { // удаляем комментарии
-        line.tokens.remove(lastTokenIndex);
+      match line.tokens[lastTokenIndex].getDataType().unwrap_or_default()
+      {
+        TokenType::Comment =>  
+        { // удаляем комментарии
+          line.tokens.remove(lastTokenIndex);
 
-        let removeNestedLines: bool = 
-        { // проверяем если есть вложенные линии;
-          // а также, что комментарий не удалится весь 
-          // и продолжается на вложенные линии;
-          if let Some(lineLines) = &line.lines 
+          match
+          { // проверяем если есть вложенные линии;
+            // а также, что комментарий не удалится весь 
+            // и продолжается на вложенные линии;
+            match &line.lines 
+            {
+              Some(lineLines) => {
+                match lastTokenIndex 
+                {
+                  0 => { false }
+                  _ => { true }
+                }
+              }
+              None => false,
+            }
+          }
           {
-            if lastTokenIndex != 0 { true } 
-            else                   { false }
-          } else { false }
-        };
-        if removeNestedLines 
-        {
-          line.lines = None;
-        }
+            true => { line.lines = None; }
+            false => {}
+          }
 
-        if line.tokens.is_empty() 
-        { // переходим к удалению пустой линии
-          deleteLine = true; // линия была удалена
-          break 'exit;       // выходим из прерывания
+          match line.tokens.is_empty()
+          { // переходим к удалению пустой линии
+            true => 
+            {
+              deleteLine = true; // линия была удалена
+              break 'exit;       // выходим из прерывания
+            }
+            false => {}
+          }
         }
+        _ => {}
       }
     }
     // когда линия удалена в прерывании, 
     // её можно спокойно удалить
-    if deleteLine 
+    match deleteLine 
     {
-      drop(line);
-      linesLinks.remove(index);
-      linesLinksLength -= 1;
-      continue;
+      true => 
+      {
+        drop(line);
+        linesLinks.remove(index);
+        linesLinksLength -= 1;
+        continue;
+      }
+      false => {}
     }
     // продолжаем чтение
     index += 1;
@@ -727,11 +745,15 @@ pub fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize) -> ()
 // предварительные базовые типы данных.
 pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> > 
 {
-  if debugMode 
+  match debugMode 
   {
-    logSeparator("AST");
-    log("ok","+Generation");
-    println!("     ┃");
+    true => 
+    {
+      logSeparator("AST");
+      log("ok","+Generation");
+      println!("     ┃");
+    }
+    false => {}
   }
 
   let mut      index: usize = 0;               // основной индекс чтения
@@ -834,43 +856,46 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
       if matches!(byte, b'\'' | b'"' | b'`') 
       { // получаем Char, String, RawString
         let mut token: Token = getQuotes(&buffer, &mut index);
-        if token.getDataType() != None 
-        { // if formatted quotes
-          let lineTokensLength: usize = lineTokens.len();
-          if lineTokensLength > 0 
-          {
-            let backToken: &Token = &lineTokens[lineTokensLength-1];
-            if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
-               backToken.getData().unwrap_or_default() == "f" 
+        let tokenType: Option<TokenType> = token.getDataType();
+        match tokenType 
+        {
+          tokenType if tokenType != None =>
+          { // if formatted quotes
+            let lineTokensLength: usize = lineTokens.len();
+            match lineTokensLength 
             {
-              match token.getDataType().unwrap_or_default()
+              lineTokensLength if lineTokensLength > 0 =>
               {
-                TokenType::RawString =>
+                let backToken: &Token = &lineTokens[lineTokensLength-1];
+                if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
+                   backToken.getData().unwrap_or_default() == "f" 
                 {
-                 token.setDataType( Some(TokenType::FormattedRawString) ); 
+                  match token.getDataType().unwrap_or_default()
+                  {
+                    TokenType::RawString =>
+                    {
+                     token.setDataType( Some(TokenType::FormattedRawString) ); 
+                    }
+                    TokenType::String =>
+                    { 
+                      token.setDataType( Some(TokenType::FormattedString) ); 
+                    }
+                    TokenType::Char =>
+                    { 
+                      token.setDataType( Some(TokenType::FormattedChar) ); 
+                    }
+                    _ => {}
+                  }
+                  lineTokens[lineTokensLength-1] = token; // replace the last token in place
+                } else 
+                { // basic quote
+                  lineTokens.push(token);
                 }
-                TokenType::String =>
-                { 
-                  token.setDataType( Some(TokenType::FormattedString) ); 
-                }
-                TokenType::Char =>
-                { 
-                  token.setDataType( Some(TokenType::FormattedChar) ); 
-                }
-                _ => {}
-              }
-              lineTokens[lineTokensLength-1] = token; // replace the last token in place
-            } else 
-            { // basic quote
-              lineTokens.push(token);
+              } 
+              _ => { lineTokens.push(token); } // basic quote
             }
-          } else 
-          { // basic quote
-            lineTokens.push(token);
-          }
-        } else 
-        { // skip
-          index += 1;
+          }  
+          _ => { index += 1; } // skip
         }
       } else
       // получаем возможные двойные и одиночные символы
@@ -880,7 +905,7 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
         match token.getDataType()
         {
           None => { index += 1; } 
-          _ => { lineTokens.push(token); }
+          _    => { lineTokens.push(token); }
         }
       } else 
       { // если мы ничего не нашли из возможного, значит этого нет в синтаксисе;
@@ -896,14 +921,18 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
   deleteNestedComment(&mut linesLinks, 0);
 
   // debug output and return
-  if debugMode 
+  match debugMode 
   {
-    let endTime:  Instant  = Instant::now();    // получаем текущее время
-    let duration: Duration = endTime-startTime; // получаем сколько всего прошло
-    outputLines(&linesLinks,&2); // выводим полученное AST дерево из линий
-    //
-    println!("     ┃");
-    log("ok",&format!("xDuration: {:?}",duration));
+    true => 
+    {
+      let endTime:  Instant  = Instant::now();    // получаем текущее время
+      let duration: Duration = endTime-startTime; // получаем сколько всего прошло
+      outputLines(&linesLinks,&2); // выводим полученное AST дерево из линий
+      //
+      println!("     ┃");
+      log("ok",&format!("xDuration: {:?}",duration));
+    }
+    false => {}
   }
   // возвращаем готовые ссылки на линии
   linesLinks

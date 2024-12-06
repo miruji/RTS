@@ -79,8 +79,6 @@ pub enum TokenType
   Rational, // Rational
   Complex,  // Complex
 
-  Array,    // Array
-
   Bool,      // Bool
   Joint,     // & (and) Joint
   Disjoint,  // ^
@@ -175,7 +173,6 @@ impl ToString for TokenType
       TokenType::Rational => String::from("Rational"), // Rational
       TokenType::Complex  => String::from("Complex"),  // Complex
 
-      TokenType::Array    => String::from("Array"),    // Array
 
       TokenType::Bool      => String::from("Bool"),      // Bool
       TokenType::Joint     => String::from("Joint"),     // & (and)

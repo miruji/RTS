@@ -186,7 +186,6 @@ pub fn getStructureResultType(word: String) -> TokenType
     "UFloat"   => TokenType::UFloat,
     "Rational" => TokenType::Rational,
     "Complex"  => TokenType::Complex,
-    "Array"    => TokenType::Array,
     "Char"     => TokenType::Char,
     "String"   => TokenType::String,
     "Bool"     => TokenType::Bool,
@@ -410,42 +409,37 @@ impl Structure
       {
         let structure: RwLockReadGuard<'_, Structure> = structureLink.read().unwrap();
         { // Если это просто обращение к имени структуры
-          if structure.lines.len() == 1 
-          { // структура с одним вложением
-            let tokens: &mut Vec<Token> = &mut structure.lines[0]
-                                            .read().unwrap()
-                                            .tokens.clone();
-            let _ = drop(structure);
-            let result: Token = self.expression(tokens);
-            value[index].setData    ( result.getData().clone() );
-            value[index].setDataType( result.getDataType().clone() );
-          } else 
-          if structure.lines.len() > 1 
-          { // это структура с вложением
-            let mut linesResult: Vec<Token> = Vec::new();
-            for line in &structure.lines 
-            {
-              let tokens: &mut Vec<Token> = &mut line.read().unwrap()
+          let structureLinesLen: usize = structure.lines.len();
+          match structureLinesLen 
+          {
+            1 =>
+            { // структура с одним вложением
+              let tokens: &mut Vec<Token> = &mut structure.lines[0]
+                                              .read().unwrap()
                                               .tokens.clone();
-              let _ = drop(line);
-              linesResult.push( self.expression(tokens) );
-            }
-            value[index] = Token::newNesting( Some(linesResult) );
-            value[index].setDataType( Some(TokenType::Array) );
-          } else
-          { // empty structure
-            value[index].setData    ( Some(structureName) );
-            value[index].setDataType( Some(TokenType::Array) );
+              let _ = drop(structure);
+              let result: Token = self.expression(tokens);
+              value[index].setData    ( result.getData().clone() );
+              value[index].setDataType( result.getDataType().clone() );
+            } 
+            structureLinesLen if structureLinesLen > 1 =>
+            { // это структура с вложением
+              let mut linesResult: Vec<Token> = Vec::new();
+              for line in &structure.lines 
+              {
+                let tokens: &mut Vec<Token> = &mut line.read().unwrap()
+                                                .tokens.clone();
+                let _ = drop(line);
+                linesResult.push( self.expression(tokens) );
+              }
+              value[index] = Token::newNesting( Some(linesResult) );
+              value[index].setDataType( Some(TokenType::Link) ); // todo: Речь не о Link, а об Array?
+            } 
+            _ => { setNone(value, index); } // В структуре не было вложений
           }
         }
-      } else 
-      {
-        setNone(value, index);
-      }
-    } else 
-    {
-      setNone(value, index);
-    }
+      } else { setNone(value, index); } // Не нашли структуру
+    } else { setNone(value, index); } // Ошибка имени структуры
   }
 
   /* Получает значение из ссылки на структуру;
