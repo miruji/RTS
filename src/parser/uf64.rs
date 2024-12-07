@@ -49,12 +49,10 @@ impl fmt::Display for uf64
     type Output = Self;
     fn div(self, other: Self) -> Self 
     {
-      if other.0 != 0.0 
+      match other.0
       {
-        uf64(self.0 / other.0)
-      } else 
-      {
-        uf64(self.0)
+        0.0 => { uf64(self.0) } // Если 0.0, то возвращаем левую часть
+        _   => { uf64(self.0 / other.0) } // Если не 0.0, то делим
       }
     }
   }
@@ -64,12 +62,10 @@ impl fmt::Display for uf64
   {
     fn from(value: f64) -> Self 
     {
-      if value >= 0.0 
+      match value >= 0.0 
       {
-        uf64(value)
-      } else 
-      {
-        uf64(0.0)
+        true  => { uf64(value) }  
+        false => { uf64(0.0) }
       }
     }
   }
@@ -86,12 +82,10 @@ impl fmt::Display for uf64
   {
     fn from(value: i64) -> Self 
     {
-      if value >= 0 
+      match value >= 0 
       {
-        uf64(value as f64)
-      } else 
-      {
-        uf64(0.0)
+        true  => { uf64(value as f64) }  
+        false => { uf64(0.0) }
       }
     }
   }
@@ -124,12 +118,10 @@ impl uf64
 {
   pub fn new(value: f64) -> Self 
   {
-    if value >= 0.0 
+    match value >= 0.0 
     {
-      uf64(value)
-    } else 
-    {
-      uf64(0.0)
+      true  => { uf64(value) }  
+      false => { uf64(0.0) }
     }
   }
 }

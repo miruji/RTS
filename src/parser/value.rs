@@ -86,28 +86,31 @@ impl std::ops::Add for Value
       (Value::Char(x), Value::Char(y)) => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32(x as u32 + y as u32)
-            {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32(x as u32 + y as u32)
+          {
+            Some(resultChar) => {resultChar} 
+            None             => {'\0'}
+          }
         )
       },
       (Value::Char(x), Value::Int(y))  => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32((x as i64 +y) as u32)
-            {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32((x as i64 +y) as u32)
+          {
+            Some(resultChar) => {resultChar} 
+            None             => {'\0'}
+          }
         )
       },
       (Value::Char(x), Value::UInt(y)) => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32((x as u64 +y) as u32) 
-            {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32((x as u64 +y) as u32) 
+          {
+            Some(resultChar) => {resultChar} 
+            None             => {'\0'}
+          }
         )
       },
       (Value::Char(x), Value::String(y)) => Value::String(x.to_string()+ &y),
@@ -140,12 +143,10 @@ impl std::ops::Sub for Value
       // UInt
       (Value::UInt(x), Value::UInt(y))   => 
       {
-        if y > x 
+        match y > x 
         {
-          Value::UInt(0)
-        } else 
-        {
-          Value::UInt(x-y)
+          true  => { Value::UInt(0) }  
+          false => { Value::UInt(x-y) }
         }
       },
       (Value::UInt(x), Value::Int(y))    => Value::Int   (x as i64 -y),
@@ -166,28 +167,31 @@ impl std::ops::Sub for Value
       (Value::Char(x), Value::Char(y)) => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32(x as u32 - y as u32)
-            {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32(x as u32 - y as u32)
+          {
+            Some(resultChar) => {resultChar} 
+            None => {'\0'}
+          }
         )
       },
       (Value::Char(x), Value::Int(y))  => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32((x as i64 -y) as u32)
-            {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32((x as i64 -y) as u32)
+          {
+            Some(resultChar) => {resultChar} 
+            None => {'\0'}
+          }
         )
       },
       (Value::Char(x), Value::UInt(y)) => 
       {
         Value::Char(
-          if let Some(resultChar) = std::char::from_u32((x as u64 -y) as u32)
-              {resultChar} 
-          else 
-            {'\0'}
+          match std::char::from_u32((x as u64 -y) as u32)
+          {
+            Some(resultChar) => {resultChar} 
+            None => {'\0'}
+          }
         )
       },
       //

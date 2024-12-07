@@ -260,19 +260,25 @@ impl Token
     // но смысл такой, что если тип был Int или Float, 
     // а ожидается UInt или UFloat, то понятно,
     // что результат будет 0
-    if let Some(ref mut data) = self.data 
+    match self.data 
     {
-      if data.chars().nth(0) == Some('-') 
+      Some(ref mut data) => 
       {
-        if self.dataType.clone().unwrap_or_default() == TokenType::UInt 
+        match data.chars().nth(0)  
         {
-          *data = String::from("0");
-        } else
-        if self.dataType.clone().unwrap_or_default() == TokenType::UFloat 
-        {
-          *data = String::from("0.0"); // todo: use . (0.0)
+          Some('-') => 
+          {
+            match self.dataType.clone().unwrap_or_default()
+            {
+              TokenType::UInt   => { *data = String::from("0"); } 
+              TokenType::UFloat => { *data = String::from("0.0"); } // todo: use . (0.0)
+              _ => {}
+            }
+          }
+          _ => {}
         }
       }
+      None => {}
     }
   }
 
@@ -304,12 +310,10 @@ impl fmt::Display for Token
 { // todo: debug only ?
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result 
   {
-    if let Some(data) = &self.data 
+    match &self.data 
     {
-      write!(f, "{}", data)
-    } else 
-    {
-      write!(f, " ")
+      Some(data) => { write!(f, "{}", data) }  
+      None       => { write!(f, " ") }
     }
   }
 }
@@ -317,12 +321,10 @@ impl fmt::Debug for Token
 { // todo: debug only ?
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
   {
-    if let Some(data) = &self.data 
+    match &self.data 
     {
-      write!(f, "{}", data)
-    } else 
-    {
-      write!(f, " ")
+      Some(data) => { write!(f, "{}", data) }  
+      None       => { write!(f, " ") }
     }
   }
 }
