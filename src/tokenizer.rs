@@ -64,12 +64,10 @@ fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
   {
     byte1 = buffer[savedIndex]; // значение текущего символа
     byte2 =                     // значение следующего символа
-      if savedIndex+1 < *bufferLength 
+      match savedIndex+1 < *bufferLength 
       {
-        buffer[savedIndex+1]
-      } else 
-      {
-        b'\0'
+        true  => { buffer[savedIndex+1] }  
+        false => { b'\0' }
       };
 
     // todo: use match case
@@ -87,9 +85,10 @@ fn getNumber(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
     if byte1 == b'.' && !dot && isDigit(&byte2) &&
        savedIndex > 1 && buffer[*index-1] != b'.' // fixed for a.0.1
     { // UFloat
-      if rational 
+      match rational 
       {
-        break;
+        true => { break; }
+        false => {}
       }
       dot = true;
       result.push(byte1 as char);
@@ -144,7 +143,11 @@ fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
     {
       result.push(byte1 as char);
       savedIndex += 1;
-      if byte1 == b'.' { isLink = true; } // только если есть . то мы знаем что это ссылка
+      match byte1 == b'.' 
+      { // только если есть . то мы знаем что это ссылка
+        true => { isLink = true; }
+        false => {}
+      } 
     } else 
     if isLetter(&byte1)
     {
@@ -158,16 +161,18 @@ fn getWord(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
 
   *index = savedIndex;
   // next return
-  if isLink 
+  match isLink 
   {
-    Token::new( Some(TokenType::Link), Some(result.clone()) )
-  } else 
-  {
-    match result.as_str()
-    {
-      "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
-      "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
-      _          => Token::new( Some(TokenType::Word), Some(result) ),
+    true => {
+      Token::new( Some(TokenType::Link), Some(result.clone()) )
+    }  
+    false => {
+      match result.as_str()
+      {
+        "true"     => Token::new( Some(TokenType::Bool), Some(String::from("1")) ),
+        "false"    => Token::new( Some(TokenType::Bool), Some(String::from("0")) ),
+        _          => Token::new( Some(TokenType::Word), Some(result) ),
+      }
     }
   }
 }
@@ -249,8 +254,11 @@ fn getOperator(buffer: &[u8], index: &mut usize, bufferLength: &usize) -> Token
 {
   let currentByte: u8 = buffer[*index]; // current byte
   let nextByte: u8 =                    // next byte or \0
-    if *index+1 < *bufferLength { buffer[*index+1] } 
-    else                        { b'\0'};
+    match *index+1 < *bufferLength 
+    {
+      true  => { buffer[*index+1] } 
+      false => { b'\0'}
+    };
 
   let mut increment = |count: usize| 
   { // index increment for single & duble operators
@@ -367,9 +375,12 @@ fn bracketNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &Toke
 {
   for token in tokens.iter_mut() 
   { // чтение токенов
-    if let Some(ref mut tokens) = token.tokens 
-    { // рекурсия
-      bracketNesting(tokens, beginType, endType);
+    match &mut token.tokens {
+      Some(tokens) => {
+        // рекурсия
+        bracketNesting(tokens, beginType, endType);
+      }
+      None => {} // ничего не делаем
     }
   }
   // вкладывание
@@ -418,7 +429,11 @@ fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenT
             tokens.remove(lastBracket);
             tokensLength -= 1;
 
-            if lastBracket < i { i -= 1; }
+            match lastBracket < i 
+            { 
+              true  => { i -= 1; }
+              false => {}
+            }
           }
         }
 
@@ -430,19 +445,23 @@ fn blockNesting(tokens: &mut Vec<Token>, beginType: &TokenType, endType: &TokenT
       _ => if !brackets.is_empty() 
       { // nesting tokens to bracket begin
         let savedToken: Token = tokens.remove(i);
-        if let Some(token) = tokens.get_mut(brackets[brackets.len()-1]) 
+        match &mut tokens.get_mut(brackets[brackets.len()-1]) 
         {
-          match &mut token.tokens 
+          Some(token) => 
           {
-            Some(tokenTokens) => 
-            { // contains tokens 
-              tokenTokens.push(savedToken.clone());
-            }
-            None => 
-            { // no tokens
-              token.tokens = Some( vec![savedToken.clone()] );
+            match &mut token.tokens 
+            {
+              Some(tokenTokens) => 
+              { // contains tokens 
+                tokenTokens.push(savedToken.clone());
+              }
+              None => 
+              { // no tokens
+                token.tokens = Some( vec![savedToken.clone()] );
+              }
             }
           }
+          None => {}
         }
 
         // go to next token
@@ -523,31 +542,44 @@ fn deleteNestedComment(linesLinks: &mut Vec< Arc<RwLock<Line>> >, mut index: usi
     { // прерывание чтобы не нарушать мутабельность
       line = linesLinks[index].write().unwrap();
 
-      if let Some(ref mut lineLines) = line.lines
+      match &mut line.lines
       { // рекурсивно обрабатываем вложенные линии
-        deleteNestedComment(lineLines, 0);
+        Some(lineLines) => { deleteNestedComment(lineLines, 0); }
+        None => {}
       }
       
-      if line.tokens.is_empty()
-      { // пропускаем разделители, они нужны для синтаксиса
+      match line.tokens.is_empty()
+      { 
+        true => 
+        { // пропускаем разделители, они нужны для синтаксиса
+          // если разделитель имеет вложения
+          match &line.lines 
+          { 
+            Some(_) => { break 'exit; } // выходим из прерывания
+            None => {}
+          } 
 
-        // если разделитель имеет вложения
-        if line.lines.is_some() { break 'exit; } // выходим из прерывания
+          // проверяем на скопление разделителей
+          match index+1 < linesLinksLength 
+          { // если есть линия ниже, то мы можем предполагать, что 
+            // она может быть тоже разделителем;
+            true => 
+            {
+              match linesLinks[index+1].write().unwrap()
+                   .tokens.is_empty() 
+               { // если токенов в следующей линии не было, значит точно separator;
+                 // повторение подобных условий оставит 1 separator линию по итогу;
+                  true  => { deleteLine = true; }
+                  false => {}
+               }
+            }
+            false => {}
+          }
 
-        // проверяем на скопление разделителей
-        if index+1 < linesLinksLength 
-        { // если есть линия ниже, то мы можем предполагать, что 
-          // она может быть тоже разделителем;
-          if linesLinks[index+1].write().unwrap()
-               .tokens.is_empty() 
-           { // если токенов в следующей линии не было, значит точно separator;
-             // повторение подобных условий оставит 1 separator линию по итогу;
-              deleteLine = true;
-           }
+          // обычный разделитель
+          break 'exit; // выходим из прерывания
         }
-
-        // обычный разделитель
-        break 'exit; // выходим из прерывания
+        false => {}
       }
       
       lastTokenIndex = line.tokens.len()-1;
@@ -625,12 +657,10 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> 
     // слева помечаем что это за токен;
     // в случае с X это завершающий токен
     c = 
-      if i == tokenCount 
+      match i == tokenCount 
       {
-        'X'
-      } else 
-      {
-        '┃'
+        true  => { 'X' }  
+        false => { '┃' }
       };
 
     tokenType = token.getDataType().unwrap_or_default(); // тип токена
@@ -699,9 +729,10 @@ pub fn outputTokens(tokens: &Vec<Token>, lineIndent: &usize, indent: &usize) -> 
     } 
 
     // если есть вложения у токена, то просто рекурсивно обрабатываем их
-    if let Some(tokens) = &token.tokens
+    match &token.tokens
     {
-      outputTokens(tokens, lineIndent, &(indent+1))
+      Some(tokens) => { outputTokens(tokens, lineIndent, &(indent+1)); }
+      None => {}
     }
   }
 }
@@ -731,10 +762,14 @@ pub fn outputLines(linesLinks: &Vec< Arc<RwLock<Line>> >, indent: &usize) -> ()
       }
     } 
     
-    if let Some(lineLines) = &line.lines
+    match &line.lines
     { // заголовок для начала вложенных линий
-      formatPrint(&format!("{}\\b┗ \\fg(#90df91)Lines\\c\n",identStr2));
-      outputLines(lineLines, &(indent+1)); // выводим вложенные линии
+      Some(lineLines) => 
+      {
+        formatPrint(&format!("{}\\b┗ \\fg(#90df91)Lines\\c\n",identStr2));
+        outputLines(lineLines, &(indent+1)); // выводим вложенные линии
+      }
+      None => {}
     }
   }
   //
@@ -773,144 +808,148 @@ pub fn readTokens(buffer: Vec<u8>, debugMode: bool) -> Vec< Arc<RwLock<Line>> >
 
     // проверяем отступы, они могут быть указаны пробелами;
     // либо readLineIndent будет true после конца строки предыдущей линии
-    if byte == b' ' && readLineIndent 
+    match byte == b' ' && readLineIndent 
     {
-      index += 1;
-      lineIndent += 1;
-    } else 
-    {
-      readLineIndent = false;
-      // смотрим является ли это endline
-      if byte == b'\n' || byte == b';' 
-      { // если это действительно конец строки,
-        // то вкладываем возможные скобки
-        bracketNesting(
-          &mut lineTokens,
-          &TokenType::CircleBracketBegin, 
-          &TokenType::CircleBracketEnd
-        );
-        bracketNesting(
-          &mut lineTokens,
-          &TokenType::SquareBracketBegin, 
-          &TokenType::SquareBracketEnd
-        );
-        // FigureBracketBegin и FigureBracketEnd
-        // это остаётся всё ещё здесь только потому,
-        // что может быть нужным для реализации использования
-        // подобных структур:
-        /*
-          for x(args: <Token>) -> None
-            args[0]
-            ? args[1]
-              {}
-              args[2]
-              go(1)
-
-          for i = 0, i < 10, i++
-            println(10)
-        */
-        // здесь наглядно видно, что for функция будет запущена
-        // только когда дойдёт до самого конца вложения,
-        // после чего {} позволит запустить всё вложение.
-        // а при необходимости мы бы могли обращаться к вложению,
-        // например: {}.0 или {}[0] ...
-        // поэтому эта тема требует отдельных тестов.
-        /*
-        bracketNesting(
-          &mut lineTokens,
-          &TokenType::FigureBracketBegin, 
-          &TokenType::FigureBracketEnd
-        );
-        */
-
-        // добавляем новую линию и пушим ссылку на неё
-        linesLinks.push( 
-          Arc::new(RwLock::new( 
-            Line {
-              tokens: std::mem::take(&mut lineTokens), // забираем все токены в линию, 
-                                                       // оставляя пустой вектор для следующей
-              indent: lineIndent,
-              lines:  None, // в данный момент у неё нет вложенных линий, это будет чуть ниже
-              parent: None  // также у неё нет родителя, это тоже будет ниже при вложении
-            }
-          ))
-        );
-        lineIndent = 0;
-
-        readLineIndent = true; // это был конец строки
-        index += 1;
-      } else
-      if byte == b'#' 
-      { // ставим метку на комментарий в линии, по ним потом будут удалены линии
-        deleteComment(&buffer, &mut index, &bufferLength); // пропускает комментарий
-        lineTokens.push( Token::newEmpty( Some(TokenType::Comment) ) );
-      } else
-      if isDigit(&byte) || (byte == b'-' && index+1 < bufferLength && isDigit(&buffer[index+1])) 
-      { // получаем все возможные численные примитивные типы данных
-        lineTokens.push( getNumber(&buffer, &mut index, &bufferLength) );
-      } else
-      if isLetter(&byte) 
-      { // получаем все возможные и зарезервированные слова
-        lineTokens.push( getWord(&buffer, &mut index, &bufferLength) );
-      } else
-      if matches!(byte, b'\'' | b'"' | b'`') 
-      { // получаем Char, String, RawString
-        let mut token: Token = getQuotes(&buffer, &mut index);
-        let tokenType: Option<TokenType> = token.getDataType();
-        match tokenType 
-        {
-          tokenType if tokenType != None =>
-          { // if formatted quotes
-            let lineTokensLength: usize = lineTokens.len();
-            match lineTokensLength 
-            {
-              lineTokensLength if lineTokensLength > 0 =>
-              {
-                let backToken: &Token = &lineTokens[lineTokensLength-1];
-                if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
-                   backToken.getData().unwrap_or_default() == "f" 
-                {
-                  match token.getDataType().unwrap_or_default()
-                  {
-                    TokenType::RawString =>
-                    {
-                     token.setDataType( Some(TokenType::FormattedRawString) ); 
-                    }
-                    TokenType::String =>
-                    { 
-                      token.setDataType( Some(TokenType::FormattedString) ); 
-                    }
-                    TokenType::Char =>
-                    { 
-                      token.setDataType( Some(TokenType::FormattedChar) ); 
-                    }
-                    _ => {}
-                  }
-                  lineTokens[lineTokensLength-1] = token; // replace the last token in place
-                } else 
-                { // basic quote
-                  lineTokens.push(token);
-                }
-              } 
-              _ => { lineTokens.push(token); } // basic quote
-            }
-          }  
-          _ => { index += 1; } // skip
-        }
-      } else
-      // получаем возможные двойные и одиночные символы
-      if isSingleChar(&byte) 
+      true => 
       {
-        let token: Token = getOperator(&buffer, &mut index, &bufferLength);
-        match token.getDataType()
-        {
-          None => { index += 1; } 
-          _    => { lineTokens.push(token); }
-        }
-      } else 
-      { // если мы ничего не нашли из возможного, значит этого нет в синтаксисе;
-        // поэтому просто идём дальше
         index += 1;
+        lineIndent += 1;
+      }  
+      false => 
+      {
+        readLineIndent = false;
+        // смотрим является ли это endline
+        if byte == b'\n' || byte == b';' 
+        { // если это действительно конец строки,
+          // то вкладываем возможные скобки
+          bracketNesting(
+            &mut lineTokens,
+            &TokenType::CircleBracketBegin, 
+            &TokenType::CircleBracketEnd
+          );
+          bracketNesting(
+            &mut lineTokens,
+            &TokenType::SquareBracketBegin, 
+            &TokenType::SquareBracketEnd
+          );
+          // FigureBracketBegin и FigureBracketEnd
+          // это остаётся всё ещё здесь только потому,
+          // что может быть нужным для реализации использования
+          // подобных структур:
+          /*
+            for x(args: <Token>) -> None
+              args[0]
+              ? args[1]
+                {}
+                args[2]
+                go(1)
+
+            for i = 0, i < 10, i++
+              println(10)
+          */
+          // здесь наглядно видно, что for функция будет запущена
+          // только когда дойдёт до самого конца вложения,
+          // после чего {} позволит запустить всё вложение.
+          // а при необходимости мы бы могли обращаться к вложению,
+          // например: {}.0 или {}[0] ...
+          // поэтому эта тема требует отдельных тестов.
+          /*
+          bracketNesting(
+            &mut lineTokens,
+            &TokenType::FigureBracketBegin, 
+            &TokenType::FigureBracketEnd
+          );
+          */
+
+          // добавляем новую линию и пушим ссылку на неё
+          linesLinks.push( 
+            Arc::new(RwLock::new( 
+              Line {
+                tokens: std::mem::take(&mut lineTokens), // забираем все токены в линию, 
+                                                         // оставляя пустой вектор для следующей
+                indent: lineIndent,
+                lines:  None, // в данный момент у неё нет вложенных линий, это будет чуть ниже
+                parent: None  // также у неё нет родителя, это тоже будет ниже при вложении
+              }
+            ))
+          );
+          lineIndent = 0;
+
+          readLineIndent = true; // это был конец строки
+          index += 1;
+        } else
+        if byte == b'#' 
+        { // ставим метку на комментарий в линии, по ним потом будут удалены линии
+          deleteComment(&buffer, &mut index, &bufferLength); // пропускает комментарий
+          lineTokens.push( Token::newEmpty( Some(TokenType::Comment) ) );
+        } else
+        if isDigit(&byte) || (byte == b'-' && index+1 < bufferLength && isDigit(&buffer[index+1])) 
+        { // получаем все возможные численные примитивные типы данных
+          lineTokens.push( getNumber(&buffer, &mut index, &bufferLength) );
+        } else
+        if isLetter(&byte) 
+        { // получаем все возможные и зарезервированные слова
+          lineTokens.push( getWord(&buffer, &mut index, &bufferLength) );
+        } else
+        if matches!(byte, b'\'' | b'"' | b'`') 
+        { // получаем Char, String, RawString
+          let mut token: Token = getQuotes(&buffer, &mut index);
+          let tokenType: Option<TokenType> = token.getDataType();
+          match tokenType 
+          {
+            tokenType if tokenType != None =>
+            { // if formatted quotes
+              let lineTokensLength: usize = lineTokens.len();
+              match lineTokensLength 
+              {
+                lineTokensLength if lineTokensLength > 0 =>
+                {
+                  let backToken: &Token = &lineTokens[lineTokensLength-1];
+                  if backToken.getDataType().unwrap_or_default() == TokenType::Word && 
+                     backToken.getData().unwrap_or_default() == "f" 
+                  {
+                    match token.getDataType().unwrap_or_default()
+                    {
+                      TokenType::RawString =>
+                      {
+                       token.setDataType( Some(TokenType::FormattedRawString) ); 
+                      }
+                      TokenType::String =>
+                      { 
+                        token.setDataType( Some(TokenType::FormattedString) ); 
+                      }
+                      TokenType::Char =>
+                      { 
+                        token.setDataType( Some(TokenType::FormattedChar) ); 
+                      }
+                      _ => {}
+                    }
+                    lineTokens[lineTokensLength-1] = token; // replace the last token in place
+                  } else 
+                  { // basic quote
+                    lineTokens.push(token);
+                  }
+                } 
+                _ => { lineTokens.push(token); } // basic quote
+              }
+            }  
+            _ => { index += 1; } // skip
+          }
+        } else
+        // получаем возможные двойные и одиночные символы
+        if isSingleChar(&byte) 
+        {
+          let token: Token = getOperator(&buffer, &mut index, &bufferLength);
+          match token.getDataType()
+          {
+            None => { index += 1; } 
+            _    => { lineTokens.push(token); }
+          }
+        } else 
+        { // если мы ничего не нашли из возможного, значит этого нет в синтаксисе;
+          // поэтому просто идём дальше
+          index += 1;
+        }
       }
     }
   }

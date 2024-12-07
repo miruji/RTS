@@ -1,5 +1,6 @@
 /* /packageApi
   Provides a set of functions for working with packages locally and remotely
+  todo: Переделать if -> match
 */
 
 use std::{
